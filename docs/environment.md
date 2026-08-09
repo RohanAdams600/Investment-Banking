@@ -33,7 +33,7 @@ placeholder is a wrong disclosure rather than a cosmetic gap.
 | `NEXT_PUBLIC_ALLOW_INDEXING` | Yes      | `"true"` permits search indexing. Anything else emits `noindex`. Defaults closed so pre-launch content cannot be indexed by omission. |
 | `NEXT_PUBLIC_DEMO_DATA`      | Yes      | `"true"` renders sample statistics and testimonials with a visible marker. **Must be `"false"` in production.**                       |
 
-## Supabase — build step 2
+## Supabase
 
 | Variable                        | Secret  | Purpose                                                                                                                                          |
 | ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -41,7 +41,7 @@ placeholder is a wrong disclosure rather than a cosmetic gap.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No      | Anon key. Safe to expose **only because Row Level Security is enabled on every table** — a table without RLS is publicly readable with this key. |
 | `SUPABASE_SERVICE_ROLE_KEY`     | **Yes** | Bypasses RLS entirely. Server-side only. Never referenced in a client component, never given a `NEXT_PUBLIC_` prefix, never logged.              |
 
-## AI providers — build step 8
+## AI providers — build step 8 (not yet used)
 
 | Variable            | Secret  | Purpose                                                          |
 | ------------------- | ------- | ---------------------------------------------------------------- |
@@ -51,7 +51,7 @@ placeholder is a wrong disclosure rather than a cosmetic gap.
 Both are consumed only by the model router. No agent reads a provider key directly, which
 is what keeps re-routing an agent a config change rather than a code change.
 
-## Communications — build step 7
+## Communications — build step 7 (not yet used)
 
 | Variable                          | Secret  | Purpose                                                                                                                                                  |
 | --------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |

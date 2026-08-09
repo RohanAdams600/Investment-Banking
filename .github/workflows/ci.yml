@@ -21,6 +21,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Row Level Security cannot be verified without a database. Policies are
+    # close to unreviewable by eye — a `using` where a `with check` was needed,
+    # a missing FORCE — and every one of those is obvious the moment a wrong
+    # role runs a query. So CI runs the queries.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cairn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +68,11 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          # Present, so the RLS and schema-parity suites run rather than skip.
+          # Their absence locally is what lets `pnpm test` work without a
+          # database; their absence here would let policy regressions through.
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cairn_test
 
       - name: Build
         run: pnpm build

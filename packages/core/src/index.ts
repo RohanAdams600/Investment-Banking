@@ -7,6 +7,7 @@ export {
   unconfiguredBrandFields,
   type BrandConfig,
 } from './brand';
+export * from './access';
 export {
   formatMoney,
   formatMoneyCompact,

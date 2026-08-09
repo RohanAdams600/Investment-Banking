@@ -17,13 +17,29 @@ pnpm dev                       # http://localhost:3000
 Useful:
 
 ```bash
-pnpm test                                   # 23 tests
+pnpm test                                   # 94 tests
 pnpm typecheck                              # all workspace packages
 pnpm lint
 pnpm --filter @ib/ui tokens:build           # after editing any design token
 pnpm --filter @ib/ui tokens:check           # what CI runs
 pnpm format
 ```
+
+### Running the database tests
+
+The RLS and schema-parity suites need a Postgres. Without `DATABASE_URL` they skip, so
+`pnpm test` works on a machine with no database; CI always provides one and fails if it is
+missing.
+
+```bash
+# any Postgres 16 will do — the suite rebuilds the schema from the migrations each run
+createdb cairn_test
+DATABASE_URL=postgresql://localhost/cairn_test pnpm test
+```
+
+The suite applies `supabase/tests/local_auth_shim.sql` first, which recreates the parts of
+Supabase the migrations depend on (`auth.users`, `auth.uid()`, the `anon` /
+`authenticated` / `service_role` roles). The shim is never applied to a real environment.
 
 **After editing a design token, run `tokens:build`.** CI fails on a stale generated
 stylesheet.
@@ -75,13 +91,18 @@ worse than leaving it forward.
 
 ## Pending — to be written as each step lands
 
-### Database (step 2)
+### Database
 
-- Supabase project creation and region pinning (see open question 6 — the region cannot be
-  changed later without a migration)
-- Migration workflow and how migrations run against staging before production
-- RLS policy verification: a test that asserts every table has RLS enabled, since a table
-  without it is publicly readable with the anon key
+**Done:** migrations, seed, and RLS verification (`supabase/`). A test asserts every table
+in `public` has RLS both enabled and forced.
+
+**Pending:**
+
+- Supabase project creation, pinned to **US East** (decided). The region cannot be changed
+  later without a migration.
+- Applying the migrations and `supabase/seed.sql` to that project. Everything is currently
+  verified against local Postgres 16 only.
+- Migration workflow: how migrations run against staging before production.
 - **Backups: automated, encrypted, with a documented and actually-executed restore test.**
   A backup that has never been restored is a hypothesis, not a backup. The restore
   procedure and the date it was last verified belong in this document.
@@ -101,7 +122,8 @@ worse than leaving it forward.
 - [ ] `isBrandFullyConfigured` is true — real support email and mailing address configured
 - [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
-- [ ] Every table has RLS enabled, verified by test
+- [x] Every table has RLS enabled and forced, verified by test
+- [ ] Migrations applied to the production Supabase project (US East)
 - [ ] Backup restore tested end to end, with a date recorded here
 - [ ] CSP set and verified against every third-party origin in use
 - [ ] Legal templates (NDA, broker agreement, terms, privacy policy) reviewed by counsel
