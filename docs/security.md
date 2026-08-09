@@ -28,7 +28,7 @@ the redundancy both exist to provide.
 
 ## What RLS guarantees
 
-Verified by 37 tests in `supabase/tests/rls.test.ts`, run against a real Postgres in CI:
+Verified by 42 tests in `supabase/tests/rls.test.ts`, run against a real Postgres in CI, and re-verified against the live Supabase project:
 
 | Guarantee                                | Mechanism                                                            |
 | ---------------------------------------- | -------------------------------------------------------------------- |
@@ -73,6 +73,45 @@ delete the evidence that the person agreed to the terms. Account deletion anonym
 profile and leaves the consent record standing, and the user is told so at the time of the
 request.
 
+## What running against real Supabase changed
+
+The migrations were verified against local Postgres first and passed. Applying them to an
+actual Supabase project surfaced two problems that local testing could not have found,
+because the local environment was _more_ restrictive than production.
+
+**Supabase's default privileges grant `ALL` on every new table in `public` to `anon` and
+`authenticated`.** The grant model treats privileges as the outer gate and deliberately
+withholds a grant where an operation should be impossible — no DELETE on the audit log, no
+UPDATE on consent records. Those omissions did nothing: the defaults had already granted
+them. Row Level Security still denied the rows, so nothing leaked, but the outer gate stood
+open and a single missing policy would have been all that separated a client from a
+rewritten audit trail. Fixed in `0008_lock_down_grants.sql`, which revokes everything and
+grants back an explicit allowlist, including for tables added in future.
+
+**The same applies to functions, and that one was worse.** `create_firm` is `SECURITY
+DEFINER`, and PostgREST publishes `public` functions at `/rest/v1/rpc/<name>`. It was
+callable without signing in. Migration 0006 did `revoke all on function ... from public`,
+which is not the same thing — `PUBLIC` is the implicit everyone-role, and the grant to
+`anon` is a separate explicit one. The `auth.uid() is null` guard inside the function did
+hold, so the behaviour looked right when tested through the error it returned; a test that
+only observes the outcome cannot tell which layer caught it. Fixed in `0009_harden.sql`.
+
+**The local shim now reproduces both defaults.** That is the durable fix. A test
+environment more restrictive than production will pass on code that fails in production,
+and will do it silently. The shim grants what Supabase grants, so the suite can prove the
+lockdown works rather than assuming an absence of grants means an absence of access.
+
+## Accepted linter findings
+
+Supabase's database linter reports one remaining warning that is intentional:
+
+**`create_firm` is a SECURITY DEFINER function callable by `authenticated`.** That is the
+design. It exists precisely because the caller has no rights on `firms` — creating a firm
+and installing its first owner has to happen in one transaction, and a caller-rights
+function cannot do it. The risk is contained by the `auth.uid()` guard, by `anon` having no
+EXECUTE grant, and by the function taking no identifiers from the caller: it can only
+create a firm owned by whoever called it.
+
 ## The service role
 
 `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS completely. Legitimate uses are narrow:
@@ -108,6 +147,8 @@ Honest list of what is not yet done. Tracked in `docs/roadmap.md`.
 - **Content Security Policy.** Baseline headers are set in `next.config.ts`; the CSP waits
   until the real third-party origins are known. A permissive placeholder is worse than
   none, because it looks like coverage.
-- **Nothing is verified against a live Supabase project.** All database guarantees above
-  are verified against local Postgres 16 with an auth shim. The shim mirrors Supabase's
-  `auth.uid()` and role setup closely, but it is not the same system.
+- **Leaked-password protection is disabled.** Supabase Auth can check new passwords against
+  HaveIBeenPwned. It is an Auth project setting, not schema, so it cannot be enabled from a
+  migration — someone has to switch it on in the dashboard under **Authentication →
+  Policies**. On a product whose accounts gate confidential financial documents it should
+  be on.

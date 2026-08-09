@@ -50,3 +50,29 @@ $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant select on auth.users to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Supabase grants ALL on every newly created table in `public` to `anon` and
+-- `authenticated`, via default privileges configured on a fresh project.
+--
+-- This shim must reproduce that, and reproducing it is not a detail. Without
+-- it, vanilla Postgres denies any statement we simply neglected to grant, so a
+-- migration that relies on "no grant means no access" passes locally and is
+-- wide open on Supabase. That exact gap let two append-only guarantees through
+-- until they were run against a real project.
+--
+-- 0008 revokes these back down to an explicit allowlist. Keeping the permissive
+-- default here is what makes the local suite able to prove that it worked.
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+
+-- The same applies to functions, and this one is easier to miss. `revoke all
+-- ... from public` does not touch an explicit grant to `anon`, so a SECURITY
+-- DEFINER function intended for signed-in users stays callable anonymously
+-- through PostgREST. 0009 revokes it; reproducing the default here is what
+-- lets the local suite prove that.
+alter default privileges in schema public
+  grant all on functions to anon, authenticated, service_role;
+
+-- Supabase keeps extensions out of `public`.
+create schema if not exists extensions;
+grant usage on schema extensions to anon, authenticated, service_role;

@@ -35,6 +35,8 @@ placeholder is a wrong disclosure rather than a cosmetic gap.
 
 ## Supabase
 
+Project `Cairn`, ref `treltiukpuxhnzuplegu`, region us-east-1.
+
 | Variable                        | Secret  | Purpose                                                                                                                                          |
 | ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `NEXT_PUBLIC_SUPABASE_URL`      | No      | Project URL.                                                                                                                                     |

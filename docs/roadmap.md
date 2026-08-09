@@ -52,13 +52,17 @@ All three resolved — see `docs/decisions/open-questions.md` for the full reaso
 - **Schema**: `firms`, `firm_members`, `profiles`, `user_roles`, `jurisdictions`,
   `legal_templates`, `consent_records`, `audit_log`.
 - **Row Level Security** on every table, enabled _and_ forced, with all policies in one
-  auditable file (`0006_rls.sql`). Verified against a real Postgres — 37 tests covering
+  auditable file (`0006_rls.sql`). Verified against a real Postgres — 42 tests covering
   cross-tenant isolation, privilege escalation, and append-only guarantees.
 - **Schema parity test** so the Postgres role enum cannot drift from the TypeScript union.
 - **Supabase wiring**: server, browser, and service-role clients; session-refresh
   middleware; a `getActor()` bridge from session to permission model.
 - **Auth flows**: sign-in, sign-up, sign-out, email confirmation callback.
 - **Seed**: all 51 US jurisdictions, every one inactive until deliberately switched on.
+- **Live**: applied to Supabase project `Cairn` in **us-east-1**. Two grant-model defects
+  that local testing could not surface were found and fixed (migrations 0008 and 0009); see
+  `docs/security.md`. Supabase's security linter is down from five warnings to one accepted
+  and one dashboard setting.
 
 CI now runs a Postgres service, and fails rather than skips if the database is missing.
 
@@ -68,9 +72,7 @@ CI now runs a Postgres service, and fails rather than skips if the database is m
 - Session list with remote sign-out
 - Onboarding: role selection and consent capture. Consent capture is blocked on published
   legal templates, which need counsel — see open question 3.
-- Supabase project provisioning in **US East** (decided), and running the migrations
-  against it. Everything above is verified against local Postgres 16, not yet against a
-  live Supabase project.
+- Enabling leaked-password protection in the Supabase Auth settings (dashboard only).
 
 ## What can proceed in parallel
 

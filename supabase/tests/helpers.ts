@@ -33,10 +33,17 @@ export async function connect(): Promise<Client> {
  * into.
  */
 export async function applyMigrations(client: Client): Promise<void> {
+  // `extensions` is dropped too. 0009 relocates citext and pgcrypto into it, so
+  // leaving it behind would make the second run start from a state the first
+  // run produced — `create extension if not exists citext` would find the
+  // extension already present in `extensions` and skip, and the `citext` column
+  // in 0003 would then fail to resolve. Replay has to begin from nothing, or it
+  // is testing the previous run rather than the migrations.
   await client.query(`
     drop schema if exists public cascade;
     drop schema if exists app cascade;
     drop schema if exists auth cascade;
+    drop schema if exists extensions cascade;
     create schema public;
   `);
 

@@ -96,13 +96,24 @@ worse than leaving it forward.
 **Done:** migrations, seed, and RLS verification (`supabase/`). A test asserts every table
 in `public` has RLS both enabled and forced.
 
+**Project:** `Cairn`, ref `treltiukpuxhnzuplegu`, region **us-east-1**, org `Cairn Capital`.
+All nine migrations and the jurisdiction seed are applied. Verified live: cross-tenant
+isolation, self-grant admin denial, append-only guarantees, and anonymous access — the last
+one exercised through PostgREST with the publishable key, which is the path a browser
+actually takes rather than a direct SQL connection.
+
+State after verification: 51 jurisdictions, all inactive; every other table empty. All
+verification fixtures were removed.
+
+An earlier project in `us-west-2` was left in place and is unused. **Delete it in the
+dashboard** — the free tier caps you at two active projects, so leaving it costs you the
+slot.
+
 **Pending:**
 
-- Supabase project creation, pinned to **US East** (decided). The region cannot be changed
-  later without a migration.
-- Applying the migrations and `supabase/seed.sql` to that project. Everything is currently
-  verified against local Postgres 16 only.
 - Migration workflow: how migrations run against staging before production.
+- **Enable leaked-password protection** under Authentication → Policies. It cannot be set
+  from a migration.
 - **Backups: automated, encrypted, with a documented and actually-executed restore test.**
   A backup that has never been restored is a hypothesis, not a backup. The restore
   procedure and the date it was last verified belong in this document.
@@ -123,7 +134,9 @@ in `public` has RLS both enabled and forced.
 - [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
-- [ ] Migrations applied to the production Supabase project (US East)
+- [x] Migrations applied to the production Supabase project (us-east-1)
+- [ ] Leaked-password protection enabled in Auth settings
+- [ ] Unused us-west-2 project deleted
 - [ ] Backup restore tested end to end, with a date recorded here
 - [ ] CSP set and verified against every third-party origin in use
 - [ ] Legal templates (NDA, broker agreement, terms, privacy policy) reviewed by counsel

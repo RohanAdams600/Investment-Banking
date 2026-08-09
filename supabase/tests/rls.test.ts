@@ -122,14 +122,92 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       }
     });
 
-    it('pins search_path on every SECURITY DEFINER helper', async () => {
-      // A SECURITY DEFINER function with a caller-controlled search_path is a
-      // privilege escalation: the caller shadows a table the definer reads.
+    it('grants authenticated exactly the privileges it should have', async () => {
+      // Supabase's default privileges grant ALL on every new table in `public`
+      // to anon and authenticated. 0008 revokes that down to this allowlist.
+      //
+      // The local shim reproduces Supabase's defaults on purpose, so this test
+      // fails if 0008 is dropped or if a new table is added without a matching
+      // grant. Before the shim was made faithful, this whole class of bug was
+      // invisible locally and live on the real project.
+      const expected: Record<string, string[]> = {
+        audit_log: ['SELECT'],
+        consent_records: ['INSERT', 'SELECT'],
+        firm_members: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        firms: ['SELECT', 'UPDATE'],
+        jurisdictions: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        legal_templates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        profiles: ['INSERT', 'SELECT', 'UPDATE'],
+        user_roles: ['DELETE', 'INSERT', 'SELECT'],
+      };
+
+      const { rows } = await db.query<{ table_name: string; privs: string }>(
+        `select table_name, string_agg(privilege_type, ',' order by privilege_type) as privs
+           from information_schema.role_table_grants
+          where grantee = 'authenticated' and table_schema = 'public'
+          group by table_name
+          order by table_name`,
+      );
+
+      const actual = Object.fromEntries(rows.map((r) => [r.table_name, r.privs.split(',')]));
+      expect(actual).toEqual(expected);
+    });
+
+    it('never grants TRUNCATE or TRIGGER to a client role', async () => {
+      // TRUNCATE ignores RLS entirely — a client holding it could empty the
+      // audit log regardless of any policy.
+      const { rows } = await db.query<{ table_name: string; privilege_type: string }>(
+        `select table_name, privilege_type
+           from information_schema.role_table_grants
+          where grantee in ('anon', 'authenticated')
+            and table_schema = 'public'
+            and privilege_type in ('TRUNCATE', 'TRIGGER', 'REFERENCES')`,
+      );
+
+      expect(rows).toEqual([]);
+    });
+
+    it('does not let anon execute any function in the exposed public schema', async () => {
+      // PostgREST publishes `public` functions as /rest/v1/rpc/<name>, and
+      // Supabase's default privileges grant EXECUTE to anon. A SECURITY DEFINER
+      // function reachable that way runs with its owner's privileges for a
+      // caller who never signed in.
+      //
+      // `revoke ... from public` does NOT cover this: PUBLIC is the implicit
+      // everyone-role, and the grant to anon is a separate explicit one.
+      const { rows } = await db.query<{ proname: string }>(
+        `select p.proname
+           from pg_proc p
+           join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and has_function_privilege('anon', p.oid, 'EXECUTE')`,
+      );
+
+      expect(rows.map((r) => r.proname)).toEqual([]);
+    });
+
+    it('lets authenticated execute create_firm', async () => {
+      // The other half of the check above — locking anon out must not have
+      // locked out the role that is supposed to call it.
+      const { rows } = await db.query<{ allowed: boolean }>(
+        `select has_function_privilege('authenticated', p.oid, 'EXECUTE') as allowed
+           from pg_proc p
+           join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = 'create_firm'`,
+      );
+
+      expect(rows[0]?.allowed).toBe(true);
+    });
+
+    it('pins search_path on every function in the app schema', async () => {
+      // Widened from SECURITY DEFINER only. The original version keyed on
+      // `prosecdef`, which skipped the invoker-rights trigger helper entirely —
+      // Supabase's linter caught what this test was shaped not to look at.
       const { rows } = await db.query<{ proname: string; proconfig: string[] | null }>(
         `select p.proname, p.proconfig
            from pg_proc p
            join pg_namespace n on n.oid = p.pronamespace
-          where n.nspname = 'app' and p.prosecdef`,
+          where n.nspname = 'app'`,
       );
 
       expect(rows.length).toBeGreaterThan(0);
