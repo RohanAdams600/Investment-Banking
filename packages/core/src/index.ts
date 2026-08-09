@@ -1,9 +1,10 @@
 export {
   brand,
+  brandDefaults,
   brandSchema,
-  isBrandPlaceholder,
+  isBrandFullyConfigured,
   pageTitle,
-  PLACEHOLDER_NAME,
+  unconfiguredBrandFields,
   type BrandConfig,
 } from './brand';
 export {

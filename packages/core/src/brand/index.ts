@@ -28,16 +28,35 @@ const brandSchema = z.object({
 
 export type BrandConfig = z.infer<typeof brandSchema>;
 
-const PLACEHOLDER_NAME = 'ACME Capital Markets';
+/**
+ * Development fallbacks. The name and tagline are settled; the entity name,
+ * support address, and mailing address are not — they depend on incorporation,
+ * which has not happened yet.
+ */
+const DEFAULTS = {
+  name: 'Cairn',
+  tagline: 'Mark the way.',
+  legalName: 'Cairn Markets, Inc.',
+  url: 'http://localhost:3000',
+  supportEmail: 'support@example.com',
+  mailingAddress: 'Address pending — see docs/brand',
+} as const;
+
+/**
+ * Values that must be replaced before launch. `mailingAddress` and
+ * `supportEmail` appear in commercial email and in the site footer, where a
+ * placeholder is not merely untidy — it is a disclosure that is wrong.
+ */
+const LAUNCH_BLOCKING_DEFAULTS = ['supportEmail', 'mailingAddress'] as const;
 
 function readBrandConfig(): BrandConfig {
   const parsed = brandSchema.safeParse({
-    name: process.env.NEXT_PUBLIC_BRAND_NAME ?? PLACEHOLDER_NAME,
-    legalName: process.env.BRAND_LEGAL_NAME ?? `${PLACEHOLDER_NAME}, Inc.`,
-    tagline: process.env.NEXT_PUBLIC_BRAND_TAGLINE ?? 'Where deals find capital.',
-    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
-    supportEmail: process.env.BRAND_SUPPORT_EMAIL ?? 'support@example.com',
-    mailingAddress: process.env.BRAND_MAILING_ADDRESS ?? 'Address pending — see docs/brand',
+    name: process.env.NEXT_PUBLIC_BRAND_NAME ?? DEFAULTS.name,
+    legalName: process.env.BRAND_LEGAL_NAME ?? DEFAULTS.legalName,
+    tagline: process.env.NEXT_PUBLIC_BRAND_TAGLINE ?? DEFAULTS.tagline,
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULTS.url,
+    supportEmail: process.env.BRAND_SUPPORT_EMAIL ?? DEFAULTS.supportEmail,
+    mailingAddress: process.env.BRAND_MAILING_ADDRESS ?? DEFAULTS.mailingAddress,
   });
 
   if (!parsed.success) {
@@ -53,12 +72,20 @@ function readBrandConfig(): BrandConfig {
 
 export const brand: BrandConfig = readBrandConfig();
 
-/** True while the brand name is still the placeholder — used to gate launch checks. */
-export const isBrandPlaceholder = brand.name === PLACEHOLDER_NAME;
+/**
+ * Fields still running on a development default. Empty is the launch condition.
+ * Surfaced in the UI so a placeholder mailing address cannot quietly ship in a
+ * footer or an email disclosure.
+ */
+export const unconfiguredBrandFields: string[] = LAUNCH_BLOCKING_DEFAULTS.filter(
+  (field) => brand[field] === DEFAULTS[field],
+);
 
-/** `"Deal Room" -> "Deal Room | ACME Capital Markets"` */
+export const isBrandFullyConfigured = unconfiguredBrandFields.length === 0;
+
+/** `"Deal Room" -> "Deal Room | Cairn"` */
 export function pageTitle(title?: string): string {
   return title ? `${title} | ${brand.name}` : `${brand.name} — ${brand.tagline}`;
 }
 
-export { brandSchema, PLACEHOLDER_NAME };
+export { brandSchema, DEFAULTS as brandDefaults };

@@ -1,22 +1,25 @@
 # Data model
 
-**Status: not implemented. Build step 2, blocked on the multi-tenancy and jurisdiction
-decisions in [`decisions/open-questions.md`](./decisions/open-questions.md).**
+**Status: not implemented. Build step 2, now unblocked.**
 
-This is the entity inventory drawn from the specification — what the schema will have to
-account for. Column-level design and the ERD land with step 2, once tenancy is settled,
-because tenancy changes nearly every table.
+Tenancy is decided: **multi-tenant**. Firms are the primary data boundary, so nearly every
+table below carries a tenant column and every RLS policy is tenant-scoped. Jurisdiction is
+decided: **US multi-state**, so consent records capture jurisdiction and template version
+at the time of acceptance.
+
+This is the entity inventory drawn from the specification. Column-level design and the ERD
+land with the migrations.
 
 ## Identity and access
 
-| Entity         | Notes                                                                                                           |
-| -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `users`        | Auth identity. **No role column** — see below.                                                                  |
-| `user_roles`   | Join table. A broker who also buys is one account with two roles.                                               |
-| `firms`        | PE funds, family offices, brokerages. First-class tenant or user attribute — **this is the blocking decision**. |
-| `firm_members` | User↔firm with a per-firm role.                                                                                 |
-| `sessions`     | Device list, remote sign-out, configurable length.                                                              |
-| `mfa_factors`  | TOTP minimum; SMS OTP optional.                                                                                 |
+| Entity         | Notes                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------- |
+| `users`        | Auth identity. **No role column** — see below.                                                    |
+| `user_roles`   | Join table. A broker who also buys is one account with two roles.                                 |
+| `firms`        | PE funds, family offices, brokerages. **First-class tenants** — the primary data boundary.        |
+| `firm_members` | User↔firm with a per-firm role. A user may belong to several firms with a different role in each. |
+| `sessions`     | Device list, remote sign-out, configurable length.                                                |
+| `mfa_factors`  | TOTP minimum; SMS OTP optional.                                                                   |
 
 The single most consequential choice here is that **roles are a join table, not an enum on
 `users`**. The specification calls for it, and it is the difference between a broker who
@@ -78,12 +81,12 @@ are the seam a processor plugs into later.
 
 ## Compliance
 
-| Entity                  | Notes                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `jurisdictions`         | State/country config driving disclosures and feature availability.                                                                                            |
-| `legal_templates`       | NDA, broker agreement, terms, privacy policy. **Versioned**, admin-editable, never hard-coded strings.                                                        |
-| `consent_records`       | What was consented to, when, **and which template version** — this cannot be backfilled after the fact, which is why the jurisdiction decision blocks step 2. |
-| `data_subject_requests` | Export and deletion requests, with documented retention exceptions.                                                                                           |
+| Entity                  | Notes                                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `jurisdictions`         | State/country config driving disclosures and feature availability.                                                            |
+| `legal_templates`       | NDA, broker agreement, terms, privacy policy. **Versioned**, admin-editable, never hard-coded strings.                        |
+| `consent_records`       | What was consented to, when, **which jurisdiction, and which template version**. None of this is backfillable after the fact. |
+| `data_subject_requests` | Export and deletion requests, with documented retention exceptions.                                                           |
 
 ## Retention
 

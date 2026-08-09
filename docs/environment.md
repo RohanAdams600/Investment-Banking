@@ -17,8 +17,13 @@ Anything secret must not carry that prefix.
 | `BRAND_MAILING_ADDRESS`     | Yes              | Footer and commercial-email compliance.                                                              |
 
 The name is not hard-coded anywhere. Renaming the company is a change to these five values
-plus a logo swap. `isBrandPlaceholder` is exported from `@ib/core` so launch-readiness
-checks can fail while the placeholder is still in use.
+plus a logo swap.
+
+The name and tagline are settled (**Cairn** / "Mark the way."). `BRAND_SUPPORT_EMAIL` and
+`BRAND_MAILING_ADDRESS` are still development defaults; `unconfiguredBrandFields` and
+`isBrandFullyConfigured` are exported from `@ib/core` so launch-readiness checks fail while
+either is in use. Both appear in the site footer and in commercial email, where a
+placeholder is a wrong disclosure rather than a cosmetic gap.
 
 ## Site
 

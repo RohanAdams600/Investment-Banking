@@ -5,20 +5,39 @@ recommendation — but the call belongs to the founder.
 
 ---
 
-## 1. Company name — blocks step 3
+## 1. Company name — RESOLVED
 
-Ten candidates with rationale, taglines, and collision risk: `docs/brand/naming.md`.
-Recommendation there is **Cairn**, with **Thesis** as the alternative and **Provenance** as
-the fallback.
+**Decision: Cairn.** Tagline "Mark the way." Working legal entity name
+"Cairn Markets, Inc." pending incorporation.
 
-**Blocks:** the marketing site, the logo, the domain purchase, the legal entity.
-**Does not block:** everything else. The name is one environment variable.
+Wired into `.env.example` and the defaults in `packages/core/src/brand`. Nothing else in
+the codebase hard-codes it.
 
-**Needed:** a name, plus a `.com` and trademark check on it.
+**Still outstanding, and these are yours to run:**
+
+- `.com` availability and acquisition cost
+- Trademark clearance — Cairn Capital operates in asset management, which is close enough
+  to the category to be worth a real search before spending on the domain
+- Incorporation, which settles `BRAND_LEGAL_NAME` and `BRAND_MAILING_ADDRESS`
+
+Until the support email and mailing address are real, `unconfiguredBrandFields` reports
+them and the app shows a warning badge. Those two appear in the site footer and in
+commercial email, where a placeholder is a wrong disclosure rather than an untidy one.
+
+Full shortlist and rationale retained in `docs/brand/naming.md`.
 
 ---
 
-## 2. Multi-tenancy — blocks step 2
+## 2. Multi-tenancy — RESOLVED
+
+**Decision: multi-tenant from the start.** Firms are the primary data boundary; users can
+belong to multiple firms with different roles in each. Nearly every table carries a tenant
+column and RLS policies are tenant-scoped.
+
+The reasoning is preserved below because it is the rationale a future maintainer will want
+when the cost of this shows up in a migration.
+
+---
 
 Does a firm — a PE fund, a family office, a brokerage — exist as a first-class tenant with
 data isolation, or is firm membership an attribute of a user?
@@ -30,7 +49,7 @@ schema, simpler policies, faster to build.
 column; RLS policies are tenant-scoped; users can belong to multiple firms with different
 roles in each.
 
-**Recommendation: multi-tenant from the start**, despite the added cost.
+**Recommendation (accepted): multi-tenant from the start**, despite the added cost.
 
 The specification already describes firm-level PE accounts with multiple associated users,
 broker commission splits across a brokerage, and family offices with elevated privacy
@@ -45,7 +64,19 @@ weighing against who is actually in the launch cohort.
 
 ---
 
-## 3. Jurisdiction scope — blocks step 2
+## 3. Jurisdiction scope — RESOLVED
+
+**Decision: US multi-state.** The jurisdiction-config layer is built in step 2 even though
+only one state may ship first. Consent records capture the jurisdiction and the disclosure
+template version at the time of acceptance.
+
+Still needed before step 11 (compliance templates), and this one is for counsel rather than
+engineering: **the platform's own regulatory posture** — whether it acts as a broker, a
+listing service, or neither, in each launch state. That answer determines what the software
+is obliged to record, and it is cheaper to know before the disclosure templates are written
+than after.
+
+---
 
 Which states or countries at launch, and are disclosures modeled per-jurisdiction from day
 one?
@@ -53,8 +84,8 @@ one?
 The compliance layer is designed to be jurisdiction-configurable rather than hard-coded.
 The question is how much of that layer to build now.
 
-**Recommendation: build the jurisdiction-config layer in step 2 even if only one state
-ships.** Consent records are retained for their legal life and are not reconstructable
+**Recommendation (accepted): build the jurisdiction-config layer in step 2 even if only
+one state ships.** Consent records are retained for their legal life and are not reconstructable
 after the fact — a consent row that does not record which jurisdiction's disclosure
 version was accepted cannot have that recovered later. The table columns are cheap now and
 impossible to backfill.

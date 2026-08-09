@@ -1,6 +1,11 @@
 # Naming candidates
 
-**Status: open — awaiting a decision from the founder.**
+**Status: RESOLVED — the name is Cairn.**
+
+The shortlist and reasoning are retained below as the record of how the decision was
+reached. Domain and trademark clearance are still outstanding; Cairn Capital operates in
+asset management, which is close enough to the category to warrant a real search before
+buying the domain.
 
 Ten candidates against the stated criteria: capital-markets gravitas, one to three
 syllables, works as a domain, no hyphenation, and nothing that overpromises given the
@@ -47,9 +52,10 @@ to every surface — page titles, transactional email, generated PDFs, legal foo
 ```
 NEXT_PUBLIC_BRAND_NAME="Cairn"
 NEXT_PUBLIC_BRAND_TAGLINE="Mark the way."
-BRAND_LEGAL_NAME="Cairn Markets, Inc."
+BRAND_LEGAL_NAME="Cairn Markets, Inc."   # pending incorporation
 ```
 
-Read through `packages/core/src/brand`. Until it is set, the app runs under a placeholder
-and shows a "brand not yet selected" badge, and `isBrandPlaceholder` is exported so
-launch-readiness checks can fail on it.
+Read through `packages/core/src/brand`. The support email and mailing address are still
+development defaults; `unconfiguredBrandFields` reports them and the app shows a warning
+badge, because both appear in the site footer and in commercial email where a placeholder
+is a wrong disclosure rather than a cosmetic gap.

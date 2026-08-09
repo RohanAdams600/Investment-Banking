@@ -91,6 +91,11 @@ Not yet built. Recorded here so the shape is agreed before implementation.
 
 PostgreSQL via Supabase. Auth via Supabase Auth.
 
+**Multi-tenant.** Firms — PE funds, family offices, brokerages — are the primary data
+boundary, not an attribute of a user. Nearly every table carries a tenant column and every
+RLS policy is tenant-scoped. A user may belong to several firms with a different role in
+each.
+
 **A user holds many roles.** A `user_roles` join table, never a role enum on `users` — a
 broker who is also a buyer is one account with two roles, and the spec calls for this
 explicitly. Getting it wrong here is expensive to undo once listings and deal rooms
@@ -127,8 +132,8 @@ access policies. Downloads are watermarked server-side at request time with the 
 name, email, and timestamp — never client-side, which would be trivially bypassed.
 Re-uploading a document creates a new version; nothing is silently overwritten.
 
-## Deferred decisions
+## Decisions
 
-Recorded in `docs/decisions/open-questions.md`. The ones that change the data model —
-multi-tenancy in particular — are blocking for step 2 and are the reason step 2 has not
-started.
+Recorded in `docs/decisions/open-questions.md`. The three that shaped the data model —
+name, tenancy, and jurisdiction scope — are resolved. The remaining open items (hosting
+region, email provider, e-signature backend, AI budget) do not block step 2.

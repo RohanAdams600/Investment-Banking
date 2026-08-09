@@ -98,7 +98,7 @@ worse than leaving it forward.
 
 ### Launch readiness (step 12)
 
-- [ ] `isBrandPlaceholder` is false — a real brand name is configured
+- [ ] `isBrandFullyConfigured` is true — real support email and mailing address configured
 - [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [ ] Every table has RLS enabled, verified by test

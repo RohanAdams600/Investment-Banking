@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { brand, isBrandPlaceholder } from '@ib/core';
+import { brand, isBrandFullyConfigured, unconfiguredBrandFields } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardDescription, CardTitle } from '@ib/ui';
 
 /**
@@ -13,9 +13,11 @@ export default function HomePage() {
   return (
     <main className="py-30 mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-8 px-6">
       <div className="space-y-4">
-        {isBrandPlaceholder ? (
-          <Badge variant="warning">Placeholder brand — name not yet selected</Badge>
-        ) : null}
+        {isBrandFullyConfigured ? null : (
+          <Badge variant="warning">
+            Placeholder brand config: {unconfiguredBrandFields.join(', ')}
+          </Badge>
+        )}
 
         <h1 className="text-4xl font-semibold">{brand.name}</h1>
         <p className="text-text-secondary max-w-xl text-lg">{brand.tagline}</p>
