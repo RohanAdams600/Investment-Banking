@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border-subtle;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-text-primary antialiased;
+    font-feature-settings:
+      'kern' 1,
+      'liga' 1;
+  }
+
+  /* Headings default to the display face; body copy stays on the UI sans. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-text-primary;
+    text-wrap: balance;
+  }
+
+  /* A visible focus ring is a non-negotiable on a product handling confidential
+     documents — keyboard users must always know what they are about to open. */
+  :focus-visible {
+    @apply ring-ring ring-offset-canvas outline-none ring-2 ring-offset-2;
+  }
+
+  ::selection {
+    @apply bg-primary-subtle text-text-primary;
+  }
+}
+
+@layer utilities {
+  /* Financial figures: fixed-width digits so columns align down a table. */
+  .font-tabular {
+    font-family: theme('fontFamily.mono');
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+coverage/
+pnpm-lock.yaml
+
+# Generated from packages/ui/src/tokens/*.ts — formatting it would create a
+# permanent diff against the generator's output.
+packages/ui/src/styles/tokens.css
