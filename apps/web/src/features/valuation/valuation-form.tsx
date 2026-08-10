@@ -1,8 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { AIDisclaimer, Badge, Card, CardContent, CardHeader, CardTitle, Input } from '@ib/ui';
+import {
+  AIDisclaimer,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+} from '@ib/ui';
 import {
   estimateValuation,
   formatMoney,
@@ -11,6 +20,9 @@ import {
   type IndustryKey,
   type ValuationResult,
 } from '@ib/core';
+
+import { saveValuation } from './actions';
+import { emptySaveState, type SaveValuationState } from './types';
 
 /**
  * Valuation intake and result.
@@ -107,8 +119,35 @@ export function ValuationForm() {
     }
   }, [form, profile.basis]);
 
+  const [saveState, setSaveState] = useState<SaveValuationState>(emptySaveState);
+  const [saving, startSaving] = useTransition();
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  function handleSave() {
+    const revenue = toCents(form.revenue);
+    const earnings = toCents(form.earnings);
+    if (revenue === undefined || earnings === undefined) return;
+
+    setSaveState(emptySaveState);
+    startSaving(async () => {
+      // Only the raw inputs are sent. The server recalculates the range from
+      // them rather than trusting numbers this component computed.
+      setSaveState(
+        await saveValuation({
+          industry: form.industry,
+          revenueCents: revenue,
+          earningsCents: earnings,
+          customerConcentration: toFraction(form.customerConcentration),
+          recurringRevenueShare: toFraction(form.recurringRevenueShare),
+          revenueGrowth: toFraction(form.revenueGrowth),
+          yearsInBusiness: form.yearsInBusiness ? Number(form.yearsInBusiness) : undefined,
+          ownerDependence: form.ownerDependence === '' ? undefined : form.ownerDependence,
+        }),
+      );
+    });
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -245,7 +284,32 @@ export function ValuationForm() {
           </Card>
         ) : null}
 
-        {result ? <ValuationOutput result={result} /> : null}
+        {result ? (
+          <>
+            <ValuationOutput result={result} />
+
+            <Card>
+              <CardContent className="space-y-3 py-4">
+                <Button variant="secondary" onClick={handleSave} loading={saving}>
+                  Save this estimate
+                </Button>
+                <p className="text-text-muted text-xs">
+                  Saved estimates are private to you. Nothing is stored until you choose to save.
+                </p>
+                {saveState.error ? (
+                  <p role="alert" className="text-danger text-sm">
+                    {saveState.error}
+                  </p>
+                ) : null}
+                {saveState.notice ? (
+                  <p role="status" className="text-success text-sm">
+                    {saveState.notice}
+                  </p>
+                ) : null}
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
 
         {!result && !error ? (
           <Card>

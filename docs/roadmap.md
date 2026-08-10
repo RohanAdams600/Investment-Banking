@@ -6,7 +6,7 @@ documentation is current.
 | #   | Step                                                    | Spec sections | Status                                          |
 | --- | ------------------------------------------------------- | ------------- | ----------------------------------------------- |
 | 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                    |
-| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Mostly complete** — MFA and session UI remain |
+| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates |
 | 3   | Marketing site                                          | 1, 2          | Not started — brand name settled (Cairn)        |
 | 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | Not started                                     |
 | 5   | Matching engine                                         | 5             | Not started                                     |
@@ -77,8 +77,8 @@ CI now runs a Postgres service, and fails rather than skips if the database is m
 - **Step-up guard** (`requireStepUp`) for actions where a stolen session is the threat.
   Available; not yet applied to any route.
 
-Still open: onboarding (role selection and consent capture, blocked on published legal
-templates — see open question 3), and leaked-password protection in the Supabase dashboard.
+Role selection now ships (see below). Consent capture remains blocked on published legal
+templates — see open question 3.
 
 ## Deal room messaging (out of sequence, requested)
 
@@ -99,9 +99,30 @@ Built ahead of steps 6–7 on request. `/deals/[dealId]/messages`.
 - **34 RLS tests** covering cross-deal isolation, impersonation, removed members, and
   append-only guarantees.
 
-Not built: message editing UI (the API and policies exist), transcript export (the
-`exported` audit action is defined for it), and the deal-creation flow that seeds a deal's
-first conversation.
+Not built: message editing UI (the API and policies exist) and transcript export (the
+`exported` audit action is defined for it). Deal creation landed in 0014, below.
+
+## Onboarding and deal creation
+
+The product was unusable end to end until this landed, and the two gaps compounded:
+
+- A new account holds **no platform role**, so every capability check returned false. Deny
+  by default is the right posture, but without a way to choose it is a dead end. `/onboarding`
+  is the picker; the dashboard redirects there when an account is roleless.
+- **There was no way to open a deal or its first conversation.** Every messaging policy
+  computes authorisation from conversation membership, and membership could only be granted
+  by an existing administrator — so nothing could ever be created, and the deal room verified
+  at length in the previous step was unreachable by anyone.
+
+`create_deal()` (migration 0014) creates the deal, its first conversation and the creator's
+banker membership in one transaction. Same reasoning as `create_firm`: two statements leave
+a window in which the thing exists unclaimed. Sell-side only — a buyer is invited into a
+deal, they do not start one — and a test asserts the SQL rule agrees with `deal:create` in
+the TypeScript capability catalog, since the two are the same rule expressed twice.
+
+Also landed: valuation estimates persist (recalculated server-side from the inputs rather
+than trusting the browser's numbers), and the dashboard links to every route that now
+exists.
 
 ## What can proceed in parallel
 

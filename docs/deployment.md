@@ -111,8 +111,25 @@ slot.
 
 ### Live migration state
 
-**All 13 migrations are applied** to project `Cairn` (`treltiukpuxhnzuplegu`, us-east-1),
+**All 14 migrations are applied** to project `Cairn` (`treltiukpuxhnzuplegu`, us-east-1),
 plus the jurisdiction seed.
+
+`0014_deal_creation.sql` applied successfully, but the connection dropped before the
+post-apply verification could run. The invariant checks below were confirmed after 0013;
+re-run them, plus a `create_deal` authorization spot-check, at the next opportunity:
+
+```sql
+-- expect 0 / 0 / 0
+select
+  (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='r'
+      and (not c.relrowsecurity or not c.relforcerowsecurity)) as missing_rls,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='app' and (p.proconfig is null or not exists (
+      select 1 from unnest(p.proconfig) c where c like 'search_path=%'))) as unpinned_search_path,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and has_function_privilege('anon', p.oid, 'EXECUTE')) as anon_fns;
+```
 
 Verified against the live project after applying, using the same invariants the test suite
 asserts:

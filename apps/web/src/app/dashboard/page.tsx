@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState } from '@ib/ui';
 import { CircleUser } from 'lucide-react';
@@ -38,6 +39,11 @@ export default async function DashboardPage() {
   const actor = await getActor();
   if (!actor) redirect('/sign-in');
 
+  // A new account holds no roles and can therefore do nothing. Sending them to
+  // the picker is the difference between deny-by-default being a safe posture
+  // and being a dead end.
+  if (actor.platformRoles.length === 0) redirect('/onboarding');
+
   return (
     <main className="py-18 mx-auto max-w-2xl space-y-6 px-6">
       <div className="flex items-start justify-between gap-4">
@@ -55,15 +61,53 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Where to go</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          {[
+            { href: '/deals', label: 'Deals', hint: 'Deal rooms you are a party to' },
+            {
+              href: '/tools/valuation',
+              label: 'Valuation estimate',
+              hint: 'What a business might be worth',
+            },
+            {
+              href: '/tools/buyer-criteria',
+              label: 'Acquisition criteria',
+              hint: 'What you are looking to buy',
+            },
+            {
+              href: '/tools/legal-documents',
+              label: 'Legal documents',
+              hint: 'Questions to take to counsel',
+            },
+            {
+              href: '/settings/security',
+              label: 'Security',
+              hint: 'Two-factor and active sessions',
+            },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="border-border-subtle hover:border-border-default block rounded-md border p-3 transition-colors"
+            >
+              <span className="block text-sm font-medium">{link.label}</span>
+              <span className="text-text-muted block text-xs">{link.hint}</span>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Platform roles</CardTitle>
         </CardHeader>
         <CardContent>
           {actor.platformRoles.length === 0 ? (
             // The expected state for a new account: registration grants nothing
             // until onboarding. See supabase/migrations/0007.
-            <p className="text-text-muted text-sm">
-              No roles yet. Onboarding — role selection and consent — is still to be built.
-            </p>
+            <p className="text-text-muted text-sm">No roles yet.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {actor.platformRoles.map((role) => (

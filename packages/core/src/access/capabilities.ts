@@ -24,6 +24,15 @@ export const CAPABILITIES = [
   /** Admin review queue. */
   'listing:review',
 
+  // --- deals ---------------------------------------------------------------
+  /**
+   * Opening a deal. Sell-side only: a buyer is invited into a deal, they do not
+   * start one. Mirrored in SQL by `app.can_create_deal()`, which the
+   * `create_deal()` function checks — the two are duplicated because the
+   * database cannot import TypeScript, and a test asserts they agree.
+   */
+  'deal:create',
+
   // --- deal room ----------------------------------------------------------
   'deal_room:access',
   'document:upload',
@@ -68,6 +77,7 @@ const BUY_SIDE_CAPABILITIES: readonly Capability[] = [
 
 /** Capabilities shared by anyone bringing a business to market. */
 const SELL_SIDE_CAPABILITIES: readonly Capability[] = [
+  'deal:create',
   'listing:create',
   'listing:update_own',
   'listing:publish_request',
@@ -111,6 +121,7 @@ const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
   ],
 
   admin: [
+    'deal:create',
     'listing:review',
     'listing:view_teaser',
     'admin:verify_users',
