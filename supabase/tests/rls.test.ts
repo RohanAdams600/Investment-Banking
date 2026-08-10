@@ -139,6 +139,15 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         legal_templates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         profiles: ['INSERT', 'SELECT', 'UPDATE'],
         user_roles: ['DELETE', 'INSERT', 'SELECT'],
+
+        // Messaging. Note what is missing: no INSERT on deals or conversations
+        // (created server-side), no DELETE on messages (withdrawal is a soft
+        // delete through withdraw_message), and SELECT only on the audit log.
+        deals: ['SELECT'],
+        deal_conversations: ['SELECT'],
+        conversation_members: ['INSERT', 'SELECT', 'UPDATE'],
+        messages: ['INSERT', 'SELECT', 'UPDATE'],
+        message_audit_log: ['SELECT'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

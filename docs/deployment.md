@@ -109,6 +109,34 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
+### Migrations not yet applied to the live project
+
+`0011_messaging.sql` and `0012_messaging_rls.sql` are **written, tested locally, and not
+applied** to the Cairn project. The Supabase connection dropped part-way through the
+rollout, after `0010_sessions.sql` succeeded. Apply them in order before using
+`/deals/[dealId]/messages` against the live project — until then those routes will fail
+with a missing-relation error.
+
+```bash
+supabase link --project-ref treltiukpuxhnzuplegu
+supabase db push
+```
+
+Then re-run the security linter, since 0012 adds SECURITY DEFINER functions and storage
+policies that it will want to check:
+
+```bash
+supabase inspect db lint
+```
+
+Two things to verify by hand afterwards, because they behave differently on Supabase than
+on local Postgres and this exact class of gap has bitten twice already
+(see `docs/security.md`):
+
+- `authenticated` holds only the grants in the allowlist test — the default privileges that
+  0008 revoked apply to future tables, but confirm rather than assume.
+- No function in `public` is executable by `anon`.
+
 **Pending:**
 
 - Migration workflow: how migrations run against staging before production.

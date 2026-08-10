@@ -112,6 +112,45 @@ function cannot do it. The risk is contained by the `auth.uid()` guard, by `anon
 EXECUTE grant, and by the function taking no identifiers from the caller: it can only
 create a firm owned by whoever called it.
 
+## Deal room messaging
+
+Authorisation is computed from one fact: is this user an **active** member of this
+conversation. Everything else derives from it — reading a deal, listing its conversations,
+subscribing to its realtime channel, downloading its attachments.
+
+Verified by 34 tests in `supabase/tests/messaging-rls.test.ts`:
+
+| Guarantee                                             | Mechanism                                                                        |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A buyer cannot read another deal's messages           | `app.is_active_conversation_member()` in the SELECT policy                       |
+| A member cannot send as somebody else                 | `sender_id = auth.uid()` in the INSERT policy                                    |
+| A message cannot be reattributed, moved, or backdated | `app.freeze_message_immutables()` trigger comparing OLD to NEW                   |
+| A removed member loses access immediately             | Every helper filters `removed_at is null`                                        |
+| A buyer cannot widen the room                         | Membership writes require `banker` or `admin`                                    |
+| A withdrawn message's body never leaves the database  | `deleted_at is null` in the SELECT policy                                        |
+| Audit entries cannot be forged or removed             | Written by triggers; no INSERT/UPDATE/DELETE grant for clients                   |
+| Realtime is not a second path to content              | Private channel authorized by the same membership rule; payload carries ids only |
+| Attachments have no permanent URL                     | Private bucket; signed URLs expire in 60 seconds                                 |
+
+### Why deletion needs a function
+
+`withdraw_message()` exists because of a Postgres behaviour worth stating plainly: **when a
+table has SELECT policies, an UPDATE also checks the new row against them.** The SELECT
+policy requires `deleted_at is null`, so any UPDATE setting `deleted_at` produces a row the
+author could no longer see, and Postgres rejects it.
+
+So a strict SELECT policy and client-side soft delete cannot coexist. Keeping the strict
+policy is the better trade — it is what makes "a withdrawn body never leaves the database"
+true over every path rather than only the ones the application remembers to filter. The
+function re-checks sender identity and live membership, so routing around the policy does
+not mean routing around the rule.
+
+### Three role axes
+
+`platform_role` (many per user) · `firm_role` (one per firm) · `conversation_role` (one per
+conversation). They answer different questions, and `banker` exists only on the third — it
+is a seat at a table, not a platform identity.
+
 ## The service role
 
 `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS completely. Legitimate uses are narrow:
@@ -140,10 +179,14 @@ audited elevation rather than an ambient permission.
 
 Honest list of what is not yet done. Tracked in `docs/roadmap.md`.
 
-- **MFA.** Supabase Auth supports TOTP; enrolment and the enforcement policy are not built.
-- **Session management.** No device list, no remote sign-out, no forced re-auth before
-  sensitive actions.
-- **Rate limiting.** Nothing on auth or search endpoints yet.
+- **Rate limiting is in-process.** `apps/web/src/lib/rate-limit.ts` defines the interface
+  and ships a fixed-window implementation held in memory. On serverless that is a speed
+  bump, not a limit — each region and cold start gets its own counter. The seam is built so
+  swapping in Redis or Upstash is one implementation; every call site already routes through
+  it. Treat the current limits as protection against a stuck client, not an attacker.
+- **Step-up auth is available but not applied.** `requireStepUp()` exists and MFA enrolment
+  works; no route calls it yet. Downloading confidential documents and changing commission
+  settings should, once those exist.
 - **Content Security Policy.** Baseline headers are set in `next.config.ts`; the CSP waits
   until the real third-party origins are known. A permissive placeholder is worse than
   none, because it looks like coverage.

@@ -44,6 +44,8 @@ export async function applyMigrations(client: Client): Promise<void> {
     drop schema if exists app cascade;
     drop schema if exists auth cascade;
     drop schema if exists extensions cascade;
+    drop schema if exists realtime cascade;
+    drop schema if exists storage cascade;
     create schema public;
   `);
 
@@ -84,16 +86,34 @@ export interface ActingResult<T> {
  * Wrapped in a transaction so `set local` reverts cleanly even when the query
  * throws — otherwise one failing test leaks its role into the next.
  */
+export interface ActingOptions {
+  /** Full JWT claim set, for policies that read more than `sub` (e.g. session_id). */
+  claims?: Record<string, unknown>;
+  /** Realtime topic being subscribed to, read by `realtime.topic()`. */
+  realtimeTopic?: string;
+}
+
 export async function actingAs<T extends Record<string, unknown>>(
   client: Client,
   userId: string | null,
   sql: string,
   params: unknown[] = [],
+  options: ActingOptions = {},
 ): Promise<ActingResult<T>> {
   await client.query('begin');
   try {
     await client.query('set local role authenticated');
     await client.query('select set_config($1, $2, true)', ['request.jwt.claim.sub', userId ?? '']);
+    await client.query('select set_config($1, $2, true)', [
+      'request.jwt.claims',
+      JSON.stringify({ sub: userId, ...options.claims }),
+    ]);
+    if (options.realtimeTopic !== undefined) {
+      await client.query('select set_config($1, $2, true)', [
+        'realtime.topic',
+        options.realtimeTopic,
+      ]);
+    }
     const result = await client.query<T>(sql, params);
     await client.query('commit');
     return { rows: result.rows, rowCount: result.rowCount ?? 0 };

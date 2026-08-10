@@ -66,13 +66,42 @@ All three resolved — see `docs/decisions/open-questions.md` for the full reaso
 
 CI now runs a Postgres service, and fails rather than skips if the database is missing.
 
-## Step 2 — what remains
+## Step 2 — completed since
 
-- MFA enrolment (TOTP) and the enrolment UI
-- Session list with remote sign-out
-- Onboarding: role selection and consent capture. Consent capture is blocked on published
-  legal templates, which need counsel — see open question 3.
-- Enabling leaked-password protection in the Supabase Auth settings (dashboard only).
+- **MFA (TOTP)**: enrol, verify, unenrol, with removal gated on a session that actually
+  completed the second factor. `/settings/security`.
+- **Session management**: device list with browser/platform, last-seen, and 2FA marker;
+  revoke one or all others. Backed by `list_my_sessions()` and `revoke_session()`, both
+  SECURITY DEFINER and filtered on `auth.uid()` — so the app never holds a credential that
+  could read anybody else's sessions.
+- **Step-up guard** (`requireStepUp`) for actions where a stolen session is the threat.
+  Available; not yet applied to any route.
+
+Still open: onboarding (role selection and consent capture, blocked on published legal
+templates — see open question 3), and leaked-password protection in the Supabase dashboard.
+
+## Deal room messaging (out of sequence, requested)
+
+Built ahead of steps 6–7 on request. `/deals/[dealId]/messages`.
+
+- **Schema**: `deals`, `deal_conversations`, `conversation_members`, `messages`,
+  `message_audit_log` (migrations 0011–0012).
+- **A third role axis**: `conversation_role` (buyer / seller / banker / admin), separate
+  from platform and firm roles.
+- **RLS**: read and send require active membership; `sender_id` must equal `auth.uid()`;
+  triggers freeze sender, conversation, and send time; withdrawal is a soft delete through
+  `withdraw_message()`.
+- **Audit log written by triggers**, not by the application, so no code path can skip it.
+  Records body length, never bodies.
+- **Realtime**: private broadcast channels, authorized by RLS on `realtime.messages`.
+  Payload carries ids only; clients refetch through RLS.
+- **Attachments**: private bucket, 60-second signed URLs, no permanent public URL.
+- **34 RLS tests** covering cross-deal isolation, impersonation, removed members, and
+  append-only guarantees.
+
+Not built: message editing UI (the API and policies exist), transcript export (the
+`exported` audit action is defined for it), and the deal-creation flow that seeds a deal's
+first conversation.
 
 ## What can proceed in parallel
 
