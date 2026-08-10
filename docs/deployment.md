@@ -109,13 +109,29 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
-### Migrations not yet applied to the live project
+### Migrations not yet applied to the live project — action required
 
-`0011_messaging.sql` and `0012_messaging_rls.sql` are **written, tested locally, and not
-applied** to the Cairn project. The Supabase connection dropped part-way through the
-rollout, after `0010_sessions.sql` succeeded. Apply them in order before using
-`/deals/[dealId]/messages` against the live project — until then those routes will fail
-with a missing-relation error.
+`0011_messaging.sql` **is applied**. `0012_messaging_rls.sql` and
+`0013_valuation_criteria_legal.sql` are **not** — the Supabase connection dropped twice
+mid-rollout.
+
+**This leaves the messaging tables on the live project with no RLS enabled.** They should
+be unreachable, because 0008 revoked the Supabase default grants and 0012 is what grants
+them back, so `authenticated` currently holds nothing on those tables. That is fail-closed,
+and it is one layer where the design calls for two. Apply 0012 before anyone uses the deal
+room, and verify rather than assume:
+
+```sql
+-- expect every table listed to show t / t
+select c.relname, c.relrowsecurity, c.relforcerowsecurity
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'r' order by 1;
+
+-- expect zero rows before 0012 is applied
+select table_name, privilege_type from information_schema.role_table_grants
+ where grantee = 'authenticated' and table_schema = 'public'
+   and table_name in ('messages','conversation_members','deal_conversations','deals');
+```
 
 ```bash
 supabase link --project-ref treltiukpuxhnzuplegu

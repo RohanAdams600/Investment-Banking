@@ -148,6 +148,13 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         conversation_members: ['INSERT', 'SELECT', 'UPDATE'],
         messages: ['INSERT', 'SELECT', 'UPDATE'],
         message_audit_log: ['SELECT'],
+
+        // Valuation, criteria and legal drafts. Note no DELETE on criteria
+        // (superseded, not removed) or on drafts (part of the negotiating
+        // record once shared).
+        valuation_estimates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        acquisition_criteria: ['INSERT', 'SELECT', 'UPDATE'],
+        legal_document_drafts: ['INSERT', 'SELECT', 'UPDATE'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(
