@@ -109,49 +109,28 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
-### Migrations not yet applied to the live project — action required
+### Live migration state
 
-`0011_messaging.sql` **is applied**. `0012_messaging_rls.sql` and
-`0013_valuation_criteria_legal.sql` are **not** — the Supabase connection dropped twice
-mid-rollout.
+**All 13 migrations are applied** to project `Cairn` (`treltiukpuxhnzuplegu`, us-east-1),
+plus the jurisdiction seed.
 
-**This leaves the messaging tables on the live project with no RLS enabled.** They should
-be unreachable, because 0008 revoked the Supabase default grants and 0012 is what grants
-them back, so `authenticated` currently holds nothing on those tables. That is fail-closed,
-and it is one layer where the design calls for two. Apply 0012 before anyone uses the deal
-room, and verify rather than assume:
+Verified against the live project after applying, using the same invariants the test suite
+asserts:
 
-```sql
--- expect every table listed to show t / t
-select c.relname, c.relrowsecurity, c.relforcerowsecurity
-  from pg_class c join pg_namespace n on n.oid = c.relnamespace
- where n.nspname = 'public' and c.relkind = 'r' order by 1;
+| Check                                                    | Result                                       |
+| -------------------------------------------------------- | -------------------------------------------- |
+| Tables in `public` missing RLS or FORCE                  | 0 of 16                                      |
+| Functions in `app` without a pinned `search_path`        | 0                                            |
+| Functions in `public` executable by `anon`               | 0                                            |
+| TRUNCATE / TRIGGER / REFERENCES granted to a client role | 0                                            |
+| `authenticated` grants                                   | match the allowlist in `rls.test.ts` exactly |
+| Attachments bucket public                                | false                                        |
+| Realtime authorization policies                          | 2                                            |
 
--- expect zero rows before 0012 is applied
-select table_name, privilege_type from information_schema.role_table_grants
- where grantee = 'authenticated' and table_schema = 'public'
-   and table_name in ('messages','conversation_members','deal_conversations','deals');
-```
-
-```bash
-supabase link --project-ref treltiukpuxhnzuplegu
-supabase db push
-```
-
-Then re-run the security linter, since 0012 adds SECURITY DEFINER functions and storage
-policies that it will want to check:
-
-```bash
-supabase inspect db lint
-```
-
-Two things to verify by hand afterwards, because they behave differently on Supabase than
-on local Postgres and this exact class of gap has bitten twice already
-(see `docs/security.md`):
-
-- `authenticated` holds only the grants in the allowlist test — the default privileges that
-  0008 revoked apply to future tables, but confirm rather than assume.
-- No function in `public` is executable by `anon`.
+Messaging behaviour was also exercised live with temporary fixtures, since local Postgres
+and Supabase have diverged before: cross-deal read denied, cross-deal post denied,
+sender impersonation denied, audit trigger fired, audit metadata carried no message body.
+All fixtures were removed — every table is empty except the 51 jurisdictions, all inactive.
 
 **Pending:**
 

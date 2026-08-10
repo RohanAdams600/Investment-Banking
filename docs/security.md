@@ -103,14 +103,22 @@ lockdown works rather than assuming an absence of grants means an absence of acc
 
 ## Accepted linter findings
 
-Supabase's database linter reports one remaining warning that is intentional:
+Supabase's database linter reports five warnings, all of the same class and all
+intentional: **SECURITY DEFINER functions callable by `authenticated`.**
 
-**`create_firm` is a SECURITY DEFINER function callable by `authenticated`.** That is the
-design. It exists precisely because the caller has no rights on `firms` — creating a firm
-and installing its first owner has to happen in one transaction, and a caller-rights
-function cannot do it. The risk is contained by the `auth.uid()` guard, by `anon` having no
-EXECUTE grant, and by the function taking no identifiers from the caller: it can only
-create a firm owned by whoever called it.
+| Function                | Why it is definer-rights                                                                             | What contains it                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `create_firm`           | The caller has no rights on `firms`; the firm and its first owner must be created in one transaction | Takes no user identifier — it can only create a firm owned by the caller         |
+| `list_my_sessions`      | `auth.sessions` is not exposed through PostgREST                                                     | Filtered on `auth.uid()`; takes no user identifier                               |
+| `revoke_session`        | Same                                                                                                 | `user_id = auth.uid()` predicate on the delete makes the caller-supplied id safe |
+| `revoke_other_sessions` | Same                                                                                                 | Filtered on `auth.uid()`; keeps the current session                              |
+| `withdraw_message`      | The SELECT policy makes a client-side soft delete impossible (see above)                             | Re-checks sender identity and live membership                                    |
+
+The pattern is what the linter flags, not a defect. Every one of these exists _because_ the
+caller lacks direct rights, and each either takes no user identifier or re-checks ownership
+inside. None is granted to `anon` — verified, not assumed.
+
+Leaked-password protection is now enabled, so it no longer appears in the linter output.
 
 ## Deal room messaging
 
@@ -190,8 +198,3 @@ Honest list of what is not yet done. Tracked in `docs/roadmap.md`.
 - **Content Security Policy.** Baseline headers are set in `next.config.ts`; the CSP waits
   until the real third-party origins are known. A permissive placeholder is worse than
   none, because it looks like coverage.
-- **Leaked-password protection is disabled.** Supabase Auth can check new passwords against
-  HaveIBeenPwned. It is an Auth project setting, not schema, so it cannot be enabled from a
-  migration — someone has to switch it on in the dashboard under **Authentication →
-  Policies**. On a product whose accounts gate confidential financial documents it should
-  be on.
