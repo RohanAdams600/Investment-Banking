@@ -41,7 +41,7 @@ export interface ListingRef {
   status: ListingStatus;
 }
 
-export type NdaStatus = 'none' | 'sent' | 'signed' | 'revoked' | 'expired';
+export type NdaStatus = 'none' | 'requested' | 'sent' | 'signed' | 'revoked' | 'expired';
 
 export interface NdaRef {
   listingId: string;

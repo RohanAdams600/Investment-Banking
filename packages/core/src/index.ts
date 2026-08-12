@@ -8,6 +8,7 @@ export {
   type BrandConfig,
 } from './brand';
 export * from './access';
+export * from './listings';
 export * from './valuation';
 export * from './criteria';
 export * from './legal';

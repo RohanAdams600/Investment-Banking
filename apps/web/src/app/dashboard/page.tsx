@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { can } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState } from '@ib/ui';
 import { CircleUser } from 'lucide-react';
 
@@ -17,11 +18,16 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 /**
- * Placeholder dashboard.
+ * The dashboard.
  *
- * Role-scoped portals arrive in step 4. What this page does today is close the
- * loop on step 2: it proves a session survives the middleware, that `getActor()`
- * assembles roles and memberships through RLS, and that sign-out works.
+ * Role-scoped by capability rather than by role name. `can(actor, 'listing:create')`
+ * survives a reorganisation of the role model; `roles.includes('seller')` does
+ * not, and would have to be found and changed in every page the day a new
+ * sell-side role appears.
+ *
+ * Hiding a link is not access control — every destination re-checks, and the
+ * database refuses regardless. This is about not offering somebody a door that
+ * will not open for them.
  */
 export default async function DashboardPage() {
   if (!isSupabaseConfigured()) {
@@ -49,7 +55,7 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="text-text-muted text-sm">Role-scoped portals arrive in step 4.</p>
+          <p className="text-text-muted text-sm">Everything you can reach, in one place.</p>
         </div>
 
         <form action={signOut}>
@@ -65,37 +71,66 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2">
           {[
-            { href: '/deals', label: 'Deals', hint: 'Deal rooms you are a party to' },
+            {
+              href: '/listings',
+              label: 'Businesses for sale',
+              hint: 'Browse the market',
+              show: can(actor, 'listing:view_teaser'),
+            },
+            {
+              href: '/listings/mine',
+              label: 'My listings',
+              hint: 'Drafts, live listings and access requests',
+              show: can(actor, 'listing:create'),
+            },
+            {
+              href: '/watchlist',
+              label: 'Watchlist',
+              hint: 'Listings you saved',
+              show: can(actor, 'listing:view_full'),
+            },
+            {
+              href: '/deals',
+              label: 'Deals',
+              hint: 'Deal rooms you are a party to',
+              show: can(actor, 'deal_room:access'),
+            },
             {
               href: '/tools/valuation',
               label: 'Valuation estimate',
               hint: 'What a business might be worth',
+              show: true,
             },
             {
               href: '/tools/buyer-criteria',
               label: 'Acquisition criteria',
               hint: 'What you are looking to buy',
+              show: can(actor, 'listing:view_full'),
             },
             {
               href: '/tools/legal-documents',
               label: 'Legal documents',
               hint: 'Questions to take to counsel',
+              show: true,
             },
             {
               href: '/settings/security',
               label: 'Security',
               hint: 'Two-factor and active sessions',
+              show: true,
             },
-          ].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="border-border-subtle hover:border-border-default block rounded-md border p-3 transition-colors"
-            >
-              <span className="block text-sm font-medium">{link.label}</span>
-              <span className="text-text-muted block text-xs">{link.hint}</span>
-            </Link>
-          ))}
+          ]
+            .filter((link) => link.show)
+            .map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="border-border-subtle hover:border-border-default block rounded-md border p-3 transition-colors"
+              >
+                <span className="block text-sm font-medium">{link.label}</span>
+                <span className="text-text-muted block text-xs">{link.hint}</span>
+              </Link>
+            ))}
         </CardContent>
       </Card>
 

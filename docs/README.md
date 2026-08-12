@@ -9,7 +9,7 @@
 | [`deployment.md`](./deployment.md)                             | Local setup, CI, environments, launch-readiness checklist          |
 | [`security.md`](./security.md)                                 | Authorisation model, RLS guarantees, known gaps                    |
 | [`agents.md`](./agents.md)                                     | AI agent contracts and human-approval boundaries                   |
-| [`data-model.md`](./data-model.md)                             | Entity inventory — schema pending step 2                           |
+| [`data-model.md`](./data-model.md)                             | Entity inventory, and the reasoning behind the schema that exists  |
 | [`decisions/open-questions.md`](./decisions/open-questions.md) | Decisions needed from the founder, with recommendations            |
 | [`brand/naming.md`](./brand/naming.md)                         | Ten name candidates with rationale and taglines                    |
 | [`brand/logo-brief.md`](./brand/logo-brief.md)                 | Creative brief for a designer or image tool                        |
@@ -19,8 +19,12 @@
 
 These land with their build step rather than being written speculatively:
 
-- **API reference** (OpenAPI, generated from route handlers) — step 4, when routes exist
-- **Backup and restore procedure** — when a Supabase project exists to restore
+- **API reference** (OpenAPI, generated from route handlers). Deferred past step 4: the
+  listings feature is server actions and server components, not REST routes, so there is
+  nothing under `/api/v1` yet to describe beyond the messaging endpoints. It becomes worth
+  writing when the partner API does.
+- **Backup and restore procedure** — a restore has to actually be executed before this is
+  worth writing down; see the launch checklist in `deployment.md`.
 
 ## Keeping this current
 

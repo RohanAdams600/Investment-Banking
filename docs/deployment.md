@@ -17,7 +17,7 @@ pnpm dev                       # http://localhost:3000
 Useful:
 
 ```bash
-pnpm test                                   # 94 tests
+pnpm test                                   # 285 tests
 pnpm typecheck                              # all workspace packages
 pnpm lint
 pnpm --filter @ib/ui tokens:build           # after editing any design token
@@ -111,12 +111,72 @@ slot.
 
 ### Live migration state
 
-**All 14 migrations are applied** to project `Cairn` (`treltiukpuxhnzuplegu`, us-east-1),
+**All 16 migrations are applied** to project `Cairn` (`treltiukpuxhnzuplegu`, us-east-1),
 plus the jurisdiction seed.
 
-`0014_deal_creation.sql` applied successfully, but the connection dropped before the
-post-apply verification could run. The invariant checks below were confirmed after 0013;
-re-run them, plus a `create_deal` authorization spot-check, at the next opportunity:
+#### ⚠️ Outstanding: verification fixtures left in the live project
+
+`0015` and `0016` applied cleanly and the structural invariants were re-verified (table
+below). Behavioural verification of the NDA gate was **partially completed** before the
+connection dropped:
+
+| Check                                             | Result             |
+| ------------------------------------------------- | ------------------ |
+| Buyer with no NDA sees the teaser                 | Confirmed — 1 row  |
+| Buyer with no NDA sees no `listing_details`       | Confirmed — 0 rows |
+| Buyer with no NDA sees no `listing_financials`    | Confirmed — 0 rows |
+| Buyer who has only _requested_ still sees nothing | Confirmed — 0 rows |
+| `published_at` stamped on first move to `live`    | Confirmed          |
+| Seller issues, buyer signs, gate opens            | **Not run**        |
+| Revocation closes the gate                        | **Not run**        |
+| A second buyer is not admitted                    | **Not run**        |
+
+**Fixtures from that run are still in the database and must be removed.** They are three
+`auth.users` rows with fixed uuids, their roles, one listing with its details, financials
+and one NDA, and `US-NY` was switched to active. Nothing else was touched.
+
+```sql
+-- Remove the step-4 verification fixtures.
+delete from public.listing_ndas
+ where listing_id = '44444444-4444-4444-4444-444444444444';
+delete from public.listing_financials
+ where listing_id = '44444444-4444-4444-4444-444444444444';
+delete from public.listing_details
+ where listing_id = '44444444-4444-4444-4444-444444444444';
+delete from public.listing_status_history
+ where listing_id = '44444444-4444-4444-4444-444444444444';
+delete from public.listings
+ where id = '44444444-4444-4444-4444-444444444444';
+delete from public.user_roles where user_id in (
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  '33333333-3333-3333-3333-333333333333');
+delete from auth.users where id in (
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  '33333333-3333-3333-3333-333333333333');
+
+-- Decide deliberately rather than leaving it as a side effect of testing.
+-- US-NY was activated to satisfy the listing's foreign key. Leave it active only
+-- if New York is genuinely a launch state.
+update public.jurisdictions set is_active = false where code = 'US-NY';
+
+-- Expect every count to be 0, and 51 jurisdictions.
+select
+  (select count(*) from public.listings) as listings,
+  (select count(*) from public.listing_details) as details,
+  (select count(*) from public.listing_ndas) as ndas,
+  (select count(*) from public.listing_status_history) as history,
+  (select count(*) from auth.users) as users,
+  (select count(*) from public.jurisdictions) as jurisdictions,
+  (select count(*) from public.jurisdictions where is_active) as active_jurisdictions;
+```
+
+Then finish the behavioural checks that did not run — the full round trip is covered by
+`supabase/tests/listings-rls.test.ts` locally, but local Postgres and Supabase have
+diverged twice before (see migrations 0008 and 0009), which is why the live pass exists.
+
+The 0014 invariant checks below were also re-run at this point and passed:
 
 ```sql
 -- expect 0 / 0 / 0
@@ -136,13 +196,20 @@ asserts:
 
 | Check                                                    | Result                                       |
 | -------------------------------------------------------- | -------------------------------------------- |
-| Tables in `public` missing RLS or FORCE                  | 0 of 16                                      |
+| Tables in `public` missing RLS or FORCE                  | 0 of 22                                      |
 | Functions in `app` without a pinned `search_path`        | 0                                            |
 | Functions in `public` executable by `anon`               | 0                                            |
+| Listings helpers in `app` executable by `anon`           | 0                                            |
 | TRUNCATE / TRIGGER / REFERENCES granted to a client role | 0                                            |
 | `authenticated` grants                                   | match the allowlist in `rls.test.ts` exactly |
 | Attachments bucket public                                | false                                        |
 | Realtime authorization policies                          | 2                                            |
+
+Note the fourth row. Postgres grants `EXECUTE` to `PUBLIC` on every function at creation,
+and 0006's blanket grant to `anon` on the `app` schema is still in force — it is
+load-bearing for the jurisdiction and legal-template policies, which run before there is a
+session. New helpers inherit that by default, so 0016 revokes it back for the five listings
+helpers explicitly. Any future migration adding an `app` helper has to do the same.
 
 Messaging behaviour was also exercised live with temporary fixtures, since local Postgres
 and Supabase have diverged before: cross-deal read denied, cross-deal post denied,
@@ -175,6 +242,8 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
 - [x] Migrations applied to the production Supabase project (us-east-1)
+- [ ] **Step-4 verification fixtures removed from the live project** (SQL above)
+- [ ] **NDA round trip verified live** — issue, sign, revoke, and a second buyer denied
 - [ ] Leaked-password protection enabled in Auth settings
 - [ ] Unused us-west-2 project deleted
 - [ ] Backup restore tested end to end, with a date recorded here

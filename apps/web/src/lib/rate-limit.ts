@@ -88,6 +88,14 @@ export const RATE_LIMITS = {
   attachmentUrl: { limit: 60, windowMs: 60_000 },
   /** Exporting a transcript is rare and worth noticing. */
   exportTranscript: { limit: 3, windowMs: 3_600_000 },
+  /** Bringing a business to market. Nobody legitimately does this in bulk. */
+  createListing: { limit: 10, windowMs: 3_600_000 },
+  /**
+   * Requesting access to a full profile. Tight on purpose: a scripted client
+   * requesting an NDA on every listing on the platform is the reconnaissance
+   * step of exactly the harvesting attack the teaser split exists to prevent.
+   */
+  ndaRequest: { limit: 20, windowMs: 3_600_000 },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

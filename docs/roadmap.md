@@ -8,7 +8,7 @@ documentation is current.
 | 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                    |
 | 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates |
 | 3   | Marketing site                                          | 1, 2          | Not started — brand name settled (Cairn)        |
-| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | Not started                                     |
+| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred           |
 | 5   | Matching engine                                         | 5             | Not started                                     |
 | 6   | Deal room, NDA flow, document vault                     | 8             | Not started                                     |
 | 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
@@ -123,6 +123,45 @@ the TypeScript capability catalog, since the two are the same rule expressed twi
 Also landed: valuation estimates persist (recalculated server-side from the inputs rather
 than trusting the browser's numbers), and the dashboard links to every route that now
 exists.
+
+## Step 4 — what shipped
+
+Listings, end to end: a seller brings a business to market, a buyer finds it, asks for
+access, signs, and reads the confidential half.
+
+- **Schema** (0015): `listings` (anonymised teaser), `listing_details` (NDA-gated),
+  `listing_financials`, `listing_ndas`, `listing_status_history`, `listing_saves`.
+- **The teaser/profile split.** Two tables rather than one, because **RLS is row-level, not
+  column-level** — a single table cannot hide the company name from a buyer who has not
+  signed. Mirrored in the API types: `ListingTeaser` and `ListingFullProfile` are separate
+  types, so a public list component cannot be handed a confidential profile.
+- **The gate** (0016): `listing_details_select_nda` requires an NDA that is signed, not
+  revoked, not expired, held by this caller, on this listing — and the listing still on the
+  market, so withdrawing it closes access already granted.
+- **Lifecycle enforced in a trigger**, with every transition logged by the database rather
+  than by the application. `closed` and `withdrawn` are terminal.
+- **Seller**: create a draft, edit the public and confidential halves separately, add
+  financial years, move the listing through its lifecycle, and work an inbound queue of
+  access requests. `/listings/new`, `/listings/mine`, `/listings/[id]/edit`.
+- **Buyer**: browse with filters as a shareable URL, request access, sign, read the full
+  profile, save to a watchlist. `/listings`, `/listings/[id]`, `/watchlist`.
+- **Dashboard** is now capability-driven rather than a fixed list — `can(actor, …)` decides
+  which destinations appear.
+- **`Select` and `Textarea`** added to the component library, both native elements.
+- **92 new tests.** 72 against real Postgres for the gate and the lifecycle, 20 in core for
+  band formatting and the transition map. Two parity tests drive SQL and TypeScript through
+  the same cases: all 49 ordered status pairs, and every NDA state.
+
+Three defects were caught by writing those tests and fixed before anything was applied: the
+NDA insert policy was scoped to the `buyer` role and would have locked out family offices,
+search funds and PE (all of which carry `nda:sign`); a buyer could have extended their own
+`expires_at` indefinitely, making the expiry check decorative; and a seller could have
+transferred a listing to another user, because the UPDATE policy's `WITH CHECK` evaluates
+the committed row and therefore the _old_ owner.
+
+Not built: the media gallery (`listing_media`), and the matching feed — `scoreFit()` has
+been tested and unused since step 3, and now that listings exist it is the obvious next
+thing to wire up.
 
 ## What can proceed in parallel
 

@@ -1,14 +1,23 @@
 # Data model
 
-**Status: not implemented. Build step 2, now unblocked.**
+Sections marked **Built** describe tables that exist; the rest is the entity inventory
+drawn from the specification, and lands with its build step. The migrations in
+`supabase/migrations` are the authority — where this document and a migration disagree,
+the migration is right and this document is a bug.
 
 Tenancy is decided: **multi-tenant**. Firms are the primary data boundary, so nearly every
 table below carries a tenant column and every RLS policy is tenant-scoped. Jurisdiction is
 decided: **US multi-state**, so consent records capture jurisdiction and template version
 at the time of acceptance.
 
-This is the entity inventory drawn from the specification. Column-level design and the ERD
-land with the migrations.
+| Area                  | State                                                   |
+| --------------------- | ------------------------------------------------------- |
+| Identity and access   | **Built** — 0001–0010                                   |
+| Listings              | **Built** — 0015, 0016. Media gallery not built         |
+| Deal room / messaging | **Partly built** — 0011–0014. Document vault not built  |
+| Matching              | **Partly built** — `acquisition_criteria` in 0013       |
+| Compliance            | **Partly built** — awaiting attorney-reviewed templates |
+| Commission            | Not built                                               |
 
 ## Identity and access
 
@@ -27,13 +36,54 @@ also buys having one account or two.
 
 ## Listings
 
-| Entity                   | Notes                                                                                                                                                 |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listings`               | Core record. Industry (NAICS/SIC), geography, revenue, EBITDA, asking price, deal type, employee count, real estate, years in business, growth trend. |
-| `listing_visibility`     | Two tiers: **teaser** (anonymized, public) and **full profile** (NDA-gated). The gate is enforced at the API and RLS layers, never only in the UI.    |
-| `listing_status_history` | Draft → Pending Review → Live → Under LOI → Under Contract → Closed/Withdrawn. **Every transition logged** with actor and timestamp.                  |
-| `listing_media`          | Gallery with ordering, alt text, cover selection.                                                                                                     |
-| `listing_financials`     | Revenue/EBITDA by year, add-backs, SDE. Integer cents.                                                                                                |
+**Built** — migrations 0015 and 0016.
+
+| Entity                   | Notes                                                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listings`               | The anonymised **teaser**. Industry, state, size **bands**, deal structure, employee count, years in business, growth trend, owner dependence. |
+| `listing_details`        | The **full profile**, NDA-gated. Legal name, address, exact figures, customer concentration, key customers, risks.                             |
+| `listing_financials`     | Revenue/EBITDA/SDE by year, add-backs. Integer cents. Behind the same gate. Earnings may be negative; revenue may not.                         |
+| `listing_ndas`           | One per buyer per listing. This row **is** the gate. Captures template id and version at signature, plus signer IP and user agent.             |
+| `listing_status_history` | Draft → Pending Review → Live → Under LOI → Under Contract → Closed/Withdrawn. Every transition logged with actor and timestamp, by trigger.   |
+| `listing_saves`          | Watchlist. Private to the user — a seller is never told who saved their listing.                                                               |
+| `listing_media`          | **Not built.** Gallery with ordering, alt text, cover selection.                                                                               |
+
+### Why the teaser and the profile are two tables
+
+Not normalisation. **Row Level Security is row-level, not column-level.** A single
+`listings` table cannot show a browsing buyer the industry and revenue band while hiding
+the company name — column privileges exist but are static per role, not per row, so they
+cannot express "this buyer, on this listing, has signed". The only way to make the
+confidential half genuinely unreachable is to put it in its own row, in its own table,
+behind its own policy.
+
+That constraint shapes the API types too: `ListingTeaser` and `ListingFullProfile` are
+separate TypeScript types rather than one type with optional fields, so a component that
+renders a public list cannot be handed a full profile without the compiler objecting.
+
+### The gate
+
+`listing_details_select_nda` admits a reader when **either**:
+
+- `app.controls_listing()` — they are the seller or a broker at the managing firm; or
+- the listing is discoverable **and** `app.has_executed_nda()`.
+
+Four conditions inside that helper are all load-bearing: the NDA belongs to this listing
+and this caller, its status is `signed`, `revoked_at` is null, and `expires_at` has not
+passed. A gate that checked only the status word would keep a lapsed agreement open.
+
+The listing must still be discoverable, so a signed NDA on a listing since **withdrawn**
+does not reopen it — pulling a business off the market closes the door behind it.
+
+Platform admins are deliberately excluded from `listing_details`. Reviewing a headline
+does not require the seller's customer concentration.
+
+### Bands, not figures
+
+The teaser carries `revenue_band_low/high_cents`, not `revenue_cents`. Industry plus state
+plus an exact revenue figure identifies most lower-middle-market businesses on its own.
+`deriveBand()` in `packages/core` rounds an exact figure **outwards** onto fixed steps for
+this reason: a band that brackets the true number too tightly is itself a disclosure.
 
 ## Matching
 

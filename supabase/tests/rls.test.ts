@@ -155,6 +155,19 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         valuation_estimates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         acquisition_criteria: ['INSERT', 'SELECT', 'UPDATE'],
         legal_document_drafts: ['INSERT', 'SELECT', 'UPDATE'],
+
+        // Listings. No DELETE anywhere except financials and the watchlist: a
+        // business that came to market, the confidentiality agreements around
+        // it, and the record of when it moved are not disposable. A listing
+        // leaves the market by being withdrawn, which is a status, not a
+        // deletion. Status history has SELECT only — the rows come from a
+        // trigger.
+        listings: ['INSERT', 'SELECT', 'UPDATE'],
+        listing_details: ['INSERT', 'SELECT', 'UPDATE'],
+        listing_financials: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        listing_ndas: ['INSERT', 'SELECT', 'UPDATE'],
+        listing_status_history: ['SELECT'],
+        listing_saves: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

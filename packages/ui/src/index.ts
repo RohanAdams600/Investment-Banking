@@ -3,6 +3,8 @@ export { cn } from './lib/cn';
 export { Button, buttonVariants, type ButtonProps } from './components/button';
 export { Badge, VerifiedBadge, badgeVariants, type BadgeProps } from './components/badge';
 export { Input, type InputProps } from './components/input';
+export { Select, type SelectProps } from './components/select';
+export { Textarea, type TextareaProps } from './components/textarea';
 export {
   Card,
   CardHeader,

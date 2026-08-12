@@ -159,6 +159,62 @@ not mean routing around the rule.
 conversation). They answer different questions, and `banker` exists only on the third — it
 is a seat at a table, not a platform identity.
 
+## The NDA gate
+
+The most consequential boundary in the product. A seller's business being identifiable
+before they chose to disclose it can cost them staff, customers, and the sale itself.
+
+It exists twice, deliberately: `canViewFullListing()` in `packages/core` and
+`listing_details_select_nda` in Postgres. Neither is sufficient alone — a route that
+forgets the application check still meets the policy — and a parity test drives every NDA
+state through real Postgres and asserts the two answer identically.
+
+Verified by 72 tests in `supabase/tests/listings-rls.test.ts`:
+
+| Guarantee                                                       | Mechanism                                                            |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| The full profile is unreachable without a signed, in-force NDA  | `app.has_executed_nda()` — status, revocation and expiry all checked |
+| One buyer's NDA does not open another buyer's door              | `buyer_id = auth.uid()` inside the helper                            |
+| A signature on one listing is not a signature on all            | `listing_id` matched inside the helper                               |
+| Withdrawing a listing closes access already granted             | The gate also requires `app.listing_is_discoverable()`               |
+| A buyer cannot sign their own NDA                               | INSERT policy admits only `requested`; the trigger requires `sent`   |
+| A seller cannot sign on the buyer's behalf                      | `app.enforce_nda_transition()` — only `is_buyer` may reach `signed`  |
+| A buyer cannot extend their own access                          | The trigger rejects `expires_at` changes from anyone but the seller  |
+| An NDA cannot be moved to another listing after signature       | `listing_id`/`buyer_id` frozen in the trigger                        |
+| Signature timestamps cannot be forged by a client               | Trigger overwrites `sent_at`/`signed_at`/`revoked_at` from OLD       |
+| A signed NDA cannot be walked back to an earlier state          | Explicit regression check in the trigger                             |
+| Financials are not a second path to the same disclosure         | Separate table, same gate predicate                                  |
+| Platform admins have no ambient access to any confidential half | No admin branch in `listing_details_select_nda`                      |
+
+### The lifecycle is enforced, not suggested
+
+`app.enforce_listing_status_transition()` validates every move and logs it. `closed` and
+`withdrawn` are terminal. The same map exists in TypeScript as `LISTING_TRANSITIONS`, and a
+test drives all 49 ordered pairs through the real trigger to assert they agree — so the UI
+cannot render a button the database will refuse.
+
+The trigger also does three things a policy cannot, because a policy sees only the new row:
+
+- **Ownership is frozen.** The UPDATE policy's `WITH CHECK` calls `controls_listing()`,
+  which reads the _committed_ row — so it evaluates the old owner and would let a seller
+  hand their listing to somebody else. The trigger is what actually stops that.
+- **Firm attribution is proven.** Attaching a listing to a firm grants every broker there
+  control of it, so a caller-supplied id is checked against membership, on insert and on
+  update.
+- **Moderation is narrow.** Admins can change a listing's status to take it down. The
+  trigger compares the whole row and rejects any admin update that touches another column,
+  so "moderation" cannot quietly become "rewriting a seller's copy".
+
+### One widening, stated plainly
+
+`profiles_select_nda_counterparty` lets a seller read the profile of a buyer who has an
+active NDA request on their listing. Without it the seller's queue shows an anonymous
+request, and a seller who cannot tell a search fund from a competitor will approve
+everything or nothing — both of which defeat the gate.
+
+It is one-directional. The buyer is revealed to the seller; the seller is not revealed to
+the buyer. That asymmetry is the product.
+
 ## The service role
 
 `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS completely. Legitimate uses are narrow:
