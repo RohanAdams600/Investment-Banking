@@ -126,6 +126,12 @@ export default async function DashboardPage() {
               show: true,
             },
             {
+              href: '/commissions',
+              label: 'Commissions',
+              hint: 'Fee schedule and what you have earned',
+              show: can(actor, 'commission:view_own'),
+            },
+            {
               href: '/settings/security',
               label: 'Security',
               hint: 'Two-factor and active sessions',

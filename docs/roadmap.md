@@ -13,7 +13,7 @@ documentation is current.
 | 6   | Deal room, NDA flow, document vault                     | 8             | Not started                                     |
 | 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
 | 8   | AI agents behind the orchestrator                       | 4             | Not started                                     |
-| 9   | Commission system + tax exports                         | 11, 12        | Not started                                     |
+| 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not        |
 | 10  | Admin panel                                             | 13            | Not started                                     |
 | 11  | Security hardening + compliance templates               | 14, 15        | Not started                                     |
 | 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | Partial — CI pipeline exists                    |
