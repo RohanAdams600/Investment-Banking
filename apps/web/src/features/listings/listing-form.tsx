@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
-import { INDUSTRY_PROFILES } from '@ib/core';
+import { INDUSTRY_PROFILES, deriveBand } from '@ib/core';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Select, Textarea } from '@ib/ui';
 
 import { createListing, updateListing } from './actions';
@@ -21,11 +21,25 @@ export function ListingForm({
   listing,
   jurisdictions,
   firms,
+  exactFigures,
 }: {
   listing?: ListingTeaser;
   jurisdictions: JurisdictionOption[];
   firms?: { id: string; name: string }[];
+  /**
+   * The seller's real numbers, from the confidential profile.
+   *
+   * Present only so the bands can be derived from them. Never rendered — this
+   * form is the public half, and a component that displays an exact figure here
+   * would put it on the teaser.
+   */
+  exactFigures?: {
+    revenueCents: number | null;
+    earningsCents: number | null;
+    askingPriceCents: number | null;
+  };
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, action] = useActionState(
     listing ? updateListing : createListing,
     emptyListingState,
@@ -33,8 +47,45 @@ export function ListingForm({
 
   const dollars = (cents: number | null): string => (cents === null ? '' : String(cents / 100));
 
+  /**
+   * Fills the public bands from the confidential figures.
+   *
+   * `deriveBand` rounds **outwards** onto fixed steps, so the published band is
+   * deliberately wider than the true figure. A band that brackets the number
+   * too tightly is itself a disclosure, which is the thing the teaser split
+   * exists to prevent.
+   *
+   * Written into the fields rather than submitted directly, so the seller sees
+   * what will be published and can widen it further before saving.
+   */
+  function suggestBands() {
+    if (!exactFigures || !formRef.current) return;
+
+    const set = (name: string, value: number | null) => {
+      const field = formRef.current!.elements.namedItem(name);
+      if (field instanceof HTMLInputElement) {
+        field.value = value === null ? '' : String(Math.round(value / 100));
+      }
+    };
+
+    const revenue = deriveBand(exactFigures.revenueCents);
+    const earnings = deriveBand(exactFigures.earningsCents);
+    const asking = deriveBand(exactFigures.askingPriceCents);
+
+    set('revenueBandLow', revenue.lowCents);
+    set('revenueBandHigh', revenue.highCents);
+    set('earningsBandLow', earnings.lowCents);
+    set('earningsBandHigh', earnings.highCents);
+    set('askingBandLow', asking.lowCents);
+    set('askingBandHigh', asking.highCents);
+  }
+
+  const canSuggest =
+    exactFigures !== undefined &&
+    (exactFigures.revenueCents !== null || exactFigures.earningsCents !== null);
+
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action} className="space-y-4">
       {listing ? <input type="hidden" name="listingId" value={listing.id} /> : null}
 
       <Card>
@@ -103,6 +154,19 @@ export function ListingForm({
               ))}
             </Select>
           </div>
+
+          {canSuggest ? (
+            <div className="border-border-subtle bg-surface-sunken/60 space-y-2 rounded border p-3">
+              <p className="text-text-secondary text-xs">
+                You have already entered exact figures on the confidential profile. These can be
+                rounded outwards into public bands — wider than the real number, on purpose, because
+                a band that brackets it too closely gives it away.
+              </p>
+              <Button type="button" variant="secondary" size="sm" onClick={suggestBands}>
+                Fill bands from my figures
+              </Button>
+            </div>
+          ) : null}
 
           <BandRow
             legend="Revenue band"
