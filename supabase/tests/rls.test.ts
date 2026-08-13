@@ -191,6 +191,12 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // Append-only. No UPDATE, no DELETE — the value of a revision history
         // is entirely in the guarantee that nobody edited it afterwards.
         legal_document_versions: ['INSERT', 'SELECT'],
+
+        // Commission. No DELETE on either: a fee that was agreed and a fee that
+        // was earned are both records of something that happened. A mistaken
+        // one is waived with a reason, which leaves a trail.
+        fee_agreements: ['INSERT', 'SELECT', 'UPDATE'],
+        commission_records: ['INSERT', 'SELECT', 'UPDATE'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(
