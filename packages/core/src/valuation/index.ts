@@ -16,3 +16,14 @@ export {
   type ValuationFactor,
   type ConfidenceLevel,
 } from './model';
+
+export {
+  valueAllMethods,
+  describeAskingPrice,
+  type AssetInputs,
+  type DerivedMetric,
+  type MethodResult,
+  type MultiMethodInputs,
+  type MultiMethodValuation,
+  type ValuationMethodKey,
+} from './methods';

@@ -17,6 +17,7 @@ at the time of acceptance.
 | Deal room / messaging | **Partly built** — 0011–0014. Document vault not built  |
 | Matching              | **Built** — 0013, 0017, 0018                            |
 | Compliance            | **Partly built** — awaiting attorney-reviewed templates |
+| Onboarding            | **Built** — 0019                                        |
 | Commission            | Not built                                               |
 
 ## Identity and access
@@ -133,6 +134,32 @@ every seller's list.
 `app.is_my_counterparty()` is `SECURITY DEFINER` for a reason worth remembering: a policy's
 subqueries are themselves subject to RLS, and `match_scores_select_own` hides those rows
 from the seller. Written inline, the policy denied everything while looking correct.
+
+## Onboarding
+
+**Built** — migration 0019.
+
+| Entity                    | Notes                                                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `questionnaire_responses` | Scratch. A half-finished questionnaire, resumable across devices. Not authoritative — the mapped tables are.      |
+| `seller_preferences`      | What the seller wants from a buyer: acceptable kinds, staff and legacy priorities, transition, financing, timing. |
+
+### Two tables, two jobs
+
+`questionnaire_responses` holds answers in progress as `jsonb`, because the shape
+varies by question type and a column per question would need a migration every time
+the wording changes. It is scratch: on completion the answers are mapped into
+`acquisition_criteria`, `buyer_profiles` and `seller_preferences`, and those are what
+the product reads. Keeping them separate means rewording a question never silently
+changes what matching runs on.
+
+`seller_preferences` is the new idea. Every marketplace models what a buyer wants;
+almost none model what a seller wants beyond price. It makes matching two-sided —
+`match_scores.seller_fit_score` is the mirror of `match_scores.score`.
+
+Buyers see a seller's preferences only after signing an NDA. Before that they are
+negotiating positions: a buyer who knows on day one that the seller is desperate to
+retire has an advantage the seller never meant to give.
 
 ## Deal room
 

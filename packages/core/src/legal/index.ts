@@ -9,3 +9,13 @@ export {
   type ReviewFinding,
   type FindingSeverity,
 } from './review';
+
+export {
+  addVersion,
+  diffDocuments,
+  summariseRevision,
+  type ChangeKind,
+  type DiffLine,
+  type DocumentDiff,
+  type DocumentVersion,
+} from './revise';

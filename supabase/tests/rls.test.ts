@@ -180,6 +180,13 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         match_scores: ['SELECT'],
         outreach_drafts: ['INSERT', 'SELECT', 'UPDATE'],
         buyer_profiles: ['INSERT', 'SELECT', 'UPDATE'],
+
+        // Questionnaire answers in progress are scratch, and DELETE is granted
+        // because starting over should actually clear them. `seller_preferences`
+        // has no DELETE: it is the record of what a seller said they wanted, and
+        // a buyer's fit score was computed against it.
+        questionnaire_responses: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        seller_preferences: ['INSERT', 'SELECT', 'UPDATE'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

@@ -14,13 +14,16 @@ import {
 } from '@ib/ui';
 import {
   estimateValuation,
+  valueAllMethods,
   formatMoney,
   INDUSTRY_PROFILES,
   ValuationInputError,
   type IndustryKey,
+  type MultiMethodValuation,
   type ValuationResult,
 } from '@ib/core';
 
+import { MethodsPanel } from './methods-panel';
 import { saveValuation } from './actions';
 import { emptySaveState, type SaveValuationState } from './types';
 
@@ -49,6 +52,10 @@ interface FormState {
   revenueGrowth: string;
   yearsInBusiness: string;
   ownerDependence: '' | 'absentee' | 'moderate' | 'critical';
+  /** Asset figures, which set a floor under the other methods. */
+  tangibleAssets: string;
+  inventory: string;
+  liabilities: string;
 }
 
 const EMPTY: FormState = {
@@ -60,6 +67,9 @@ const EMPTY: FormState = {
   revenueGrowth: '',
   yearsInBusiness: '',
   ownerDependence: '',
+  tangibleAssets: '',
+  inventory: '',
+  liabilities: '',
 };
 
 /** Dollars in the field, integer cents in the model. */
@@ -117,6 +127,35 @@ export function ValuationForm() {
         error: thrown instanceof ValuationInputError ? thrown.message : 'Could not calculate.',
       };
     }
+  }, [form, profile.basis]);
+
+  /**
+   * The same inputs, valued every way that applies.
+   *
+   * Computed separately from `result` rather than replacing it: the earnings
+   * method stays the primary answer with its itemised adjustments, and this
+   * adds the cross-checks. It also covers the case `result` cannot — a business
+   * at or below break-even, where the single-method engine refuses and the
+   * seller is left with an error where a number should be.
+   */
+  const methods = useMemo((): MultiMethodValuation | null => {
+    const revenue = toCents(form.revenue);
+    const earnings = toCents(form.earnings);
+    if (revenue === undefined || earnings === undefined) return null;
+
+    return valueAllMethods({
+      industry: form.industry,
+      revenue,
+      ...(profile.basis === 'sde' ? { sde: earnings } : { ebitda: earnings }),
+      customerConcentration: toFraction(form.customerConcentration),
+      recurringRevenueShare: toFraction(form.recurringRevenueShare),
+      revenueGrowth: toFraction(form.revenueGrowth),
+      yearsInBusiness: form.yearsInBusiness ? Number(form.yearsInBusiness) : undefined,
+      ownerDependence: form.ownerDependence === '' ? undefined : form.ownerDependence,
+      tangibleAssets: toCents(form.tangibleAssets),
+      inventory: toCents(form.inventory),
+      liabilities: toCents(form.liabilities),
+    });
   }, [form, profile.basis]);
 
   const [saveState, setSaveState] = useState<SaveValuationState>(emptySaveState);
@@ -235,6 +274,35 @@ export function ValuationForm() {
             />
 
             <Input
+              label="Equipment and vehicles"
+              numeric
+              inputMode="decimal"
+              value={form.tangibleAssets}
+              onChange={(e) => set('tangibleAssets', e.target.value)}
+              placeholder="300000"
+              hint="What a buyer would pay to replace them. Sets a floor under the estimate."
+            />
+
+            <Input
+              label="Inventory at cost"
+              numeric
+              inputMode="decimal"
+              value={form.inventory}
+              onChange={(e) => set('inventory', e.target.value)}
+              placeholder="50000"
+            />
+
+            <Input
+              label="Debt that transfers with the business"
+              numeric
+              inputMode="decimal"
+              value={form.liabilities}
+              onChange={(e) => set('liabilities', e.target.value)}
+              placeholder="80000"
+              hint="Netted off the asset figure. Leave blank if the buyer takes none."
+            />
+
+            <Input
               label="Years in business"
               numeric
               inputMode="numeric"
@@ -311,7 +379,15 @@ export function ValuationForm() {
           </>
         ) : null}
 
-        {!result && !error ? (
+        {/*
+          Rendered whenever there are inputs, including when the earnings
+          method refused. That refusal used to leave the seller with nothing;
+          the revenue and asset methods still say something a buyer would
+          recognise.
+        */}
+        {methods ? <MethodsPanel valuation={methods} /> : null}
+
+        {!methods ? (
           <Card>
             <CardContent className="text-text-muted py-8 text-center text-sm">
               Enter revenue and earnings to see an estimated range.

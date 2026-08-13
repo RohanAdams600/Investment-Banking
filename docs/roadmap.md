@@ -206,6 +206,71 @@ fix is a `SECURITY DEFINER` helper, `app.is_my_counterparty()`.
 Not built: natural-language search with editable parsed filters, and behavioural signal
 (browse/save/skip) feeding the score.
 
+## Onboarding questionnaire, multi-method valuation, legal revision
+
+Three additions that make the first ten minutes of the product actually work.
+
+### The questionnaire
+
+A new account used to land on an empty dashboard: no matches, no listing, no
+valuation, because the platform knew nothing about them. Now onboarding hands
+straight into a questionnaire — **one question per screen**, branching by role,
+resumable across devices.
+
+One at a time costs clicks and buys two things worth more. Answer quality: a
+twenty-field form gets skimmed and half-filled, a single question gets read, and
+everything downstream is only as good as what people actually tell us. And
+branching that makes sense: asking a PE fund about SBA financing wastes their
+time and says we were not listening.
+
+The engine (`packages/core/src/questionnaire`) is framework-free, so the
+questions can be reviewed as content rather than read out of JSX. Answers are
+scratch until the flow completes; `finishQuestionnaire` maps them onto
+`acquisition_criteria`, `buyer_profiles` and `seller_preferences`, and that
+mapping lives in one file. Question wording can change without changing what
+matching computes.
+
+### Sellers say who they want to sell to
+
+`seller_preferences` (migration 0019) is the part nobody else models. Owners who
+spent decades building something care whether the staff keep their jobs, whether
+the name survives, and whether the buyer is a competitor who will strip it —
+often more than they care about the last five percent of price.
+
+That makes matching two-sided: `scoreSellerFit()` ranks buyers _for the seller_,
+stored alongside the existing score. A buyer scoring 91 on the business and 40 on
+the seller's wishes is worth talking to and worth knowing about, because that gap
+is where deals fall apart at week ten. The frictions are surfaced explicitly —
+including that nothing on this platform binds a buyer to keep staff, which
+belongs in the purchase agreement and is a conversation for an attorney.
+
+### Valuation across methods
+
+`valueAllMethods()` adds revenue-multiple and asset-based alongside the earnings
+multiple, with derived metrics (margin, revenue per employee, concentration,
+recurring share) and their interpretation.
+
+Two things it fixes. A single range invites the reader to treat it as _the_
+number — now the spread between methods is itself shown, and when they do not
+overlap that is said rather than averaged away. And a business at or below
+break-even used to get an error where a number should be; the revenue and asset
+methods still say something a buyer would recognise.
+
+`describeAskingPrice()` compares an asking price to the estimate and never
+objects to it. A seller may price above the range for good reasons — a strategic
+buyer circling, land under the building — and a platform that refused would be
+substituting its judgement for the owner's on the sale of their own business. A
+test asserts the wording never directs.
+
+### Legal revision
+
+`diffDocuments()` gives a proper LCS redline, and flags clauses that disappeared
+between versions — indemnification, governing law, confidentiality — because
+that is what gets missed in a long redline and matters most when it does. Every
+version is kept; nothing is overwritten. `summariseRevision()` counts and flags
+and never characterises a change as good, risky, or a concession. A test asserts
+that too.
+
 ## What can proceed in parallel
 
 The marketing site (step 3) does not depend on the data model and the brand name is now

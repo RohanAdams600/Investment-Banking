@@ -17,7 +17,7 @@ pnpm dev                       # http://localhost:3000
 Useful:
 
 ```bash
-pnpm test                                   # 353 tests
+pnpm test                                   # 438 tests
 pnpm typecheck                              # all workspace packages
 pnpm lint
 pnpm --filter @ib/ui tokens:build           # after editing any design token
@@ -114,7 +114,7 @@ slot.
 **Migrations 0001–0016 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
 us-east-1), plus the jurisdiction seed.
 
-**0017 and 0018 are written and tested locally but NOT applied.** The Supabase connection
+**0017, 0018 and 0019 are written and tested locally but NOT applied.** The Supabase connection
 dropped before they could be. Apply them in order, then re-run the invariant block below —
 0018 adds `app.is_my_counterparty()`, which must appear in the pinned-`search_path` check,
 and three tables that must appear with RLS forced.
@@ -249,7 +249,7 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 - [x] Migrations applied to the production Supabase project (us-east-1)
 - [ ] **Step-4 verification fixtures removed from the live project** (SQL above)
 - [ ] **NDA round trip verified live** — issue, sign, revoke, and a second buyer denied
-- [ ] **0017 and 0018 applied** to the live project, and invariants re-run
+- [ ] **0017, 0018 and 0019 applied** to the live project, and invariants re-run
 - [ ] AI provider keys set, or accepted as absent (features degrade, they do not break)
 - [ ] Leaked-password protection enabled in Auth settings
 - [ ] Unused us-west-2 project deleted
