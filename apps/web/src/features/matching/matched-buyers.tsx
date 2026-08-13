@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Sparkles } from 'lucide-react';
@@ -75,11 +76,23 @@ export function MatchedBuyers({
                     ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {buyer.hasNda ? <Badge variant="info">NDA in place</Badge> : null}
                     <Badge variant={buyer.score >= 70 ? 'success' : 'neutral'}>
-                      {buyer.score}% fit
+                      {buyer.score}% business fit
                     </Badge>
+                    {/*
+                      The two scores answer different questions and are shown
+                      side by side rather than averaged. A buyer at 91 on the
+                      business and 40 on what you asked for is worth talking to
+                      and worth knowing about — that gap is where deals fall
+                      apart at week ten, and a blended number would hide it.
+                    */}
+                    {buyer.sellerFitScore !== null ? (
+                      <Badge variant={buyer.sellerFitScore >= 70 ? 'success' : 'warning'}>
+                        {buyer.sellerFitScore}% your fit
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
 
@@ -111,6 +124,19 @@ export function MatchedBuyers({
                   </p>
                 ) : null}
 
+                {buyer.sellerFrictions.length > 0 ? (
+                  <ul className="text-text-secondary mt-2 space-y-1 text-xs">
+                    {buyer.sellerFrictions.map((friction) => (
+                      <li key={friction} className="flex gap-1.5">
+                        <span className="text-warning" aria-hidden>
+                          •
+                        </span>
+                        <span>{friction}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
                 <form action={draftAction} className="mt-2">
                   <input type="hidden" name="listingId" value={listingId} />
                   <input type="hidden" name="recipientId" value={buyer.buyerId} />
@@ -120,6 +146,17 @@ export function MatchedBuyers({
             ))}
           </ul>
         )}
+
+        <p className="text-text-muted text-xs">
+          Two scores, deliberately not combined. <strong>Business fit</strong> is how well your
+          business matches what they said they want. <strong>Your fit</strong> is how well they
+          match what you said you want — buyer type, staff, legacy, timing, financing. Set those on
+          your{' '}
+          <Link href="/questionnaire/seller" className="underline underline-offset-4">
+            seller preferences
+          </Link>
+          .
+        </p>
 
         <p className="text-text-muted text-xs">
           Buyers appear here because they chose to be discoverable. Drafting an introduction does

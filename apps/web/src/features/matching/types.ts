@@ -54,6 +54,14 @@ export interface MatchedBuyer {
   score: number;
   aiScore: number | null;
   aiRationale: string | null;
+  /**
+   * How well this buyer matches what the *seller* asked for. Null when the
+   * seller stated no preferences or the buyer has no profile — a score computed
+   * from defaults would look like a finding and is a guess.
+   */
+  sellerFitScore: number | null;
+  /** Worth raising before week ten. Shown to the seller only. */
+  sellerFrictions: string[];
   verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   hasNda: boolean;
 }

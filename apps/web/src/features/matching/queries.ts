@@ -193,6 +193,8 @@ export async function listMatchedBuyers(listingId: string): Promise<MatchedBuyer
     score: row.score,
     aiScore: row.ai_score ?? null,
     aiRationale: row.ai_rationale ?? null,
+    sellerFitScore: row.seller_fit_score ?? null,
+    sellerFrictions: (row.seller_frictions ?? []) as string[],
     verificationStatus: row.verification_status ?? 'unverified',
     hasNda: Boolean(row.has_nda),
   }));

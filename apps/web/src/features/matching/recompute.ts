@@ -5,9 +5,13 @@ import {
   formatBand,
   redactFitResult,
   scoreFit,
+  scoreSellerFit,
   type AcquisitionCriteria,
+  type BuyerKind,
+  type BuyerSnapshot,
   type IndustryKey,
   type ListingProfile,
+  type SellerPreferences,
 } from '@ib/core';
 
 import { isAiConfigured } from '@/lib/ai/router';
@@ -65,12 +69,21 @@ interface BuyerCriteria {
   buyerId: string;
   criteriaId: string;
   criteria: AcquisitionCriteria;
+  /**
+   * Everything the *seller's* half of the match needs.
+   *
+   * Null when the buyer has not filled in a profile. The seller-fit score is
+   * then left off rather than computed from defaults — a made-up 60% is worse
+   * than an honest blank, because a seller would act on it.
+   */
+  snapshot: BuyerSnapshot | null;
 }
 
-function toCriteria(row: Row): BuyerCriteria {
+function toCriteria(row: Row, profile?: Row, roles: string[] = []): BuyerCriteria {
   return {
     buyerId: row.user_id,
     criteriaId: row.id,
+    snapshot: profile ? toSnapshot(row, profile, roles) : null,
     criteria: {
       industries: (row.industries ?? []) as IndustryKey[],
       jurisdictions: (row.jurisdictions ?? []) as string[],
@@ -92,6 +105,54 @@ function toCriteria(row: Row): BuyerCriteria {
       thesis: row.thesis ?? undefined,
     },
   };
+}
+
+/**
+ * The buyer, as the seller's half of the match sees them.
+ *
+ * `kind` is derived from the buyer's platform roles rather than asked again —
+ * somebody who signed up as a family office should not have to restate it — and
+ * falls back to `individual`, which is what a plain `buyer` role means.
+ */
+function toSnapshot(criteria: Row, profile: Row, roles: string[]): BuyerSnapshot {
+  const kind: BuyerKind = roles.includes('private_equity')
+    ? 'private_equity'
+    : roles.includes('family_office')
+      ? 'family_office'
+      : roles.includes('search_fund')
+        ? 'search_fund'
+        : 'individual';
+
+  return {
+    kind,
+    fundingSource: fundingFromLabel(profile.funding_source as string | null),
+    involvement: (criteria.involvement ?? 'either') as BuyerSnapshot['involvement'],
+    // Not collected on the criteria row yet. `six_months` is the middle of the
+    // range rather than an optimistic guess, and it is the one field here the
+    // seller-fit score treats as soft.
+    timeline: 'six_months',
+    priorAcquisitions: profile.prior_acquisitions ?? undefined,
+  };
+}
+
+/**
+ * Maps the stored funding label back to the enum the scorer takes.
+ *
+ * The label is stored for display, so this is a reverse lookup rather than a
+ * second source of truth. Anything unrecognised is `undecided`, which is the
+ * conservative answer — a seller should not be told a buyer is paying cash
+ * because a string failed to match.
+ */
+function fundingFromLabel(label: string | null): BuyerSnapshot['fundingSource'] {
+  if (!label) return 'undecided';
+
+  const normalised = label.toLowerCase();
+  if (normalised.includes('cash')) return 'cash';
+  if (normalised.includes('sba')) return 'sba';
+  if (normalised.includes('bank')) return 'conventional';
+  if (normalised.includes('fund')) return 'fund';
+  if (normalised.includes('seller')) return 'seller';
+  return 'undecided';
 }
 
 /**
@@ -158,7 +219,7 @@ function toProfile(listing: Row, details: Row | undefined): ScoredListing | null
  * field to one without the other is obvious.
  */
 const LISTING_COLUMNS = `
-  id, status, industry, jurisdiction_code, deal_structure, owner_dependence,
+  id, status, seller_id, industry, jurisdiction_code, deal_structure, owner_dependence,
   headline, summary, employee_count, years_in_business, growth_trend,
   earnings_band_low_cents, earnings_band_high_cents,
   jurisdictions ( name )
@@ -185,13 +246,37 @@ async function aiColumns(listing: ScoredListing, buyer: BuyerCriteria) {
   };
 }
 
+/**
+ * The seller's half of the match.
+ *
+ * Empty when the seller has stated no preferences or the buyer has no profile.
+ * A score computed from defaults would look like a finding and is a guess, and
+ * a seller would act on it.
+ */
+function sellerFitColumns(buyer: BuyerCriteria, preferences: SellerPreferences | null) {
+  if (!preferences || !buyer.snapshot) return {};
+
+  const result = scoreSellerFit(preferences, buyer.snapshot);
+
+  return {
+    seller_fit_score: result.score,
+    seller_fit_reasons: result.reasons,
+    seller_frictions: result.frictions,
+  };
+}
+
 /** Scores one listing against one buyer and shapes the row to be written. */
-async function scoreRow(listing: ScoredListing, buyer: BuyerCriteria) {
+async function scoreRow(
+  listing: ScoredListing,
+  buyer: BuyerCriteria,
+  preferences: SellerPreferences | null,
+) {
   const result = redactFitResult(scoreFit(buyer.criteria, listing.profile));
   const ai = await aiColumns(listing, buyer);
 
   return {
     ...ai,
+    ...sellerFitColumns(buyer, preferences),
     listing_id: listing.listingId,
     buyer_id: buyer.buyerId,
     criteria_id: buyer.criteriaId,
@@ -249,7 +334,23 @@ export async function recomputeMatchesForListing(listingId: string): Promise<num
 
   if (!criteria || criteria.length === 0) return 0;
 
-  const rows = await mapWithLimit(criteria, (row) => scoreRow(scored, toCriteria(row as Row)));
+  // The seller's half of the match. Loaded once for the whole batch, since
+  // every buyer here is being scored against the same seller.
+  const preferences = await loadSellerPreferences(service, (listing as Row).seller_id);
+  const buyerIds = criteria.map((row) => (row as Row).user_id as string);
+  const [profiles, roles] = await Promise.all([
+    loadBuyerProfiles(service, buyerIds),
+    loadRoles(service, buyerIds),
+  ]);
+
+  const rows = await mapWithLimit(criteria, (row) => {
+    const userId = (row as Row).user_id as string;
+    return scoreRow(
+      scored,
+      toCriteria(row as Row, profiles.get(userId), roles.get(userId) ?? []),
+      preferences,
+    );
+  });
 
   const { error } = await service
     .from('match_scores')
@@ -278,7 +379,13 @@ export async function recomputeMatchesForBuyer(buyerId: string): Promise<number>
   await service.from('match_scores').delete().eq('buyer_id', buyerId);
 
   if (!criteriaRow) return 0;
-  const buyer = toCriteria(criteriaRow as Row);
+
+  const [profiles, roles] = await Promise.all([
+    loadBuyerProfiles(service, [buyerId]),
+    loadRoles(service, [buyerId]),
+  ]);
+
+  const buyer = toCriteria(criteriaRow as Row, profiles.get(buyerId), roles.get(buyerId) ?? []);
 
   const { data: listings } = await service
     .from('listings')
@@ -305,7 +412,21 @@ export async function recomputeMatchesForBuyer(buyerId: string): Promise<number>
     .map((listing) => toProfile(listing as Row, detailsByListing.get((listing as Row).id)))
     .filter((scored): scored is ScoredListing => scored !== null);
 
-  const rows = await mapWithLimit(scorable, (scored) => scoreRow(scored, buyer));
+  // Each listing has a different seller, so preferences are looked up per
+  // listing rather than once. Fetched in one query and indexed, not N queries.
+  const sellerIds = [...new Set(listings.map((l) => (l as Row).seller_id as string))];
+  const preferencesBySeller = await loadSellerPreferencesFor(service, sellerIds);
+  const sellerByListing = new Map<string, string>(
+    listings.map((l) => [(l as Row).id as string, (l as Row).seller_id as string]),
+  );
+
+  const rows = await mapWithLimit(scorable, (scored) =>
+    scoreRow(
+      scored,
+      buyer,
+      preferencesBySeller.get(sellerByListing.get(scored.listingId) ?? '') ?? null,
+    ),
+  );
 
   if (rows.length === 0) return 0;
 
@@ -314,6 +435,76 @@ export async function recomputeMatchesForBuyer(buyerId: string): Promise<number>
     .upsert(rows, { onConflict: 'listing_id,buyer_id' });
 
   return error ? 0 : rows.length;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ServiceClient = any;
+
+function toPreferences(row: Row): SellerPreferences {
+  return {
+    acceptableBuyerTypes: (row.acceptable_buyer_types ?? []) as BuyerKind[],
+    employeePriority: row.employee_priority ?? 3,
+    legacyPriority: row.legacy_priority ?? 3,
+    transition: row.transition ?? 'months',
+    sellerFinancing: row.seller_financing ?? 'open',
+    timeline: row.timeline ?? 'six_months',
+  };
+}
+
+async function loadSellerPreferences(
+  service: ServiceClient,
+  sellerId: string,
+): Promise<SellerPreferences | null> {
+  const { data } = await service
+    .from('seller_preferences')
+    .select('*')
+    .eq('user_id', sellerId)
+    .maybeSingle();
+
+  return data ? toPreferences(data as Row) : null;
+}
+
+async function loadSellerPreferencesFor(
+  service: ServiceClient,
+  sellerIds: string[],
+): Promise<Map<string, SellerPreferences>> {
+  if (sellerIds.length === 0) return new Map();
+
+  const { data } = await service.from('seller_preferences').select('*').in('user_id', sellerIds);
+
+  return new Map(((data ?? []) as Row[]).map((row) => [row.user_id as string, toPreferences(row)]));
+}
+
+async function loadBuyerProfiles(
+  service: ServiceClient,
+  buyerIds: string[],
+): Promise<Map<string, Row>> {
+  if (buyerIds.length === 0) return new Map();
+
+  const { data } = await service
+    .from('buyer_profiles')
+    .select('user_id, funding_source, prior_acquisitions')
+    .in('user_id', buyerIds);
+
+  return new Map(((data ?? []) as Row[]).map((row) => [row.user_id as string, row]));
+}
+
+/** Platform roles per buyer, used to derive what kind of buyer they are. */
+async function loadRoles(
+  service: ServiceClient,
+  buyerIds: string[],
+): Promise<Map<string, string[]>> {
+  if (buyerIds.length === 0) return new Map();
+
+  const { data } = await service.from('user_roles').select('user_id, role').in('user_id', buyerIds);
+
+  const byUser = new Map<string, string[]>();
+  for (const row of (data ?? []) as Row[]) {
+    const list = byUser.get(row.user_id as string) ?? [];
+    list.push(row.role as string);
+    byUser.set(row.user_id as string, list);
+  }
+  return byUser;
 }
 
 /**

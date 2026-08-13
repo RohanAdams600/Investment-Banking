@@ -89,8 +89,31 @@ function toFraction(value: string): number | undefined {
   return percent / 100;
 }
 
-export function ValuationForm() {
-  const [form, setForm] = useState<FormState>(EMPTY);
+/**
+ * Values carried over from the seller questionnaire.
+ *
+ * Every field optional, and every one still editable once here. A seller who
+ * has just answered eighteen questions should not be asked for revenue again;
+ * a seller who typed a round number should be able to correct it.
+ */
+export interface ValuationPrefill {
+  industry?: IndustryKey;
+  revenue?: string;
+  earnings?: string;
+  customerConcentration?: string;
+  recurringRevenueShare?: string;
+  revenueGrowth?: string;
+  yearsInBusiness?: string;
+  ownerDependence?: 'absentee' | 'moderate' | 'critical';
+}
+
+export function ValuationForm({ prefill }: { prefill?: ValuationPrefill } = {}) {
+  const [form, setForm] = useState<FormState>(() => ({
+    ...EMPTY,
+    // Spread rather than assigned field by field, so a new prefill field works
+    // without editing this line. `undefined` values fall through to EMPTY.
+    ...Object.fromEntries(Object.entries(prefill ?? {}).filter(([, value]) => value !== undefined)),
+  }));
 
   const profile = INDUSTRY_PROFILES[form.industry];
 

@@ -183,3 +183,77 @@ create policy seller_preferences_select_counterparty on public.seller_preference
 
 grant select, insert, update, delete on public.questionnaire_responses to authenticated;
 grant select, insert, update on public.seller_preferences to authenticated;
+
+-- ===========================================================================
+-- Surfacing the seller's half of the match
+-- ===========================================================================
+--
+-- `matched_buyers()` gained three columns. Replaced wholesale rather than
+-- altered because Postgres cannot change a function's return type in place, and
+-- because the definition is easier to review as one piece than as a patch.
+--
+-- `seller_frictions` is included and `score` is not reordered: the seller sees
+-- how well the buyer fits the *business* and how well they fit *what the seller
+-- asked for*, side by side. A buyer at 91 on one and 40 on the other is worth
+-- talking to and worth knowing about, and averaging the two would hide exactly
+-- the thing worth seeing.
+drop function if exists public.matched_buyers(uuid);
+
+create or replace function public.matched_buyers(target_listing_id uuid)
+returns table (
+  buyer_id uuid,
+  full_name text,
+  entity_name text,
+  headline text,
+  funding_source text,
+  prior_acquisitions integer,
+  capital_low_cents bigint,
+  capital_high_cents bigint,
+  score smallint,
+  ai_score smallint,
+  ai_rationale text,
+  seller_fit_score smallint,
+  seller_frictions jsonb,
+  verification_status app.verification_status,
+  has_nda boolean
+)
+language sql
+stable
+security definer
+set search_path = public, pg_catalog
+as $$
+  select
+    m.buyer_id,
+    p.full_name,
+    b.entity_name,
+    b.headline,
+    b.funding_source,
+    b.prior_acquisitions,
+    b.capital_available_low_cents,
+    b.capital_available_high_cents,
+    m.score,
+    m.ai_score,
+    m.ai_rationale,
+    m.seller_fit_score,
+    m.seller_frictions,
+    p.verification_status,
+    exists (
+      select 1 from public.listing_ndas n
+       where n.listing_id = target_listing_id
+         and n.buyer_id = m.buyer_id
+         and n.revoked_at is null
+    ) as has_nda
+  from public.match_scores m
+  join public.acquisition_criteria c
+    on c.id = m.criteria_id and c.is_discoverable
+  left join public.profiles p on p.id = m.buyer_id
+  left join public.buyer_profiles b on b.user_id = m.buyer_id
+  where m.listing_id = target_listing_id
+    and not m.excluded
+    and app.controls_listing(target_listing_id)
+  order by m.score desc
+  limit 100;
+$$;
+
+revoke all on function public.matched_buyers(uuid) from public, anon;
+grant execute on function public.matched_buyers(uuid) to authenticated;

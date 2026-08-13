@@ -575,6 +575,45 @@ describe.skipIf(!hasDatabase)('matching', () => {
       expect(rows).toHaveLength(0);
     });
 
+    it('carries the seller-fit score and frictions through to the seller', async () => {
+      // `scoreSellerFit` was built, tested, and initially wired to nothing —
+      // the same gap `scoreFit` had. This asserts the column reaches the
+      // function the seller's page actually calls.
+      const criteria = await makeBuyer(buyer, true);
+      await db.query(
+        `insert into public.match_scores
+           (listing_id, buyer_id, criteria_id, score, seller_fit_score, seller_frictions)
+         values ($1, $2, $3, 88, 42,
+           '["This buyer has not settled how they would pay."]'::jsonb)`,
+        [listing, buyer, criteria],
+      );
+
+      const { rows } = await actingAs<{
+        seller_fit_score: number;
+        seller_frictions: string[];
+      }>(db, seller, 'select seller_fit_score, seller_frictions from public.matched_buyers($1)', [
+        listing,
+      ]);
+
+      expect(rows[0]!.seller_fit_score).toBe(42);
+      expect(rows[0]!.seller_frictions).toHaveLength(1);
+    });
+
+    it('leaves the seller-fit score null rather than guessing', async () => {
+      // A score computed from defaults would look like a finding. A seller
+      // would act on it.
+      const criteria = await makeBuyer(buyer, true);
+      await scoreWithCriteria(listing, buyer, criteria, 88);
+
+      const { rows } = await actingAs<{ seller_fit_score: number | null }>(
+        db,
+        seller,
+        'select seller_fit_score from public.matched_buyers($1)',
+        [listing],
+      );
+      expect(rows[0]!.seller_fit_score).toBeNull();
+    });
+
     it('lets the seller read a matched buyer profile directly', async () => {
       const criteria = await makeBuyer(buyer, true);
       await scoreWithCriteria(listing, buyer, criteria, 88);
