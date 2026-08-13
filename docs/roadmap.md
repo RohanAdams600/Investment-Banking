@@ -7,7 +7,7 @@ documentation is current.
 | --- | ------------------------------------------------------- | ------------- | ----------------------------------------------- |
 | 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                    |
 | 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates |
-| 3   | Marketing site                                          | 1, 2          | Not started — brand name settled (Cairn)        |
+| 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred  |
 | 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred           |
 | 5   | Matching engine                                         | 5             | **Complete** — NL search deferred               |
 | 6   | Deal room, NDA flow, document vault                     | 8             | Not started                                     |
