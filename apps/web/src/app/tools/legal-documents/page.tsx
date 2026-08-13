@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
 
 import { DocumentWorkbench } from '@/features/legal/document-workbench';
 import { listMyDrafts, listPublishedTemplates } from '@/features/legal/queries';
+import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 export const metadata: Metadata = {
@@ -22,6 +23,10 @@ export default async function LegalDocumentsPage() {
   const [templates, drafts] = isSupabaseConfigured()
     ? await Promise.all([listPublishedTemplates(), listMyDrafts()])
     : [[], []];
+
+  // The checklist is useful signed out; saving needs somewhere to save to.
+  const actor = isSupabaseConfigured() ? await getActor() : null;
+  const canSave = actor !== null;
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
@@ -65,7 +70,7 @@ export default async function LegalDocumentsPage() {
         </Card>
       ) : null}
 
-      <DocumentWorkbench templates={templates} />
+      <DocumentWorkbench templates={templates} canSave={canSave} />
     </main>
   );
 }

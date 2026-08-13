@@ -117,3 +117,79 @@ export async function saveRevision(
   revalidatePath('/tools/legal-documents');
   return { error: null, message: 'Revision saved.' };
 }
+
+/**
+ * Creating a draft from whatever is in the workbench.
+ *
+ * Until this existed, the workbench produced documents that lived in browser
+ * state and vanished on refresh — so the revision history had nothing to
+ * attach to. Saving is the step that turns a scratchpad into a record.
+ *
+ * Version 1 is written alongside the draft, so the history starts at the text
+ * that was first saved rather than at the first *edit*. Otherwise comparing
+ * against "the original" would be impossible for exactly one version, which is
+ * the version people most often want back.
+ */
+const createSchema = z.object({
+  kind: z.enum(LEGAL_DOCUMENT_KINDS as [LegalDocumentKind, ...LegalDocumentKind[]]),
+  title: z.string().trim().min(1, 'Give the document a name.').max(200),
+  body: z.string().min(1, 'There is nothing to save.').max(200_000),
+});
+
+export async function createDraft(
+  _prev: RevisionState,
+  formData: FormData,
+): Promise<RevisionState> {
+  const parsed = createSchema.safeParse({
+    kind: formData.get('kind'),
+    title: formData.get('title'),
+    body: formData.get('body'),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Check the document.', message: null };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Sign in to save a document.', message: null };
+
+  const review = reviewDocument(parsed.data.kind, parsed.data.body);
+
+  const { data, error } = await supabase
+    .from('legal_document_drafts')
+    .insert({
+      created_by: user.id,
+      kind: parsed.data.kind,
+      title: parsed.data.title,
+      body: parsed.data.body,
+      review_findings: review.findings,
+      unresolved_placeholders: review.unresolvedPlaceholders,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) return { error: 'Could not save that document.', message: null };
+
+  const draftId = (data as { id: string }).id;
+
+  await supabase.from('legal_document_versions').insert({
+    draft_id: draftId,
+    body: parsed.data.body,
+    note: 'Saved from the workbench',
+    review_findings: review.findings,
+  });
+
+  await recordAuditEvent({
+    action: 'legal_document.created',
+    entityType: 'legal_document_draft',
+    entityId: draftId,
+    metadata: { kind: parsed.data.kind, findingCount: review.findings.length },
+  });
+
+  revalidatePath('/tools/legal-documents');
+  return { error: null, message: 'Saved.' };
+}

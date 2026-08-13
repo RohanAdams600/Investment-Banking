@@ -1,8 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { AlertTriangle, CircleHelp, Info } from 'lucide-react';
-import { AIDisclaimer, Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
+import {
+  AIDisclaimer,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+} from '@ib/ui';
+import { useFormStatus } from 'react-dom';
+
+import { createDraft, emptyRevisionState } from './revision-actions';
 import {
   DOCUMENT_LABELS,
   LEGAL_DOCUMENT_KINDS,
@@ -33,11 +45,20 @@ import {
 interface DocumentWorkbenchProps {
   /** Published, counsel-approved templates. Empty until they exist. */
   templates: Array<{ id: string; kind: LegalDocumentKind; title: string; version: number }>;
+  /**
+   * Whether there is a session to save against.
+   *
+   * The checklist works signed out — it is useful on its own and asking someone
+   * to register before they can paste a contract into a box is a bad trade. But
+   * saving needs somewhere to save to.
+   */
+  canSave?: boolean;
 }
 
-export function DocumentWorkbench({ templates }: DocumentWorkbenchProps) {
+export function DocumentWorkbench({ templates, canSave = false }: DocumentWorkbenchProps) {
   const [kind, setKind] = useState<LegalDocumentKind>('loi');
   const [body, setBody] = useState('');
+  const [createState, createAction] = useActionState(createDraft, emptyRevisionState);
 
   const review = useMemo(
     () => (body.trim() === '' ? null : reviewDocument(kind, body)),
@@ -125,10 +146,41 @@ export function DocumentWorkbench({ templates }: DocumentWorkbenchProps) {
                 placeholder="Paste the draft here…"
                 className="border-border-default bg-surface text-text-primary placeholder:text-text-muted focus-visible:ring-ring w-full resize-y rounded border px-3 py-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-2"
               />
-              <p className="text-text-muted text-xs">
-                Nothing is saved unless you choose to attach it to a deal.
-              </p>
+              <p className="text-text-muted text-xs">Nothing leaves this page until you save it.</p>
             </div>
+
+            {/*
+              Saving is what turns a scratchpad into a record with a revision
+              history. Until a document is saved there is nothing for a redline
+              to compare against, which is the whole point of saving it.
+            */}
+            {body.trim() !== '' && canSave ? (
+              <form action={createAction} className="border-border-subtle space-y-3 border-t pt-4">
+                <input type="hidden" name="kind" value={kind} />
+                <input type="hidden" name="body" value={body} />
+
+                <Input
+                  label="Save as"
+                  name="title"
+                  required
+                  maxLength={200}
+                  placeholder={`${DOCUMENT_LABELS[kind]} — Project Anchor`}
+                  hint="Saved to your documents, where you can revise it and see what changed between versions."
+                />
+
+                {createState.error ? (
+                  <p role="alert" className="text-danger text-sm">
+                    {createState.error}
+                  </p>
+                ) : null}
+
+                <p aria-live="polite" className="text-text-muted text-sm">
+                  {createState.message}
+                </p>
+
+                <SaveDraftButton />
+              </form>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -205,5 +257,14 @@ export function DocumentWorkbench({ templates }: DocumentWorkbenchProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SaveDraftButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" loading={pending}>
+      Save document
+    </Button>
   );
 }
