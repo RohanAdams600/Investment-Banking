@@ -168,6 +168,18 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         listing_ndas: ['INSERT', 'SELECT', 'UPDATE'],
         listing_status_history: ['SELECT'],
         listing_saves: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+
+        // Matching and outreach. `match_scores` is SELECT only for everyone:
+        // scores are written by the matcher with the service role, because
+        // scoring reads every buyer's criteria against a listing's confidential
+        // figures. A client that could write here would promote itself to the
+        // top of every seller's list.
+        //
+        // No DELETE on outreach either — a message that was approved and sent is
+        // a record of something that happened.
+        match_scores: ['SELECT'],
+        outreach_drafts: ['INSERT', 'SELECT', 'UPDATE'],
+        buyer_profiles: ['INSERT', 'SELECT', 'UPDATE'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

@@ -15,7 +15,7 @@ at the time of acceptance.
 | Identity and access   | **Built** — 0001–0010                                   |
 | Listings              | **Built** — 0015, 0016. Media gallery not built         |
 | Deal room / messaging | **Partly built** — 0011–0014. Document vault not built  |
-| Matching              | **Partly built** — `acquisition_criteria` in 0013       |
+| Matching              | **Built** — 0013, 0017, 0018                            |
 | Compliance            | **Partly built** — awaiting attorney-reviewed templates |
 | Commission            | Not built                                               |
 
@@ -87,13 +87,52 @@ this reason: a band that brackets the true number too tightly is itself a disclo
 
 ## Matching
 
-| Entity                 | Notes                                                                                                                              |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `acquisition_criteria` | Shared by search fund, PE, and family office portals. Feeds the matching agent.                                                    |
-| `preference_profiles`  | **Versioned.** Implicit (browse/save/skip) plus explicit criteria. Versioning is what makes a change in recommendations traceable. |
-| `match_scores`         | 0–100, with the contributing factors stored — not just the score, or the "why this match" explanation cannot be reconstructed.     |
-| `saved_searches`       | With change alerts.                                                                                                                |
-| `watchlists`           | Saved listings with status-change notifications.                                                                                   |
+**Built** — migrations 0017 and 0018.
+
+| Entity                 | Notes                                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `acquisition_criteria` | Versioned (superseded, not updated). `is_discoverable` is the buyer's consent to be shown to sellers.                                  |
+| `match_scores`         | 0–100 with the contributing factors stored, **redacted**. Plus `ai_score`/`ai_rationale`, kept in separate columns.                    |
+| `buyer_profiles`       | Who the buyer is: entity, funding source, capital band, prior deals. What a seller uses to decide whether to release their financials. |
+| `outreach_drafts`      | Personalised automatically, sent only after a person approves. Trigger refuses `sent` without an approver.                             |
+| `listing_saves`        | Watchlist. Built in 0015.                                                                                                              |
+| `saved_searches`       | **Not built.** With change alerts.                                                                                                     |
+| `preference_profiles`  | **Not built.** Implicit signal (browse/save/skip) on top of explicit criteria.                                                         |
+
+### Scores are stored, not computed on read
+
+Three reasons, in order of how much they matter:
+
+1. **The scoring inputs are confidential.** A good score needs the seller's exact revenue,
+   earnings and customer concentration — the NDA-gated half. Computing at read time would
+   mean a buyer's own request reads data they are not entitled to. Computing ahead of time,
+   server-side, and storing only the redacted result keeps those figures off any path the
+   buyer can reach.
+2. **A changed ranking has to be explainable.** `criteria_id` records which version of the
+   buyer's criteria produced the score, so "why did this drop off my list" has an answer.
+3. Speed, which is the least interesting reason and the one usually given.
+
+`match_scores` has **no insert or update grant for any client role**. The matcher writes it
+with the service role; a client that could write here would promote itself to the top of
+every seller's list.
+
+### Identity: the business is confidential, the people are not
+
+0018 corrected an over-anonymisation in 0015–0016.
+
+- **Sellers are named.** `profiles_select_listing_representative` lets any signed-in buyer
+  read the profile of whoever represents a live listing, and
+  `firms_select_listing_representative` does the same for the brokerage. Buyers need
+  somebody to call.
+- **Buyers are named to their counterparties.** `app.is_my_counterparty()` admits a seller
+  to a buyer's profile on two grounds: the buyer requested access to a listing they control,
+  or the buyer matched one and left `is_discoverable` on.
+- **Neither reveals the business.** Knowing Sam Reyes is selling _a_ home-services company
+  in New York is not knowing which one.
+
+`app.is_my_counterparty()` is `SECURITY DEFINER` for a reason worth remembering: a policy's
+subqueries are themselves subject to RLS, and `match_scores_select_own` hides those rows
+from the seller. Written inline, the policy denied everything while looking correct.
 
 ## Deal room
 

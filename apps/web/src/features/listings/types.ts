@@ -86,10 +86,18 @@ export interface ListingNda {
   revokedAt: string | null;
 }
 
-/** An NDA as the seller sees it in their inbound queue. */
+/**
+ * An NDA as the seller sees it in their inbound queue.
+ *
+ * Named, with enough context to decide. A seller shown "identity withheld"
+ * cannot judge whether to release their financials, and will end up approving
+ * everyone or no one — both of which defeat the gate the NDA exists to be.
+ */
 export interface ListingNdaRequest extends ListingNda {
   buyerId: string;
   buyerName: string | null;
+  buyerEntity: string | null;
+  buyerFundingSource: string | null;
 }
 
 export interface ListingStatusEntry {

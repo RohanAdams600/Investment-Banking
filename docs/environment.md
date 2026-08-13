@@ -43,15 +43,23 @@ Project `Cairn`, ref `treltiukpuxhnzuplegu`, region us-east-1.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No      | Anon key. Safe to expose **only because Row Level Security is enabled on every table** — a table without RLS is publicly readable with this key. |
 | `SUPABASE_SERVICE_ROLE_KEY`     | **Yes** | Bypasses RLS entirely. Server-side only. Never referenced in a client component, never given a `NEXT_PUBLIC_` prefix, never logged.              |
 
-## AI providers — build step 8 (not yet used)
+## AI providers — in use
 
-| Variable            | Secret  | Purpose                                                          |
-| ------------------- | ------- | ---------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | **Yes** | Claude — primary reasoning, drafting, orchestration.             |
-| `OPENAI_API_KEY`    | **Yes** | Secondary — embeddings and cost-sensitive structured extraction. |
+| Variable            | Secret  | Purpose                                               |
+| ------------------- | ------- | ----------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | **Yes** | Claude — primary. Tried first.                        |
+| `OPENAI_API_KEY`    | **Yes** | Secondary — used when Anthropic is absent or failing. |
 
-Both are consumed only by the model router. No agent reads a provider key directly, which
-is what keeps re-routing an agent a config change rather than a code change.
+Both are consumed only by `apps/web/src/lib/ai/router.ts`. No feature reads a provider key
+directly, which keeps re-routing a task a config change rather than a code change — and
+makes "what did we send to whom" answerable from one file.
+
+**Both are optional.** With neither set, `runModel()` returns null and AI features degrade
+rather than break: matching still scores deterministically, and the thesis read is simply
+absent. Every caller has to handle null, which the return type makes unavoidable.
+
+What is sent: the anonymised listing teaser and the buyer's own thesis text. **Never the
+confidential profile** — see `docs/agents.md` and `docs/security.md`.
 
 ## Communications — build step 7 (not yet used)
 

@@ -38,8 +38,16 @@ export function NdaQueue({ requests }: { requests: ListingNdaRequest[] }) {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
-                      {request.buyerName ?? 'Identity withheld'}
+                      {request.buyerName ?? request.buyerEntity ?? 'Buyer'}
                     </p>
+                    {request.buyerEntity && request.buyerName ? (
+                      <p className="text-text-muted truncate text-xs">{request.buyerEntity}</p>
+                    ) : null}
+                    {request.buyerFundingSource ? (
+                      <p className="text-text-secondary text-xs">
+                        Funding: {request.buyerFundingSource}
+                      </p>
+                    ) : null}
                     <p className="text-text-muted text-xs">
                       Requested {new Date(request.requestedAt).toLocaleDateString()}
                       {request.expiresAt

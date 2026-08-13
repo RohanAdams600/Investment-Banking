@@ -10,12 +10,13 @@ import {
   formatBand,
   type IndustryKey,
 } from '@ib/core';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, VerifiedBadge } from '@ib/ui';
 
 import { FullProfile } from '@/features/listings/full-profile';
 import { NdaPanel } from '@/features/listings/nda-panel';
 import { loadListing } from '@/features/listings/queries';
 import { SaveButton } from '@/features/listings/save-button';
+import { loadRepresentative } from '@/features/matching/queries';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -43,6 +44,11 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
 
   const { teaser, profile, nda, controls } = view;
   const industry = INDUSTRY_PROFILES[teaser.industry as IndustryKey];
+
+  // Who is selling. The business is anonymous; the person representing it is
+  // not — a buyer needs somebody to call, and a deal offered by nobody in
+  // particular does not get taken seriously.
+  const representative = await loadRepresentative(listingId);
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -130,6 +136,27 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
           </p>
         </CardContent>
       </Card>
+
+      {representative && !controls ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Represented by</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              {representative.fullName ?? 'Seller'}
+              {representative.verificationStatus === 'verified' ? <VerifiedBadge /> : null}
+            </p>
+            {representative.firmName ? (
+              <p className="text-text-muted text-sm">{representative.firmName}</p>
+            ) : null}
+            <p className="text-text-muted text-xs">
+              Message them through the deal room once you have signed the confidentiality agreement.
+              Cairn is the platform, not your broker or your advisor.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/*
         The gate. `profile` is non-null only because Postgres returned a row,

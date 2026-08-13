@@ -9,6 +9,7 @@ export {
 } from './brand';
 export * from './access';
 export * from './listings';
+export * from './matching';
 export * from './valuation';
 export * from './criteria';
 export * from './legal';

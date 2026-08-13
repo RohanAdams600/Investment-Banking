@@ -9,7 +9,7 @@ documentation is current.
 | 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates |
 | 3   | Marketing site                                          | 1, 2          | Not started — brand name settled (Cairn)        |
 | 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred           |
-| 5   | Matching engine                                         | 5             | Not started                                     |
+| 5   | Matching engine                                         | 5             | **Complete** — NL search deferred               |
 | 6   | Deal room, NDA flow, document vault                     | 8             | Not started                                     |
 | 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
 | 8   | AI agents behind the orchestrator                       | 4             | Not started                                     |
@@ -162,6 +162,49 @@ the committed row and therefore the _old_ owner.
 Not built: the media gallery (`listing_media`), and the matching feed — `scoreFit()` has
 been tested and unused since step 3, and now that listings exist it is the obvious next
 thing to wire up.
+
+## Step 5 — what shipped
+
+Matching, buyer and seller identity, and outreach a person approves.
+
+- **Schema** (0017): `match_scores` with the contributing factors stored, and
+  `outreach_drafts` with an approval gate enforced by trigger.
+- **The confidentiality problem, solved rather than dodged.** A good score needs the
+  seller's exact figures; the buyer being scored has signed nothing. So the matcher runs
+  server-side against the real numbers and stores **only a redacted explanation** —
+  `redactFitResult()` strips every figure, and a test sweeps 2,520 input combinations
+  asserting no digit survives. The buyer gets an accurate ranking; the seller discloses
+  nothing.
+- **AI on the thesis** (0018, `lib/ai/`). A model router (Claude first, OpenAI second,
+  neither required) reads the buyer's free-text thesis against the listing teaser. Kept in
+  separate columns from the arithmetic, because a blended number cannot be explained and
+  the deterministic half has to stay reproducible. The model never sees the confidential
+  profile — see `docs/agents.md`.
+- **Outreach**: personalised automatically, sent only after a person approves the exact
+  wording. Editing an approved draft withdraws the approval.
+
+### The correction in 0018
+
+0015 and 0016 anonymised too much. They treated the _people_ as confidential along with the
+business, which is not how brokerage works:
+
+- Every listing now names the broker or seller representing it. A buyer needs somebody to
+  call, and a deal offered by nobody in particular does not get taken seriously.
+- The seller's NDA queue and matched-buyer list show real identities — name, entity,
+  funding source, prior deals. A seller shown "identity withheld" cannot judge whether to
+  release their financials, and will approve everyone or no one.
+- Buyers control this with `is_discoverable` on their criteria. Off means they keep their
+  own match feed and disappear from every seller's view.
+
+The business stays confidential. Getting those two the same way round was the mistake.
+
+Also found and fixed while testing: `buyer_profiles_select_counterparty` subqueried
+`match_scores`, whose own RLS hides those rows from the seller — so the policy denied
+everything while looking correct. Third time this codebase has hit that class of bug; the
+fix is a `SECURITY DEFINER` helper, `app.is_my_counterparty()`.
+
+Not built: natural-language search with editable parsed filters, and behavioural signal
+(browse/save/skip) feeding the score.
 
 ## What can proceed in parallel
 

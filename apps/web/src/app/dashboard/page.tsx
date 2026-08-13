@@ -84,6 +84,18 @@ export default async function DashboardPage() {
               show: can(actor, 'listing:create'),
             },
             {
+              href: '/matches',
+              label: 'Matches',
+              hint: 'Listings ranked against your criteria',
+              show: can(actor, 'listing:view_full'),
+            },
+            {
+              href: '/buyer-profile',
+              label: 'Buyer profile',
+              hint: 'How sellers see you',
+              show: can(actor, 'listing:view_full'),
+            },
+            {
               href: '/watchlist',
               label: 'Watchlist',
               hint: 'Listings you saved',

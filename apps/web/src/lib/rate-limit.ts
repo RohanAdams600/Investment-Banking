@@ -96,6 +96,18 @@ export const RATE_LIMITS = {
    * step of exactly the harvesting attack the teaser split exists to prevent.
    */
   ndaRequest: { limit: 20, windowMs: 3_600_000 },
+  /**
+   * Rescoring reads every active buyer's criteria against a listing's
+   * confidential figures. It is the most expensive thing a user can trigger,
+   * and the answer barely changes minute to minute.
+   */
+  recomputeMatches: { limit: 6, windowMs: 3_600_000 },
+  /**
+   * Drafting outreach. Tight because the failure mode is a seller generating a
+   * thousand messages and approving them without reading — which is exactly the
+   * behaviour the approval step exists to prevent.
+   */
+  outreachDraft: { limit: 30, windowMs: 3_600_000 },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

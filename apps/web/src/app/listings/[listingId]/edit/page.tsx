@@ -8,6 +8,14 @@ import { NdaQueue } from '@/features/listings/nda-queue';
 import { ProfileForm } from '@/features/listings/profile-form';
 import { listJurisdictions, listNdaRequests, loadListing } from '@/features/listings/queries';
 import { StatusControl } from '@/features/listings/status-control';
+import { checkOutreachReadiness } from '@/features/matching/actions';
+import { MatchedBuyers } from '@/features/matching/matched-buyers';
+import { OutreachQueue } from '@/features/matching/outreach-queue';
+import {
+  listMatchedBuyers,
+  listOutreachDrafts,
+  loadMatchSummary,
+} from '@/features/matching/queries';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -39,9 +47,13 @@ export default async function EditListingPage({
   // nothing from the difference.
   if (!view.controls) notFound();
 
-  const [jurisdictions, ndaRequests] = await Promise.all([
+  const [jurisdictions, ndaRequests, summary, buyers, drafts, blockers] = await Promise.all([
     listJurisdictions(),
     listNdaRequests(listingId),
+    loadMatchSummary(listingId),
+    listMatchedBuyers(listingId),
+    listOutreachDrafts(listingId),
+    checkOutreachReadiness(),
   ]);
 
   return (
@@ -66,6 +78,10 @@ export default async function EditListingPage({
       <FinancialsEditor listingId={listingId} years={view.profile?.financials ?? []} />
 
       <NdaQueue requests={ndaRequests} />
+
+      <MatchedBuyers listingId={listingId} summary={summary} buyers={buyers} />
+
+      <OutreachQueue drafts={drafts} blockers={blockers} />
     </main>
   );
 }

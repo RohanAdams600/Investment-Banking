@@ -381,30 +381,48 @@ export async function listNdaRequests(listingId: string): Promise<ListingNdaRequ
   // and `profiles.id` both point at `auth.users` without pointing at each
   // other — there is no foreign key between them for PostgREST to follow.
   //
-  // Names come back only for buyers `profiles_select_nda_counterparty` admits.
-  // A null name is therefore a policy outcome, not a missing profile, and the
-  // UI says "identity withheld" rather than inventing a placeholder.
+  // `profiles_select_nda_counterparty` admits the seller to the profile of any
+  // buyer with a live request on their listing, which is the whole point: a
+  // seller deciding whether to release their financials has to know who is
+  // asking. The entity and funding source come from `buyer_profiles` for the
+  // same reason — "SBA-funded operator, two prior deals" is what the decision
+  // actually turns on.
   const buyerIds = [...new Set(data.map((row) => (row as Row).buyer_id as string))];
   const names = new Map<string, string>();
+  const entities = new Map<string, { entityName: string | null; fundingSource: string | null }>();
 
   if (buyerIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', buyerIds);
+    const [profiles, buyerProfiles] = await Promise.all([
+      supabase.from('profiles').select('id, full_name').in('id', buyerIds),
+      supabase
+        .from('buyer_profiles')
+        .select('user_id, entity_name, funding_source')
+        .in('user_id', buyerIds),
+    ]);
 
-    for (const profile of profiles ?? []) {
+    for (const profile of profiles.data ?? []) {
       const p = profile as Row;
       if (p.full_name) names.set(p.id as string, p.full_name as string);
+    }
+
+    for (const buyerProfile of buyerProfiles.data ?? []) {
+      const b = buyerProfile as Row;
+      entities.set(b.user_id as string, {
+        entityName: b.entity_name ?? null,
+        fundingSource: b.funding_source ?? null,
+      });
     }
   }
 
   return data.map((row) => {
     const r = row as Row;
+    const entity = entities.get(r.buyer_id as string);
     return {
       ...toNda(r),
       buyerId: r.buyer_id,
       buyerName: names.get(r.buyer_id as string) ?? null,
+      buyerEntity: entity?.entityName ?? null,
+      buyerFundingSource: entity?.fundingSource ?? null,
     };
   });
 }

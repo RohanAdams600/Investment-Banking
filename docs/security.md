@@ -215,6 +215,84 @@ everything or nothing — both of which defeat the gate.
 It is one-directional. The buyer is revealed to the seller; the seller is not revealed to
 the buyer. That asymmetry is the product.
 
+## Matching: accurate scores without disclosure
+
+The matcher has a problem the rest of the product does not. A score is only worth showing
+if it is right, and a right score needs the seller's exact revenue, earnings and customer
+concentration — the NDA-gated half. The buyer being scored has signed nothing.
+
+Resolved by computing against the real figures **server-side** and storing only a redacted
+explanation. `redactFitResult()` in `packages/core` strips every figure before anything is
+written, with two overlapping defences: reasons built from confidential numbers are
+replaced wholesale, and whatever survives is scrubbed of digits anyway. The second exists
+because the first depends on recognising which reasons leak, and that judgement will
+eventually be wrong.
+
+A test sweeps 2,520 input combinations and asserts no digit appears in any output a buyer
+can read. A new reason added to the scoring model that quotes a figure fails the build
+without anyone having to remember the redaction exists.
+
+Verified by 38 tests in `supabase/tests/matching-rls.test.ts`:
+
+| Guarantee                                               | Mechanism                                                       |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| A buyer sees only their own scores                      | `match_scores_select_own` on `auth.uid()`                       |
+| No client can write a score                             | SELECT-only grant; the matcher uses the service role            |
+| A buyer cannot delete an unflattering score             | No DELETE policy or grant                                       |
+| A seller cannot read the raw score table                | Reaches buyers through `matched_buyers()`, which checks consent |
+| A buyer who opted out is invisible to sellers           | `is_discoverable` joined inside the definer function            |
+| A definer function cannot be pointed at another listing | `app.controls_listing()` checked inside the function body       |
+
+### Identity is disclosed; the business is not
+
+0018 corrected an over-anonymisation. Sellers are named on their listings, and buyers are
+named to the sellers they match or petition — because a seller shown "identity withheld"
+cannot judge whether to release their financials, and will approve everyone or no one.
+Neither disclosure reveals what is for sale.
+
+### The third instance of one bug
+
+`buyer_profiles_select_counterparty` originally subqueried `match_scores` inline. **A
+policy's subqueries are themselves subject to RLS**, and `match_scores_select_own` hides
+those rows from the seller — so the policy denied everything while reading as correct. This
+codebase has now hit that exact shape three times (messaging, listings, matching). The fix
+each time is a `SECURITY DEFINER` helper with a pinned `search_path`; here,
+`app.is_my_counterparty()`.
+
+**If a policy queries a table other than the one it protects, check whether the caller can
+read that table.** Usually they cannot.
+
+## What leaves the platform
+
+`apps/web/src/lib/ai/router.ts` is the only module that talks to a model provider. No
+feature calls one directly, so "what did we send to whom" is answerable from one file.
+
+**Confidential listing data never reaches a provider.** The deterministic matcher reads the
+seller's exact figures because it runs inside our own Postgres; sending them to a
+third-party API is a disclosure to a subprocessor the seller never agreed to, and no
+retention setting undoes it. The model gets the anonymised teaser and the buyer's own
+thesis text.
+
+That is enforced by types rather than by care: `ThesisMatchInput` has no field for a legal
+name, an address, or an exact figure, and `ScoredListing` keeps `profile` (never leaves the
+process) and `teaser` (publishable) as separate fields. Passing the wrong one requires
+changing a type first.
+
+Buyer thesis text is fenced and labelled as data in the prompt. It is user-supplied and
+reaches a model; treating it as instructions is how prompt injection works.
+
+## No agent sends anything on its own
+
+Outreach is personalised automatically and sent only after a person approves it. The
+`outreach_drafts` trigger makes that an invariant of the data:
+
+- rows are created as `draft`; any other starting state is refused;
+- `sent` requires `approved_by` and `approved_at`, both stamped from `auth.uid()` rather
+  than accepted from the caller;
+- editing an approved draft withdraws the approval, so "approve something bland then
+  rewrite it" does not work;
+- a sent message cannot be unsent or edited.
+
 ## The service role
 
 `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS completely. Legitimate uses are narrow:
