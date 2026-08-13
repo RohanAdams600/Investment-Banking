@@ -187,6 +187,10 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // a buyer's fit score was computed against it.
         questionnaire_responses: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         seller_preferences: ['INSERT', 'SELECT', 'UPDATE'],
+
+        // Append-only. No UPDATE, no DELETE — the value of a revision history
+        // is entirely in the guarantee that nobody edited it afterwards.
+        legal_document_versions: ['INSERT', 'SELECT'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

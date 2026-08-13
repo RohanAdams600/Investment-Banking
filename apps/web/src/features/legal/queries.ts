@@ -55,3 +55,101 @@ export async function listPublishedTemplates(): Promise<PublishedTemplate[]> {
       version: row.version as number,
     }));
 }
+
+export interface DraftSummary {
+  id: string;
+  kind: LegalDocumentKind;
+  title: string;
+  updatedAt: string;
+  findingCount: number;
+  versionCount: number;
+}
+
+/**
+ * The caller's own drafts.
+ *
+ * RLS restricts this to drafts they created, so no user filter — the session is
+ * the filter. Version counts come from the embedded relation rather than a
+ * second query.
+ */
+export async function listMyDrafts(): Promise<DraftSummary[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('legal_document_drafts')
+    .select('id, kind, title, updated_at, review_findings, legal_document_versions(id)')
+    .order('updated_at', { ascending: false })
+    .limit(50);
+
+  if (error || !data) return [];
+
+  return data.map((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = row as Record<string, any>;
+    return {
+      id: r.id,
+      kind: r.kind,
+      title: r.title,
+      updatedAt: r.updated_at,
+      findingCount: Array.isArray(r.review_findings) ? r.review_findings.length : 0,
+      versionCount: Array.isArray(r.legal_document_versions) ? r.legal_document_versions.length : 0,
+    };
+  });
+}
+
+export interface DraftDetail {
+  id: string;
+  kind: LegalDocumentKind;
+  title: string;
+  body: string;
+  versions: Array<{
+    id: string;
+    version: number;
+    body: string;
+    note: string | null;
+    createdAt: string;
+  }>;
+}
+
+/**
+ * One draft with its full revision history.
+ *
+ * Versions come back newest first, which is the order the comparison picker
+ * wants — the useful default is "what changed since last time", not "what
+ * changed since the beginning".
+ */
+export async function loadDraft(draftId: string): Promise<DraftDetail | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('legal_document_drafts')
+    .select('id, kind, title, body')
+    .eq('id', draftId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const { data: versions } = await supabase
+    .from('legal_document_versions')
+    .select('id, version, body, note, created_at')
+    .eq('draft_id', draftId)
+    .order('version', { ascending: false });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = data as Record<string, any>;
+
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    versions: ((versions ?? []) as Array<Record<string, any>>).map((v) => ({
+      id: v.id,
+      version: v.version,
+      body: v.body,
+      note: v.note ?? null,
+      createdAt: v.created_at,
+    })),
+  };
+}
