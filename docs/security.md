@@ -418,9 +418,18 @@ Honest list of what is not yet done. Tracked in `docs/roadmap.md`.
   bump, not a limit — each region and cold start gets its own counter. The seam is built so
   swapping in Redis or Upstash is one implementation; every call site already routes through
   it. Treat the current limits as protection against a stuck client, not an attacker.
-- **Step-up auth is available but not applied.** `requireStepUp()` exists and MFA enrolment
-  works; no route calls it yet. Downloading confidential documents and changing commission
-  settings should, once those exist.
+- **Step-up auth protects the accounts that opted into MFA, and reports on the rest.**
+  Applied to confidential document downloads and to fee-schedule changes — the two places
+  where a stolen session, rather than a stolen password, is the threat. `stepUpIfPossible()`
+  challenges any account that has a second factor. An account with none has nothing to step
+  up to, so the action proceeds and an audit entry records that it happened without one;
+  blocking there would mean "download this document, or first go and enrol in MFA", which
+  reads as a security feature and functions as a wall in front of the product on the day
+  somebody is closing a deal. The real fix is requiring MFA for the roles that touch a data
+  room, which is an operator policy — and the count of
+  `document.downloaded_without_second_factor` entries is the number that argument gets made
+  on. `requireStepUp()` still blocks unconditionally and is right for removing a factor,
+  where an account with none has nothing to remove.
 - **Content Security Policy.** Baseline headers are set in `next.config.ts`; the CSP waits
   until the real third-party origins are known. A permissive placeholder is worse than
   none, because it looks like coverage.

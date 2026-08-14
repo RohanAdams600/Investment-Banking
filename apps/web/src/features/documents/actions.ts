@@ -15,6 +15,13 @@ import {
 
 import { recordAuditEvent } from '@/lib/audit';
 import { getActor } from '@/lib/auth/actor';
+import {
+  STEP_UP_ACTIONS,
+  StepUpRequiredError,
+  stepUpIfPossible,
+  stepUpPrompt,
+  type StepUpOutcome,
+} from '@/lib/auth/assurance';
 import { createClient } from '@/lib/supabase/server';
 
 import { createDocumentDownloadUrl, createDocumentUploadUrl } from './storage';
@@ -359,12 +366,37 @@ export async function withdrawDocument(_prev: VaultState, formData: FormData): P
  */
 export async function requestDocumentUrl(
   documentId: string,
-): Promise<{ url: string | null; error: string | null }> {
+): Promise<{ url: string | null; error: string | null; needsStepUp?: boolean }> {
   const actor = await getActor();
   if (!actor) return { url: null, error: 'Sign in first.' };
 
   if (!can(actor, 'document:download')) {
     return { url: null, error: 'Your role does not include downloading deal documents.' };
+  }
+
+  /*
+   * A confidential document is exactly the case step-up was written for: the
+   * threat is a stolen session, not a stolen password, and a password check
+   * happened hours ago.
+   *
+   * Enforced for every account that has a second factor. For an account with
+   * none there is nothing to step up to, so the download proceeds and the gap
+   * is recorded — which is what makes "how many confidential downloads happened
+   * without a second factor" answerable, and that number is the argument for
+   * requiring MFA on the roles that touch a data room.
+   */
+  let assurance: StepUpOutcome;
+  try {
+    assurance = await stepUpIfPossible(STEP_UP_ACTIONS.documentDownload);
+  } catch (thrown) {
+    if (thrown instanceof StepUpRequiredError) {
+      return {
+        url: null,
+        error: stepUpPrompt(STEP_UP_ACTIONS.documentDownload),
+        needsStepUp: true,
+      };
+    }
+    throw thrown;
   }
 
   const supabase = await createClient();
@@ -383,5 +415,17 @@ export async function requestDocumentUrl(
   );
 
   if (!url) return { url: null, error: 'That document could not be opened.' };
+
+  if (assurance === 'unprotected') {
+    // Recorded rather than hidden. A run of these is the operator's evidence
+    // that MFA should be required for the roles that touch a data room — which
+    // is their policy call, and this is the number it gets made on.
+    await recordAuditEvent({
+      action: 'document.downloaded_without_second_factor',
+      entityType: 'deal_document',
+      entityId: documentId,
+    });
+  }
+
   return { url, error: null };
 }

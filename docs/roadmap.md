@@ -3,20 +3,20 @@
 Twelve steps, from the specification. Each is complete only when it has tests and its
 documentation is current.
 
-| #   | Step                                                    | Spec sections | Status                                          |
-| --- | ------------------------------------------------------- | ------------- | ----------------------------------------------- |
-| 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                    |
-| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates |
-| 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred  |
-| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred           |
-| 5   | Matching engine                                         | 5             | **Complete** — NL search deferred               |
-| 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred            |
-| 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
-| 8   | AI agents behind the orchestrator                       | 4             | Not started                                     |
-| 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not        |
-| 10  | Admin panel                                             | 13            | **Complete** — audit export deferred            |
-| 11  | Security hardening + compliance templates               | 14, 15        | Not started                                     |
-| 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | Partial — CI pipeline exists                    |
+| #   | Step                                                    | Spec sections | Status                                               |
+| --- | ------------------------------------------------------- | ------------- | ---------------------------------------------------- |
+| 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                         |
+| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates      |
+| 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred       |
+| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred                |
+| 5   | Matching engine                                         | 5             | **Complete** — NL search deferred                    |
+| 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred                 |
+| 7   | CRM + messaging                                         | 9, 10         | Not started                                          |
+| 8   | AI agents behind the orchestrator                       | 4             | Not started                                          |
+| 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not             |
+| 10  | Admin panel                                             | 13            | **Complete** — audit export deferred                 |
+| 11  | Security hardening + compliance templates               | 14, 15        | **Partial** — step-up applied; CSP and templates not |
+| 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | Partial — CI pipeline exists                         |
 
 ## Step 1 — what shipped
 

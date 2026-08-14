@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition, type FormEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_CATEGORY_LABELS,
@@ -359,6 +360,7 @@ function DocumentCard({
 function DownloadButton({ documentId }: { documentId: string }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [needsStepUp, setNeedsStepUp] = useState(false);
 
   return (
     <div className="space-y-1">
@@ -369,9 +371,11 @@ function DownloadButton({ documentId }: { documentId: string }) {
         onClick={() =>
           start(async () => {
             setError(null);
+            setNeedsStepUp(false);
             const result = await requestDocumentUrl(documentId);
             if (result.error || !result.url) {
               setError(result.error ?? 'That document could not be opened.');
+              setNeedsStepUp(result.needsStepUp === true);
               return;
             }
             window.location.href = result.url;
@@ -383,7 +387,14 @@ function DownloadButton({ documentId }: { documentId: string }) {
 
       {error ? (
         <p role="alert" className="text-danger text-xs">
-          {error}
+          {error}{' '}
+          {needsStepUp ? (
+            // A dead end otherwise: the message says "confirm with your
+            // authenticator" and there is nowhere on this page to do it.
+            <Link href="/settings/security" className="underline underline-offset-4">
+              Confirm now
+            </Link>
+          ) : null}
         </p>
       ) : null}
 

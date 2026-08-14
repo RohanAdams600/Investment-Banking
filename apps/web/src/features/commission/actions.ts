@@ -5,6 +5,12 @@ import { z } from 'zod';
 import { calculateCommission, CommissionInputError, type FeeStructure } from '@ib/core';
 
 import { recordAuditEvent } from '@/lib/audit';
+import {
+  STEP_UP_ACTIONS,
+  StepUpRequiredError,
+  stepUpIfPossible,
+  stepUpPrompt,
+} from '@/lib/auth/assurance';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -87,6 +93,22 @@ export async function saveFeeAgreement(
     // Accepting the structure here without tiers would violate the check
     // constraint and produce an error nobody can act on.
     return fail('Custom tiers are configured separately.');
+  }
+
+  /*
+   * A fee schedule decides what every deal at the firm charges, and changing it
+   * from a stolen session is a quiet, lucrative attack — nobody notices a rate
+   * table until an invoice looks wrong months later. Step-up for any account
+   * that has a second factor; see `stepUpIfPossible` for what happens to the
+   * accounts that do not.
+   */
+  try {
+    await stepUpIfPossible(STEP_UP_ACTIONS.commissionSettings);
+  } catch (thrown) {
+    if (thrown instanceof StepUpRequiredError) {
+      return fail(stepUpPrompt(STEP_UP_ACTIONS.commissionSettings));
+    }
+    throw thrown;
   }
 
   const supabase = await createClient();

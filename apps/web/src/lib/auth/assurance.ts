@@ -3,6 +3,14 @@ import 'server-only';
 import { cache } from 'react';
 
 import { createClient } from '../supabase/server';
+import { stepUpOutcome, type StepUpAction, type StepUpOutcome } from './step-up-policy';
+
+export {
+  STEP_UP_ACTIONS,
+  stepUpPrompt,
+  type StepUpAction,
+  type StepUpOutcome,
+} from './step-up-policy';
 
 /**
  * Authenticator Assurance Level.
@@ -64,6 +72,34 @@ export async function requireStepUp(action: string): Promise<void> {
   if (assurance.current !== 'aal2') {
     throw new StepUpRequiredError(action, assurance.hasEnrolledFactor);
   }
+}
+
+/**
+ * The form the product actually uses.
+ *
+ * `requireStepUp` blocks unconditionally, which is right for removing a second
+ * factor — somebody with no factor has nothing to remove — and wrong for
+ * everything else, because it would mean "download this document, or first go
+ * and enrol in MFA". That reads as a security feature and functions as a wall
+ * in front of the product on the day somebody is closing a deal.
+ *
+ * So this enforces step-up for every account that *can* step up, and reports
+ * the gap for the rest rather than hiding it. The caller records the
+ * `unprotected` outcome in the audit log, which is what makes "how many
+ * confidential downloads happened without a second factor" a question the
+ * operator can answer — and the answer is the argument for requiring MFA on the
+ * roles that touch a data room, which is their policy call and not this
+ * function's.
+ */
+export async function stepUpIfPossible(action: StepUpAction): Promise<StepUpOutcome> {
+  const assurance = await getAssuranceState();
+
+  const outcome = stepUpOutcome({ current: assurance.current, next: assurance.next });
+  if (outcome === 'challenge') {
+    throw new StepUpRequiredError(action, true);
+  }
+
+  return outcome;
 }
 
 export class StepUpRequiredError extends Error {
