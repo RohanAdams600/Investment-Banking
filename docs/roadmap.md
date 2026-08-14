@@ -398,6 +398,73 @@ Watermarking. Stamping a viewer's name into a PDF is a real deterrent, and doing
 properly needs a render pipeline this step does not have. The access log is the part
 that is actually evidence, and it is built.
 
+## Step 7 — the CRM
+
+Migration 0024, `packages/core/src/crm`, one screen at `/crm`. It also enforces
+`crm:manage`, which had been in the capability catalog since step 2 with nothing
+checking it.
+
+### A contact is not a user
+
+The shape of the whole schema follows from this. Most people in a broker's
+pipeline have never signed up and never will — the accountant who refers deals,
+the owner who might sell in two years, the buyer who called about a listing and
+left a phone number. A CRM that could only track platform accounts is a CRM the
+broker keeps in a spreadsheet instead.
+
+So `contacts` carries its own identity with an **optional** `user_id`, set if and
+when that person signs up. Building it the other way round — a profile row for
+everybody a broker has ever met — would mean fabricating accounts nobody asked
+for, and putting those people inside every policy that trusts `auth.users`.
+
+### The firm is the boundary, and there is no admin branch
+
+A brokerage's pipeline is the most commercially sensitive thing it owns; two
+brokers at rival firms share this platform. Every policy here is
+`app.owns_crm_row()`, and unlike listings there is no half of a contact that is
+safe to show — so platform admins see nothing either. A test asserts that.
+Operations verifies people and moderates listings; who a brokerage is talking to
+is none of its business, and an escape hatch "for support" is how that stops
+being true.
+
+Unaffiliated sellers have no firm, so rows carry `owner_id` instead. A check
+constraint says exactly one of the two is set: a row with neither is invisible to
+every policy — data nobody can reach or delete — and a row with both would be
+visible through two.
+
+### Dedupe is a constraint, not a nightly job
+
+The same person inquires on three listings and fills in the contact form twice.
+Calling them five times is how a brokerage loses a referral source, so Postgres
+refuses the duplicate: a unique index on `(firm_id, lower(email))`, partial so
+phone-only leads do not collide with each other. `contactKey()` in
+`packages/core` mirrors it so the warning arrives before the constraint
+violation does.
+
+Deliberately **not** applying Gmail's dot and plus rules. They are real and
+specific to Gmail; applying them everywhere would merge two different people's
+records at another provider, which is the wrong direction to be wrong in.
+
+### Stage and status are separate facts
+
+The stage is where somebody dragged the card; the status is what actually became
+of the lead. Collapsing them would mean a board that has been tidied claims deals
+that never closed, so the card carries both controls and `countPipeline()` trusts
+the status over the column.
+
+### What is deliberately absent
+
+No lead score, no engagement index, no conversion rate. A percentage computed
+over three weeks of pipeline is a number that gets quoted in a board meeting and
+means nothing, and a "heat" score would be a guess dressed as a metric — which
+this codebase has a rule about. What the board shows is counts, and one of them
+is `overdue`: a next action whose date has passed is somebody who was promised a
+call that did not happen.
+
+### Deferred
+
+Notification preferences, and meetings as calendar entries.
+
 ## What can proceed in parallel
 
 The marketing site (step 3) does not depend on the data model and the brand name is now

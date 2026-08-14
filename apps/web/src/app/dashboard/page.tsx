@@ -126,6 +126,12 @@ export default async function DashboardPage() {
               show: true,
             },
             {
+              href: '/crm',
+              label: 'Pipeline',
+              hint: 'Contacts, leads and what to do today',
+              show: can(actor, 'crm:manage'),
+            },
+            {
               href: '/commissions',
               label: 'Commissions',
               hint: 'Fee schedule and what you have earned',

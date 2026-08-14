@@ -203,6 +203,25 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // widens nothing — it is a shape over rows the caller could already
         // read. If this ever gains a privilege beyond SELECT, something has gone
         // badly wrong.
+        /*
+         * The CRM, and the one place DELETE is granted broadly.
+         *
+         * Everything else in this schema withholds it because the rows are
+         * records of what happened to *other people* — an NDA somebody signed,
+         * a fee that was earned, an entry in an audit trail. A contact typed in
+         * wrong is the firm's own working data, and a CRM you cannot tidy is a
+         * CRM people stop using, which costs more than the deletion does.
+         *
+         * The safety net is not the missing grant, it is
+         * `leads.contact_id on delete restrict`: tidying a contact that has
+         * pipeline history attached is refused rather than cascaded.
+         */
+        contacts: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        pipeline_stages: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        leads: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        crm_notes: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        crm_tasks: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+
         // The vault. No DELETE on documents or grants: a document in a data
         // room is part of the record of what was disclosed, and a grant is the
         // record of a release — "was this person ever shown the customer list"

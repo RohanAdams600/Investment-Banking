@@ -16,6 +16,7 @@ export * from './valuation';
 export * from './criteria';
 export * from './legal';
 export * from './documents';
+export * from './crm';
 export {
   formatMoney,
   formatMoneyCompact,
