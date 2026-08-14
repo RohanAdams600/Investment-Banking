@@ -14,11 +14,11 @@ at the time of acceptance.
 | --------------------- | ------------------------------------------------------- |
 | Identity and access   | **Built** — 0001–0010                                   |
 | Listings              | **Built** — 0015, 0016. Media gallery not built         |
-| Deal room / messaging | **Partly built** — 0011–0014. Document vault not built  |
+| Deal room / messaging | **Built** — 0011–0014, 0023                             |
 | Matching              | **Built** — 0013, 0017, 0018                            |
 | Compliance            | **Partly built** — awaiting attorney-reviewed templates |
 | Onboarding            | **Built** — 0019                                        |
-| Commission            | Not built                                               |
+| Commission            | **Built** — 0021                                        |
 
 ## Identity and access
 
@@ -184,15 +184,55 @@ retire has an advantage the seller never meant to give.
 
 ## Deal room
 
-| Entity                 | Notes                                                                                     |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| `deal_rooms`           | Per listing/buyer pairing.                                                                |
-| `documents`            | Stored separately from general app data, stricter policies.                               |
-| `document_versions`    | Re-upload creates a version. **Nothing is overwritten.**                                  |
-| `document_permissions` | Per-document, per-user. View-only vs download, with bulk presets.                         |
-| `ndas`                 | Template per listing, status per buyer, gates full-profile access.                        |
-| `nda_signatures`       | Signer, timestamp, template version.                                                      |
-| `audit_log`            | **Immutable.** Every view, download, permission change, upload. Exportable per deal room. |
+**Built** — migration 0023, on top of the messaging schema in 0011–0012.
+
+| Entity                | Notes                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `deal_documents`      | The vault. Category, visibility, and the object key. Superseded and withdrawn are statuses; nothing is deleted.             |
+| `document_grants`     | Who a restricted document was released to. Revoking sets `revoked_at`; the row stays.                                       |
+| `document_access_log` | **Append-only.** Every signed URL issued, and every refusal. Readable by the document's owner and by the person it records. |
+| `listing_ndas` (0015) | Template per listing, status per buyer, gates full-profile access on the listing side.                                      |
+
+### Why this is not the attachments table
+
+0012 already stores files: an attachment is something somebody sent in a conversation,
+and it inherits that conversation's membership exactly. That is the right model for
+"here is the thing I was talking about" and the wrong one for diligence.
+
+A diligence document belongs to the **deal**, is filed under a category, is superseded
+rather than resent, and — the part the attachment model cannot express — is often
+released to one party and not another. A seller with three bidders in one room does not
+hand all three their tax returns on the same day, and the one who signed first should
+not see what the third one asked for.
+
+### Three visibility levels, and why not more
+
+`private` (my side only, staging), `restricted` (the people I name), `deal` (everybody
+in the room). Every per-document permission scheme grows towards a matrix nobody can
+reason about, and a model a seller cannot hold in their head is one they will get wrong
+under time pressure — which is exactly when the confidential file goes to the wrong
+bidder. Anything finer is expressed by naming fewer people, not by adding a level.
+
+Deal membership is required in **every** branch of `app.can_read_document()`. A grant
+outlives the membership that justified it, so removing somebody from the room closes
+their documents even if nobody remembered to revoke the grants.
+
+### Reading a row is reading the document
+
+The SELECT policy on `deal_documents` is the same check as the storage policy on the
+object, because a title like "Q3 layoffs memo" is not metadata. The one addition is
+`app.controls_document()`: a withdrawn document stays visible to whoever withdrew it.
+Not a widening — without it, withdrawal made the row unreachable to its own owner, and
+since Postgres applies SELECT policies to `UPDATE ... WHERE`, the next update matched
+zero rows instead of being refused. Silent, and indistinguishable from success.
+
+### What the access log actually claims
+
+That a signed URL was issued to this person for this document at this time. Whether the
+bytes arrived, and whether they were then forwarded, is outside what any server can
+observe — the vault UI says so rather than implying a chain of custody it does not have.
+Refusals are logged too, and a run of `denied` against one document is the interesting
+row.
 
 ## CRM and messaging
 

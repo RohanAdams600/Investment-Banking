@@ -111,7 +111,7 @@ slot.
 
 ### Live migration state
 
-**Migrations 0001–0022 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
+**Migrations 0001–0023 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
 us-east-1), plus the jurisdiction seed. 0017–0022 went on in one pass; the structural
 invariants were re-run afterwards and the behavioural checks that had been outstanding
 since step 4 were finished.
@@ -233,7 +233,7 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 - [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
-- [x] Migrations 0001–0022 applied to the production Supabase project (us-east-1)
+- [x] Migrations 0001–0023 applied to the production Supabase project (us-east-1)
 - [x] Step-4 verification fixtures removed from the live project
 - [x] NDA round trip verified live — issue, sign, revoke, and a second buyer denied
 - [x] Admin panel verified live — an operator reads no confidential half

@@ -370,6 +370,45 @@ The policy now narrows to the listing's controllers and admins, and the market r
 general shape: **a comment explaining why a column is safe is not a control.** If a column
 must be hidden from a reader who can see the row, it needs its own table or its own view.
 
+## The document vault
+
+Verified by 32 tests in `supabase/tests/document-vault.test.ts`, all built around one
+scenario: a seller with two bidders in the same deal room.
+
+| Guarantee                                                       | Mechanism                                                                   |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Membership of the room does not open a restricted document      | `app.can_read_document()` requires an explicit grant on top of deal access  |
+| One bidder cannot see what the other was released               | `document_grants_select` admits the controller and the grantee, nobody else |
+| A buyer cannot re-release a seller's document                   | `app.controls_document()` on the grant write policy                         |
+| A grant to somebody outside the room admits nothing             | Deal access is required in **every** branch, not only the grant branch      |
+| Removing somebody from the room closes their documents          | Same — the grant survives, the access does not                              |
+| A document cannot be repointed at another file after release    | `app.freeze_document_immutables()`, whole-row comparison                    |
+| Withdrawal is one-way                                           | Same trigger; `withdrawn_at` is stamped, never accepted                     |
+| The access log cannot be written, edited or deleted by a client | No insert/update/delete policy or grant; entries use the service role       |
+| The bucket has no permanent URL                                 | `public = false`; reads are 60-second signed URLs minted per request        |
+| A malformed object path denies rather than raises               | `app.can_read_document_path()` catches the cast                             |
+
+Two of those deserve the reasoning, because the obvious implementation gets them wrong.
+
+**Repointing.** Without the freeze trigger, "set permissions" and "change the file this
+row points at" are the same grant. A party could release something harmless, wait for it
+to be reviewed, then swap the object — and the audit log would show a release of the
+reviewed document and a download of something else.
+
+**The path segment.** Object keys are `<deal_id>/<document_id>/<file_name>` and the
+storage policy checks the **second** segment. A file name containing a slash moves the
+boundary, so `../../other-deal/x.pdf` would produce a key whose second segment names a
+document the uploader has nothing to do with — and the policy would faithfully check that
+one. `safeFileName()` in `packages/core` is what keeps the segment where it is, and a test
+asserts the key always has exactly three parts with the document id in the middle.
+
+### What the access log claims
+
+That a signed URL was issued to this person for this document at this time. Not that a
+file was read, and not where it went afterwards — no server can observe that, and the page
+says so rather than implying a chain of custody it does not have. Withdrawing access says
+the same thing in the confirmation: _anything already downloaded stays downloaded._
+
 ## Known gaps
 
 Honest list of what is not yet done. Tracked in `docs/roadmap.md`.

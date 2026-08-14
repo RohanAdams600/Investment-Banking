@@ -62,21 +62,27 @@ export default async function DealsPage() {
         <ul className="space-y-2">
           {deals.map((deal) => (
             <li key={deal.id}>
-              <Link href={`/deals/${deal.id}/messages`} className="block">
-                <Card className="hover:border-border-default transition-colors">
-                  <CardContent className="flex items-center justify-between gap-4 py-4">
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="truncate text-sm font-medium">{deal.name}</p>
-                      <p className="text-text-muted text-xs">
-                        Opened {new Date(deal.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
+              <Card className="hover:border-border-default transition-colors">
+                <CardContent className="flex items-center justify-between gap-4 py-4">
+                  <Link href={`/deals/${deal.id}/messages`} className="min-w-0 flex-1 space-y-0.5">
+                    <p className="truncate text-sm font-medium">{deal.name}</p>
+                    <p className="text-text-muted text-xs">
+                      Opened {new Date(deal.createdAt).toLocaleDateString()}
+                    </p>
+                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/deals/${deal.id}/documents`}
+                      className="text-text-secondary hover:text-text-primary text-xs underline underline-offset-4"
+                    >
+                      Documents
+                    </Link>
                     <Badge>
                       {deal.conversationCount} {deal.conversationCount === 1 ? 'room' : 'rooms'}
                     </Badge>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>

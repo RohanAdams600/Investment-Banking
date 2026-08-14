@@ -1,0 +1,18 @@
+export {
+  ALLOWED_DOCUMENT_TYPES,
+  DOCUMENT_CATEGORIES,
+  DOCUMENT_CATEGORY_LABELS,
+  DOCUMENT_VISIBILITIES,
+  DOCUMENT_VISIBILITY_HINTS,
+  DOCUMENT_VISIBILITY_LABELS,
+  DocumentRejected,
+  MAX_DOCUMENT_BYTES,
+  SENSITIVE_CATEGORIES,
+  assertAcceptable,
+  documentKey,
+  formatBytes,
+  safeFileName,
+  visibilityWarning,
+  type DocumentCategory,
+  type DocumentVisibility,
+} from './vault';

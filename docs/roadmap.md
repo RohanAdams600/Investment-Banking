@@ -10,7 +10,7 @@ documentation is current.
 | 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred  |
 | 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred           |
 | 5   | Matching engine                                         | 5             | **Complete** — NL search deferred               |
-| 6   | Deal room, NDA flow, document vault                     | 8             | Not started                                     |
+| 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred            |
 | 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
 | 8   | AI agents behind the orchestrator                       | 4             | Not started                                     |
 | 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not        |
@@ -337,6 +337,66 @@ compliance work.
 
 Audit export for a regulator or an incident review. The log is readable and filterable at
 200 entries; getting it out of the browser is step 11's problem.
+
+## Step 6 — the document vault
+
+Migration 0023, `packages/core/src/documents`, and one screen at
+`/deals/[dealId]/documents`. It is also where `document:upload`,
+`document:download` and `document:set_permissions` stop being aspirational —
+they have been in the capability catalog since step 2 with nothing enforcing them.
+
+### The scenario the whole design is for
+
+A seller with two bidders in the same room. Everything here is about the second
+bidder not seeing what the first one was shown, and it is why the vault is a
+separate table from message attachments rather than a folder in one.
+
+An attachment inherits its conversation's membership exactly, which is right for
+"here is the thing I was talking about". A diligence document belongs to the deal,
+is filed under a category, is superseded rather than resent, and is often released
+to one party and not another.
+
+### Three levels, and the sentence each one is
+
+`private` / `restricted` / `deal`, labelled in the UI as "only my side", "only the
+people I name", "everyone in this deal room". Every per-document permission scheme
+grows towards a matrix nobody can reason about, and a model a seller cannot hold in
+their head is one they will get wrong under time pressure — which is exactly when
+the confidential file goes to the wrong bidder. Releasing names a person from the
+room; there is nowhere to paste an identifier.
+
+Deal membership is required in every branch of `app.can_read_document()`, so
+removing somebody from the room closes their documents even if nobody remembered to
+revoke the grants. A test asserts that.
+
+### Two things the tests caught
+
+**Firm membership is not deal membership.** The first version of the test put the
+uploader's colleague outside the room and expected the firm branch to admit them. It
+did not, and it should not: a brokerage runs twenty deals and not every broker
+belongs in every room. What the firm branch buys is narrower — a colleague already
+in the room reads their own side's documents without a separate grant.
+
+**Withdrawal made the row unreachable to its own owner.** `can_read_document`
+excludes withdrawn documents, and Postgres applies SELECT policies to
+`UPDATE ... WHERE` — so after withdrawing, the next update matched zero rows instead
+of being refused. Silent, and indistinguishable from success. The SELECT policy now
+also admits `controls_document`, which is the honest model anyway: a withdrawn
+document is part of the record of what was disclosed and when it was pulled.
+
+### What the access log claims, and what it does not
+
+That a signed URL was issued to this person for this document at this time. Whether
+the bytes arrived, and whether they were then forwarded, is outside what any server
+can observe — so the page says exactly that instead of implying a chain of custody.
+Refusals are logged too, and a run of `denied` against one document is the
+interesting row.
+
+### Deferred
+
+Watermarking. Stamping a viewer's name into a PDF is a real deterrent, and doing it
+properly needs a render pipeline this step does not have. The access log is the part
+that is actually evidence, and it is built.
 
 ## What can proceed in parallel
 

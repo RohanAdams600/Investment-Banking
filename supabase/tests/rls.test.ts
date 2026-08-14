@@ -203,6 +203,20 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // widens nothing — it is a shape over rows the caller could already
         // read. If this ever gains a privilege beyond SELECT, something has gone
         // badly wrong.
+        // The vault. No DELETE on documents or grants: a document in a data
+        // room is part of the record of what was disclosed, and a grant is the
+        // record of a release — "was this person ever shown the customer list"
+        // gets asked after a deal falls apart, and a deleted row answers it
+        // wrongly. Withdrawal and revocation are statuses.
+        //
+        // `document_access_log` is SELECT only for the same reason the platform
+        // audit log is: entries are written server-side when a URL is issued,
+        // and a client that could write here could fabricate a read — or omit
+        // their own, which is the only one they would want to omit.
+        deal_documents: ['INSERT', 'SELECT', 'UPDATE'],
+        document_grants: ['INSERT', 'SELECT', 'UPDATE'],
+        document_access_log: ['SELECT'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:

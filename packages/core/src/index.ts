@@ -15,6 +15,7 @@ export * from './questionnaire';
 export * from './valuation';
 export * from './criteria';
 export * from './legal';
+export * from './documents';
 export {
   formatMoney,
   formatMoneyCompact,
