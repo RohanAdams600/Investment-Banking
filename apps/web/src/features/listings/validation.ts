@@ -163,6 +163,18 @@ export const financialYearSchema = z.object({
 export const statusChangeSchema = z.object({
   listingId: uuidSchema,
   status: z.enum(LISTING_STATUSES as [string, ...string[]]),
+  /**
+   * Why. Optional for a seller moving their own listing, and the whole point
+   * when a reviewer sends one back — "rejected" with no explanation gives the
+   * seller nothing to act on. Stored on the status history row, visible to the
+   * seller and never to the market.
+   */
+  reason: z
+    .string()
+    .trim()
+    .max(1000, 'Keep the reason under 1000 characters.')
+    .optional()
+    .transform((value) => (value ? value : null)),
 });
 
 export const ndaSchema = z.object({

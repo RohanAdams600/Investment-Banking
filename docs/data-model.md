@@ -79,6 +79,27 @@ does not reopen it — pulling a business off the market closes the door behind 
 Platform admins are deliberately excluded from `listing_details`. Reviewing a headline
 does not require the seller's customer concentration.
 
+Which means a reviewer cannot see whether a seller filled the profile in at all, and they
+genuinely need that before publishing to the market. `app.listing_has_profile()` and
+`app.listing_financial_years()` (0022) answer it as a boolean and a count, guarded inside
+their own bodies — completeness without contents. The `listing_review_queue` view is built
+on those rather than on an inline `exists`, which under `security_invoker` would have
+correctly returned false to the only person meant to read it.
+
+### The reviewer's reason, and where it may not go
+
+`listing_status_history.reason` records why a listing moved — mostly, why a reviewer sent
+one back to draft. Written through `change_listing_status()`, which passes it on a
+transaction-local setting to the trigger that writes the history row, so the table stays
+append-only with no UPDATE grant.
+
+RLS is row-level. Since 0016 admitted anybody who can see a discoverable listing to its
+status history, populating that column would have published the reviewer's note to the
+market — "readable row, unreadable column" is not something a policy can express. So the
+policy narrowed to the seller and admins, and everyone else reads
+`listing_status_timeline`, a view with no `reason` column in it. Same split as the teaser
+and the profile, one table down.
+
 ### Bands, not figures
 
 The teaser carries `revenue_band_low/high_cents`, not `revenue_cents`. Industry plus state

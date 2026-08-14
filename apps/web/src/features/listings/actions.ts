@@ -329,12 +329,15 @@ export async function changeListingStatus(
   _prev: ListingActionState,
   formData: FormData,
 ): Promise<ListingActionState> {
+  const reason = formData.get('reason');
+
   const parsed = statusChangeSchema.safeParse({
     listingId: formData.get('listingId') ?? '',
     status: formData.get('status') ?? '',
+    reason: typeof reason === 'string' ? reason : undefined,
   });
 
-  if (!parsed.success) return fail('Not a valid status change.');
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? 'Not a valid status change.');
 
   const supabase = await createClient();
   const next = parsed.data.status as ListingStatus;
@@ -357,19 +360,26 @@ export async function changeListingStatus(
     );
   }
 
-  const { error, count } = await supabase
-    .from('listings')
-    .update({ status: next }, { count: 'exact' })
-    .eq('id', parsed.data.listingId);
+  // Through the RPC rather than a direct update, so the explanation lands on
+  // the status history row the trigger writes. The function runs with invoker
+  // rights: the same policies apply and a caller with no business here still
+  // moves nothing.
+  const { data: moved, error } = await supabase.rpc('change_listing_status', {
+    target_listing_id: parsed.data.listingId,
+    new_status: next,
+    reason: parsed.data.reason,
+  });
 
   if (error) return fail(explain(error, 'Could not change that status.'));
-  if (count === 0) return fail('You do not have permission to change this listing.');
+  if (Number(moved ?? 0) === 0) return fail('You do not have permission to change this listing.');
 
   await recordAuditEvent({
     action: 'listing.status_changed',
     entityType: 'listing',
     entityId: parsed.data.listingId,
-    metadata: { from, to: next },
+    // The reason itself is not copied here. The audit log is broadly readable
+    // by admins and gets exported; the sentence belongs to the seller.
+    metadata: { from, to: next, gaveReason: parsed.data.reason !== null },
   });
 
   revalidatePath(`/listings/${parsed.data.listingId}`);

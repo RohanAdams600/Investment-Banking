@@ -197,6 +197,19 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // one is waived with a reason, which leaves a trail.
         fee_agreements: ['INSERT', 'SELECT', 'UPDATE'],
         commission_records: ['INSERT', 'SELECT', 'UPDATE'],
+
+        // A view, and it appears here because `role_table_grants` does not
+        // distinguish. SELECT only, and it runs `security_invoker` so the grant
+        // widens nothing — it is a shape over rows the caller could already
+        // read. If this ever gains a privilege beyond SELECT, something has gone
+        // badly wrong.
+        listing_review_queue: ['SELECT'],
+
+        // Also a view, and the reason it exists is the grant above it:
+        // `listing_status_history` carries a reviewer's explanation, RLS cannot
+        // hide a single column, so the market gets a view with no such column
+        // rather than the table.
+        listing_status_timeline: ['SELECT'],
       };
 
       const { rows } = await db.query<{ table_name: string; privs: string }>(

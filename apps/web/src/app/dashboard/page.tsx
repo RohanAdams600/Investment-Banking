@@ -132,6 +132,12 @@ export default async function DashboardPage() {
               show: can(actor, 'commission:view_own'),
             },
             {
+              href: '/admin',
+              label: 'Platform operations',
+              hint: 'Review, verification and jurisdictions',
+              show: can(actor, 'admin:view_platform_analytics'),
+            },
+            {
               href: '/settings/security',
               label: 'Security',
               hint: 'Two-factor and active sessions',

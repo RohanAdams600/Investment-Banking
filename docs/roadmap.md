@@ -14,7 +14,7 @@ documentation is current.
 | 7   | CRM + messaging                                         | 9, 10         | Not started                                     |
 | 8   | AI agents behind the orchestrator                       | 4             | Not started                                     |
 | 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not        |
-| 10  | Admin panel                                             | 13            | Not started                                     |
+| 10  | Admin panel                                             | 13            | **Complete** — audit export deferred            |
 | 11  | Security hardening + compliance templates               | 14, 15        | Not started                                     |
 | 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | Partial — CI pipeline exists                    |
 
@@ -270,6 +270,73 @@ that is what gets missed in a long redline and matters most when it does. Every
 version is kept; nothing is overwritten. `summariseRevision()` counts and flags
 and never characterises a change as good, risky, or a concession. A test asserts
 that too.
+
+## Step 10 — the admin panel
+
+Five screens (`/admin`, review, verification, jurisdictions, audit) and one migration, 0022. Most of the work was in what the panel refuses to show.
+
+### Admin is not a superuser, and this is where that got expensive
+
+The capability catalog has said so since step 2: `admin` carries verification, listing
+review, templates, jurisdictions and audit, and deliberately not `deal_room:access`,
+`document:download` or `listing:view_full`. Building the screens is where that stopped
+being a comment. The obvious way to build a review queue is broad read access filtered in
+the UI, and every shortcut here would have been that.
+
+So each power is granted as narrowly as it goes:
+
+- verification changes `verification_status` and nothing else, enforced by a trigger that
+  copies the new row, normalises the two columns that may move, and compares against the
+  old — a whole-row comparison catches a column added next year that nobody thought to
+  protect, which an explicit column list would not;
+- listing review was already narrow (0016 restricts a non-controller to the status
+  column), so the panel inherited it;
+- `listing_details` and `listing_financials` stay unreachable, and two tests assert an
+  admin reading them gets zero rows.
+
+### The review queue collided with that principle immediately
+
+The queue's first draft asked `exists (select 1 from listing_details ...)` inline, and it
+was always false for the only person meant to read it. The view is declared
+`security_invoker = true`, so that subquery runs with the caller's rights — and admins are
+deliberately excluded from `listing_details`.
+
+Which is the right collision to have. The fix is not to open the table but to ask a
+narrower question: `app.listing_has_profile()` and `app.listing_financial_years()` return a
+boolean and a count, guarded inside their own bodies, and never a value from inside the
+row. A reviewer learns the listing is complete without learning what it says.
+
+### Rejection needed a reason, and a reason needed a hiding place
+
+`listing_status_history.reason` had existed since 0015 with nothing ever writing to it. A
+reviewer sending a listing back to draft with no explanation gives the seller a rejection
+and nothing to act on, so `change_listing_status()` now carries one — on a
+transaction-local setting read by the history trigger, because the alternative was an
+UPDATE grant on an append-only table.
+
+That immediately created a leak. 0016 admitted anybody who can see a discoverable listing
+to its status history, reasoning that the reason text was seller-side only; true until
+something started writing to it, and RLS is row-level, so "they can read the row but not
+that column" was never something the policy could say. A buyer could have selected
+`reason` straight through PostgREST. The policy now narrows to the seller and admins, and
+the public timeline moved to `listing_status_timeline` — a view with no reason column to
+leak. Same teaser/detail split as listings themselves, one table down.
+
+The function is invoker-rights, deliberately: the update inside is subject to exactly the
+policies 0016 already wrote, so a buyer calling it moves zero rows. It is the ordinary
+update plus somewhere to put the sentence explaining it.
+
+### Jurisdictions are a switch, not a claim
+
+Turning New York on opens it to new business. It does not verify a licence, check a
+registration, or make the platform compliant there. The page says so in those words,
+because the one thing this screen must never imply is that flipping it did any of the
+compliance work.
+
+### Deferred
+
+Audit export for a regulator or an incident review. The log is readable and filterable at
+200 entries; getting it out of the browser is step 11's problem.
 
 ## What can proceed in parallel
 

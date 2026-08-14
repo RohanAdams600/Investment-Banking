@@ -317,6 +317,34 @@ confidential financials of a business they are not party to. Where admins genuin
 document access, such as a fraud investigation, that should be a separate, individually
 audited elevation rather than an ambient permission.
 
+Migration 0022 is where that stopped being a comment, because every admin screen has an
+easy version that violates it.
+
+| Power           | How it is bounded                                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Verification    | `enforce_profile_verification()` copies the new row, normalises `verification_status` / `verified_at` / `updated_at`, and rejects the update if anything else moved. `verified_at` is stamped by the database, not accepted. An account holder cannot verify themselves. |
+| Listing review  | Inherited from 0016 — a non-controller may touch the status column and nothing else, checked by whole-row comparison.                                                                                                                                                    |
+| Review queue    | `listing_review_queue` is `security_invoker`. Completeness comes from two guarded definer helpers returning a boolean and a count, never a value from the row.                                                                                                           |
+| Platform counts | `platform_stats()` answers "how many", never "which", and is guarded by `app.is_platform_admin()` inside the body because definer rights ignore RLS.                                                                                                                     |
+| Status changes  | `change_listing_status()` is **invoker**-rights. It adds a place to record why, not a way to move a listing you could not otherwise move.                                                                                                                                |
+| Audit log       | Readable by admins; no UPDATE or DELETE policy and no grant to back one, for anybody. A log an administrator can rewrite still looks like evidence.                                                                                                                      |
+
+Two tests assert the negative case directly: an admin selecting `listing_details` and
+`listing_financials` gets zero rows.
+
+### A column RLS could not hide
+
+Populating `listing_status_history.reason` created a leak that had been latent since 0016:
+the select policy admitted anybody who could see a discoverable listing, on the reasoning
+that the reason text was seller-side only. That held while nothing wrote to it. RLS filters
+rows, not columns, so once a reviewer's note landed there, a buyer could have read it
+straight through PostgREST.
+
+The policy now narrows to the listing's controllers and admins, and the market reads
+`listing_status_timeline` — a view that has no `reason` column to leak. Worth naming the
+general shape: **a comment explaining why a column is safe is not a control.** If a column
+must be hidden from a reader who can see the row, it needs its own table or its own view.
+
 ## Known gaps
 
 Honest list of what is not yet done. Tracked in `docs/roadmap.md`.

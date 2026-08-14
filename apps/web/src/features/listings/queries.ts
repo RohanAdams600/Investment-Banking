@@ -343,7 +343,11 @@ async function loadStatusHistory(listingId: string): Promise<ListingStatusEntry[
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('listing_status_history')
+    // The view, not the table. Since 0022 the table carries a reviewer's reason
+    // for sending a listing back, which is written for the seller and not for
+    // the market — and a column is not something RLS can hide, so the timeline
+    // everyone sees is a view with no reason column at all.
+    .from('listing_status_timeline')
     .select('id, from_status, to_status, changed_at')
     .eq('listing_id', listingId)
     .order('changed_at', { ascending: false });
