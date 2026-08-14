@@ -18,7 +18,9 @@ at the time of acceptance.
 | Matching              | **Built** — 0013, 0017, 0018                            |
 | Compliance            | **Partly built** — awaiting attorney-reviewed templates |
 | Onboarding            | **Built** — 0019                                        |
-| Commission            | **Built** — 0021                                        |
+| Commission            | **Built** — 0021, with CSV export                       |
+| CRM                   | **Built** — 0024                                        |
+| Agent runs            | **Built** — 0025                                        |
 
 ## Identity and access
 

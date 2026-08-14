@@ -119,6 +119,12 @@ DEFINER functions callable by `authenticated`.**
 | `platform_stats`        | Counts rows across tables no one user can see                                                        | `app.is_platform_admin()` inside the body; returns "how many", never "which"     |
 | `verification_queue`    | Joins `user_roles`, which is restricted to the caller's own rows                                     | `app.is_platform_admin()` inside the body                                        |
 
+Notably **absent** from that list, and deliberately: `seed_pipeline_stages` and
+`change_listing_status`. Both write, and both are invoker-rights — they are ordinary
+statements with somewhere to put a reason or a default, not privileged operations dressed
+as functions. A caller pointing either at somebody else's rows changes nothing, because
+the same policies apply inside as outside.
+
 The pattern is what the linter flags, not a defect. Every one of these exists _because_ the
 caller lacks direct rights, and each either takes no user identifier or re-checks ownership
 inside. None is granted to `anon` — verified, not assumed.
@@ -408,6 +414,20 @@ That a signed URL was issued to this person for this document at this time. Not 
 file was read, and not where it went afterwards — no server can observe that, and the page
 says so rather than implying a chain of custody it does not have. Withdrawing access says
 the same thing in the confirmation: _anything already downloaded stays downloaded._
+
+## The CRM has no admin branch
+
+Worth stating separately because it is the one place this codebase deliberately gives
+platform operations _less_ than everywhere else.
+
+Every policy on `contacts`, `leads`, `pipeline_stages`, `crm_notes` and `crm_tasks` is
+`app.owns_crm_row()` and nothing else. No `or app.is_platform_admin()`. A brokerage's
+pipeline is the most commercially sensitive thing it owns — it _is_ the business — and
+unlike a listing there is no half of a contact that is safe to show. A test asserts an
+admin reads zero rows.
+
+The pressure to add an escape hatch here will be real and will be phrased as "for
+support". That is how it stops being true.
 
 ## Known gaps
 
