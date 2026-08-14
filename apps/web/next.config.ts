@@ -18,10 +18,13 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
   },
 
-  // Baseline security headers. The CSP is deliberately not set here yet — it
-  // needs the real third-party origins (Supabase, Twilio, Maps, analytics)
-  // enumerated first, and a permissive placeholder CSP is worse than none
-  // because it looks like coverage. Tracked in docs/security.md.
+  /*
+   * Baseline security headers.
+   *
+   * The CSP is **not** here: it needs a per-request nonce, so it is set in
+   * `src/middleware.ts` where one can be minted. These are the headers that are
+   * the same for every response.
+   */
   async headers() {
     return [
       {

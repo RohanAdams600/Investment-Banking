@@ -3,20 +3,20 @@
 Twelve steps, from the specification. Each is complete only when it has tests and its
 documentation is current.
 
-| #   | Step                                                    | Spec sections | Status                                               |
-| --- | ------------------------------------------------------- | ------------- | ---------------------------------------------------- |
-| 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                         |
-| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates      |
-| 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred       |
-| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred                |
-| 5   | Matching engine                                         | 5             | **Complete** — NL search deferred                    |
-| 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred                 |
-| 7   | CRM + messaging                                         | 9, 10         | **Complete** — notification preferences deferred     |
-| 8   | AI agents behind the orchestrator                       | 4             | **Complete** — narrative summaries deferred          |
-| 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not             |
-| 10  | Admin panel                                             | 13            | **Complete** — audit export deferred                 |
-| 11  | Security hardening + compliance templates               | 14, 15        | **Partial** — step-up applied; CSP and templates not |
-| 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | Partial — CI pipeline exists                         |
+| #   | Step                                                    | Spec sections | Status                                                      |
+| --- | ------------------------------------------------------- | ------------- | ----------------------------------------------------------- |
+| 1   | Repo scaffold, design tokens, shared UI, docs skeleton  | 1, 16         | **Complete**                                                |
+| 2   | Auth, roles/permissions, base data model, RLS policies  | 3.2, 14       | **Complete** — consent capture awaits templates             |
+| 3   | Marketing site                                          | 1, 2          | **Complete** — landing page; blog/SEO deferred              |
+| 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred                       |
+| 5   | Matching engine                                         | 5             | **Complete** — NL search deferred                           |
+| 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred                        |
+| 7   | CRM + messaging                                         | 9, 10         | **Complete** — notification preferences deferred            |
+| 8   | AI agents behind the orchestrator                       | 4             | **Complete** — narrative summaries deferred                 |
+| 9   | Commission system + tax exports                         | 11, 12        | **Complete** — records and CSV export                       |
+| 10  | Admin panel                                             | 13            | **Complete** — audit export deferred                        |
+| 11  | Security hardening + compliance templates               | 14, 15        | **Partial** — step-up and CSP done; templates await counsel |
+| 12  | Testing catch-up, deployment pipeline, launch readiness | 16            | **Partial** — 735 tests green; 8 checklist items left       |
 
 ## Step 1 — what shipped
 
@@ -529,6 +529,52 @@ table refuses the send, and this refuses the claim that no send was needed.
 A model-written covering paragraph over the deterministic findings. The plumbing is
 there (`runModel`, and `model`/`provider` columns on every run); what it would add is
 prose, and prose was not the part that was missing.
+
+## Steps 9, 11 and 12 — the last pieces
+
+### The commission export
+
+`packages/core/src/commission/export.ts` and `/commissions/export`, closing the half of
+step 9 that was outstanding. A CSV, because every accounting package imports one and no
+accountant has ever asked for JSON.
+
+Every amount appears twice — integer cents and a formatted dollar figure. That looks
+redundant and is not: a spreadsheet reads `"$180,000.00"` as text and `18000000` as a
+number, so the accountant can sum one column and eyeball the other, and a rounding
+dispute becomes resolvable rather than an argument about display. `formatMoney` drops the
+decimals on a round figure, which is right on a card and wrong in a column somebody
+reconciles against a bank statement, so the export overrides it.
+
+The interesting part of `csvField` is not the quoting. A field beginning `=`, `+`, `-` or
+`@` is **executed as a formula** by Excel and Sheets when the file opens, which turns
+"export your records" into arbitrary code on the accountant's machine — and `waived_reason`
+is free text a user typed. A leading apostrophe defuses it, and a test asserts it for every
+prefix including the tab and carriage-return variants that spreadsheet parsers skip past.
+
+### The CSP
+
+The gap `docs/security.md` has carried since step 1 could not close until the real origins
+were known. There is exactly one — Supabase — because every model call goes through the
+server-side router and the browser never touches a provider. A test asserts
+`api.anthropic.com` appears nowhere in the policy: an entry for it would be a standing
+invitation to call the provider from the client, which is also where the API key would
+then have to live.
+
+Nonce-based rather than `'unsafe-inline'`, minted in middleware because that is the only
+layer that runs before Next renders. Styles still allow inline — a smaller, deliberate
+concession, written down rather than left for somebody to discover.
+
+Shipping **report-only** until `CSP_ENFORCE=true`. That is not the failure the original
+note warned about: report-only says so in the header name, whereas a permissive enforcing
+policy claims a protection it does not provide. The rollout is a launch-checklist item.
+
+### What is left
+
+Eight items on the launch checklist, and none of them are code: brand configuration, the
+CSP walk-through, provider keys, a leaked-password setting, a backup restore test, deleting
+the unused us-west-2 project, branch protection, and the one that actually gates a launch —
+**legal templates reviewed by counsel**. Consent capture has been blocked on that since
+step 2 and no amount of engineering moves it.
 
 ## What can proceed in parallel
 

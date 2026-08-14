@@ -79,3 +79,14 @@ confidential profile** — see `docs/agents.md` and `docs/security.md`.
    variable should fail at startup with a readable message, not produce `undefined` three
    layers deep.
 4. Add it to the deployment environments (see `docs/deployment.md`).
+
+## Security
+
+| Variable      | Secret | Notes                                                                                                                                                                                                                                                                                                                            |
+| ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CSP_ENFORCE` | No     | `"true"` sends the Content Security Policy as `Content-Security-Policy`; anything else sends it as `Content-Security-Policy-Report-Only`. Defaults to report-only deliberately — a CSP that breaks production is a worse outage than no CSP is a vulnerability. Flip it after walking the app and reading the violation reports. |
+
+The policy itself is built in `apps/web/src/lib/security/csp.ts` and the per-request nonce
+is minted in `src/middleware.ts`. There is nothing to configure beyond the flag: the only
+third-party origin is Supabase, and it is derived from `NEXT_PUBLIC_SUPABASE_URL` rather
+than listed separately, so a project rename cannot leave the policy blocking the database.

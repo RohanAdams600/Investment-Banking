@@ -430,6 +430,18 @@ Honest list of what is not yet done. Tracked in `docs/roadmap.md`.
   `document.downloaded_without_second_factor` entries is the number that argument gets made
   on. `requireStepUp()` still blocks unconditionally and is right for removing a factor,
   where an account with none has nothing to remove.
-- **Content Security Policy.** Baseline headers are set in `next.config.ts`; the CSP waits
-  until the real third-party origins are known. A permissive placeholder is worse than
-  none, because it looks like coverage.
+- **Content Security Policy — written, and shipping report-only.** The origins are known
+  now: exactly one, Supabase, because every model call goes through the server-side router
+  and the browser never touches a provider. `apps/web/src/lib/security/csp.ts` builds a
+  nonce-based policy and `src/middleware.ts` mints the nonce per request, which is the only
+  layer that runs before Next renders. Scripts get a nonce and `'strict-dynamic'` rather
+  than `'unsafe-inline'`; styles still allow inline, which is a smaller and deliberate
+  concession — Next and Tailwind both emit inline style attributes, there is no nonce
+  plumbing for them, and injected CSS is a far weaker primitive than injected script.
+
+  It goes out as `Content-Security-Policy-Report-Only` until `CSP_ENFORCE=true`. A CSP
+  that breaks production is a worse outage than no CSP is a vulnerability, and report-only
+  says so in the header name — which is not the failure the original note warned about. A
+  permissive _enforcing_ policy claims a protection it does not provide; this one claims
+  nothing yet. The rollout is on the launch checklist: deploy, walk the app, read the
+  violations, flip the flag.

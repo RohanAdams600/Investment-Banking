@@ -93,10 +93,24 @@ export default async function CommissionsPage({
 
       {agreement ? <RecordCommissionForm firmId={firm.id} /> : null}
 
-      <p className="text-text-muted text-sm">
-        These records are for your own bookkeeping and are not tax advice. Export and reconciliation
-        for your accountant is not built yet.
-      </p>
+      <div className="border-border-subtle space-y-2 rounded-md border p-4">
+        <h2 className="text-sm font-medium">For your accountant</h2>
+        <p className="text-text-muted text-sm">
+          A CSV of every record above, with each amount in both integer cents and dollars — one
+          column to sum, one to read. Every accounting package imports it.
+        </p>
+        <a
+          href={`/commissions/export?firm=${firm.id}`}
+          className="border-border-default hover:border-border-strong inline-block rounded-md border px-3 py-1.5 text-sm"
+          download
+        >
+          Download CSV
+        </a>
+        <p className="text-text-muted text-xs">
+          These records are your own bookkeeping. They are not a tax filing, not a 1099, and not
+          advice about either — Cairn does not move money and has no payment rail.
+        </p>
+      </div>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { buildCsp, cspHeaderName, isCspEnforced } from './lib/security/csp';
 import { isSupabaseConfigured } from './lib/supabase/env';
 
 /**
@@ -14,15 +15,47 @@ import { isSupabaseConfigured } from './lib/supabase/env';
  * who may see what. Those checks live in the route handlers and layouts, backed
  * by Row Level Security. Middleware runs before the route is known and is the
  * wrong layer to encode "may this person open this deal room".
+ *
+ * It also mints the CSP nonce, because this is the only layer that runs before
+ * Next renders and can therefore put the nonce where Next will find it. See
+ * `lib/security/csp.ts` for why the policy is nonce-based rather than
+ * `'unsafe-inline'`.
  */
 export async function middleware(request: NextRequest) {
+  /*
+   * A nonce per request, and it must be per request.
+   *
+   * A nonce reused across responses is a nonce an attacker can read from one
+   * page and paste into an injection on another, which is the same as having no
+   * script policy at all. `crypto.randomUUID()` is available in the edge
+   * runtime and is what the platform gives us here.
+   */
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+
+  const csp = buildCsp({
+    nonce,
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    development: process.env.NODE_ENV === 'development',
+  });
+
+  const headerName = cspHeaderName(isCspEnforced());
+
+  // Set on the *request* as well as the response. Next reads the nonce out of
+  // the request's CSP header to stamp its own inline scripts — without this the
+  // policy is correct and the application does not load.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
+
   // Lets the app run before a Supabase project exists — during early
   // development, and in CI where the build must not require secrets.
   if (!isSupabaseConfigured()) {
-    return NextResponse.next({ request });
+    const bare = NextResponse.next({ request: { headers: requestHeaders } });
+    bare.headers.set(headerName, csp);
+    return bare;
   }
 
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +69,7 @@ export async function middleware(request: NextRequest) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
           }
@@ -48,6 +81,10 @@ export async function middleware(request: NextRequest) {
   // Do not remove. Calling getUser() is what triggers the refresh; dropping it
   // because "the value is unused" silently reintroduces mid-session sign-outs.
   await supabase.auth.getUser();
+
+  // Set last, because the cookie handler above rebuilds `response` and would
+  // otherwise drop it.
+  response.headers.set(headerName, csp);
 
   return response;
 }
