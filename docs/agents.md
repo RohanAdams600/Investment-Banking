@@ -163,3 +163,47 @@ replace the guarantee that the words are known in advance.
 postal address and a working opt-out. It is a tool that supports the sender's compliance
 process and is explicitly **not** a compliance guarantee — rules vary by state and by
 channel, and SMS carries consent requirements it does not model.
+
+## The orchestrator
+
+**Built** — migration 0025, `apps/web/src/lib/ai/orchestrator.ts`,
+`apps/web/src/features/pipeline`.
+
+The four-step workflow — analyse the submission, value it, find buyers, draft the
+approach — runs as a sequence of recorded steps. Steps 1–3 run together when a seller
+asks; step 4 is deliberately not part of it.
+
+### Every step is a row
+
+`agent_runs` records the kind, the status, what was read, what came out, which model
+answered (usually none — steps 1 and 2 are deterministic), and how long it took. That
+is what turns "the platform thinks your listing is worth X" into something with a
+provenance three months later, which is what the specification asks for and what a log
+line cannot provide.
+
+### What may be stored, and what may not
+
+`inputs` records **what was read, never the values**: which listing, how many financial
+years, which criteria version. Storing the figures would make `agent_runs` a second
+copy of the NDA-gated half of every listing, sitting behind its own policies rather
+than the ones written for it — and one widening later, the gate is gone.
+
+`output` is different: it is the thing the user is being shown anyway. Where a step
+produces something derived from confidential data, it is redacted first, by the same
+`redactFitResult()` the match scores go through.
+
+### Only one step calls a model at all
+
+The thesis matcher. It sees the anonymised teaser and the buyer's own words about what
+they want — never the seller's revenue, customers or name — and that boundary is
+enforced by the shape of `ThesisMatchInput`, which has no field for either.
+
+Steps 1 and 2 never call anything. The readiness analysis and the valuation both read
+the confidential half and both run inside our own process for that reason.
+
+### The stop is enforced twice
+
+A `draft_outreach` run cannot report `succeeded`; it ends at `needs_approval`. The
+`outreach_drafts` trigger from 0017 already refuses to mark anything sent without a
+human approver, so this is the second mechanism — it refuses the _claim_ that no send
+was needed. Two, because this is the rule that gets somebody sued.

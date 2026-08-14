@@ -13,6 +13,8 @@ import {
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, VerifiedBadge } from '@ib/ui';
 
 import { FullProfile } from '@/features/listings/full-profile';
+import { PipelinePanel } from '@/features/pipeline/pipeline-panel';
+import { loadPipelineState } from '@/features/pipeline/queries';
 import { NdaPanel } from '@/features/listings/nda-panel';
 import { loadListing } from '@/features/listings/queries';
 import { SaveButton } from '@/features/listings/save-button';
@@ -49,6 +51,11 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
   // not — a buyer needs somebody to call, and a deal offered by nobody in
   // particular does not get taken seriously.
   const representative = await loadRepresentative(listingId);
+
+  // Only the seller's side gets this. `listing_pipeline_state()` checks control
+  // inside its own body, so a buyer calling it gets nothing — but not asking at
+  // all keeps the buyer's page from carrying a shape it has no use for.
+  const pipelineSteps = controls ? await loadPipelineState(listingId) : [];
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -164,6 +171,14 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
         in-force NDA. This page does not decide that; it renders what came back.
       */}
       {controls ? null : <NdaPanel listingId={teaser.id} nda={nda} />}
+
+      {/*
+        The pipeline's own account of this listing: what is wrong with it, what
+        it might be worth, and how many buyers it was scored against. Seller-side
+        only — the findings quote the confidential figures back, which is fine
+        for the person whose business it is and nobody else.
+      */}
+      {controls ? <PipelinePanel listingId={teaser.id} steps={pipelineSteps} /> : null}
 
       {profile ? <FullProfile profile={profile} /> : null}
     </main>

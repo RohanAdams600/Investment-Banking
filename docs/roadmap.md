@@ -12,7 +12,7 @@ documentation is current.
 | 5   | Matching engine                                         | 5             | **Complete** — NL search deferred                    |
 | 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred                 |
 | 7   | CRM + messaging                                         | 9, 10         | **Complete** — notification preferences deferred     |
-| 8   | AI agents behind the orchestrator                       | 4             | Not started                                          |
+| 8   | AI agents behind the orchestrator                       | 4             | **Complete** — narrative summaries deferred          |
 | 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not             |
 | 10  | Admin panel                                             | 13            | **Complete** — audit export deferred                 |
 | 11  | Security hardening + compliance templates               | 14, 15        | **Partial** — step-up applied; CSP and templates not |
@@ -464,6 +464,71 @@ call that did not happen.
 ### Deferred
 
 Notification preferences, and meetings as calendar entries.
+
+## Step 8 — the orchestrator
+
+Migration 0025, `packages/core/src/agents`, `apps/web/src/lib/ai/orchestrator.ts`,
+`apps/web/src/features/pipeline`. The panel lives on the seller's own listing page.
+
+### The honest description
+
+It is bookkeeping around four functions that already existed. The valuation is
+deterministic and lives in `packages/core`; so is the readiness analysis; so is the
+matcher's scoring. An orchestrator that reimplemented any of them would be a second
+answer to a question that already has one.
+
+What it adds is the part none of them can do alone: **a record** (every step is a row
+with its inputs, its output and how long it took, so "why was I matched with this"
+has an answer three months later), **sequencing** (a step whose dependency is blocked
+records why it did not run rather than running badly), and **the stop**.
+
+### Step one is not a model
+
+The obvious way to build "analyse the business details submitted by the seller" is to
+hand everything to a model and print what it says. That is wrong twice over. The
+confidential figures may not leave — a proper analysis needs the exact revenue and
+customer concentration, and sending those to a provider is a disclosure to a
+subprocessor the seller never agreed to. And a finding has to be checkable: "your
+customer concentration is a concern" is an opinion the seller cannot argue with, while
+"your top customer is 60% of revenue, and buyers usually discount above 30%" is a fact
+plus a stated convention they can disagree with out loud.
+
+So every finding is deterministic, carries the number that produced it, and names the
+threshold it crossed. The thresholds are named constants, because a broker with twenty
+years in the industry will disagree with some of them and that should be a one-line
+change somebody can review.
+
+### The false positive the tests caught
+
+`headlineNamesBusiness()` first flagged a headline sharing **one** word with the legal
+name. "Anchor Route Services LLC" and "established route-based business" share
+"route", so a correctly-written anonymous headline got a blocking finding — and a
+warning that fires on good input is a warning people learn to click past. The rule is
+now two distinctive words, or the only one there is, with the generic half of company
+names ("services", "group", "holdings") excluded from counting at all.
+
+### What `agent_runs.inputs` may not contain
+
+Not the confidential figures. Storing everything that went in, for reproducibility,
+would make the table a second copy of the NDA-gated half of every listing behind its
+own policies rather than the ones written for it — and the first time somebody widens
+access "so support can debug", the gate is gone. `inputs` records _what was read_:
+which listing, how many financial years, which criteria version.
+
+### There is no automatic step four
+
+Drafting outreach is built and a seller triggers it per buyer from their own queue.
+Running it inside the pipeline would generate a message to every matched buyer the
+moment a listing was submitted — one accidental click from the autonomous outbound the
+specification forbids, even with the approval trigger catching the send. The database
+refuses a `draft_outreach` run that claims success for the same reason: the outreach
+table refuses the send, and this refuses the claim that no send was needed.
+
+### Deferred
+
+A model-written covering paragraph over the deterministic findings. The plumbing is
+there (`runModel`, and `model`/`provider` columns on every run); what it would add is
+prose, and prose was not the part that was missing.
 
 ## What can proceed in parallel
 

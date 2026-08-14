@@ -236,6 +236,15 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         document_grants: ['INSERT', 'SELECT', 'UPDATE'],
         document_access_log: ['SELECT'],
 
+        /*
+         * The orchestrator's record. SELECT only for everyone: runs are written
+         * with the service role because scoring reads every buyer's criteria
+         * against a listing's confidential figures, and a client that could
+         * write here could fabricate an approval trail for outreach nobody
+         * reviewed.
+         */
+        agent_runs: ['SELECT'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:
