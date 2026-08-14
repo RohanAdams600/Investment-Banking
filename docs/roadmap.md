@@ -11,7 +11,7 @@ documentation is current.
 | 4   | Core listings + buyer/seller dashboards                 | 3, 6, 7       | **Complete** — media gallery deferred                |
 | 5   | Matching engine                                         | 5             | **Complete** — NL search deferred                    |
 | 6   | Deal room, NDA flow, document vault                     | 8             | **Complete** — watermarking deferred                 |
-| 7   | CRM + messaging                                         | 9, 10         | Not started                                          |
+| 7   | CRM + messaging                                         | 9, 10         | **Complete** — notification preferences deferred     |
 | 8   | AI agents behind the orchestrator                       | 4             | Not started                                          |
 | 9   | Commission system + tax exports                         | 11, 12        | **Partial** — records built; exports not             |
 | 10  | Admin panel                                             | 13            | **Complete** — audit export deferred                 |
