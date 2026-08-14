@@ -350,7 +350,12 @@ async function loadStatusHistory(listingId: string): Promise<ListingStatusEntry[
     .from('listing_status_timeline')
     .select('id, from_status, to_status, changed_at')
     .eq('listing_id', listingId)
-    .order('changed_at', { ascending: false });
+    // `id` breaks the tie. Every row written in one transaction shares `now()`,
+    // so two transitions made together sort arbitrarily against each other on
+    // the timestamp alone — and a timeline that shows a listing going live
+    // before it was submitted reads as a bug in the record.
+    .order('changed_at', { ascending: false })
+    .order('id', { ascending: false });
 
   if (error || !data) return [];
 

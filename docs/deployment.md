@@ -97,7 +97,7 @@ worse than leaving it forward.
 in `public` has RLS both enabled and forced.
 
 **Project:** `Cairn`, ref `treltiukpuxhnzuplegu`, region **us-east-1**, org `Cairn Capital`.
-All nine migrations and the jurisdiction seed are applied. Verified live: cross-tenant
+All twenty-two migrations and the jurisdiction seed are applied. Verified live: cross-tenant
 isolation, self-grant admin denial, append-only guarantees, and anonymous access — the last
 one exercised through PostgREST with the publishable key, which is the path a browser
 actually takes rather than a direct SQL connection.
@@ -111,77 +111,65 @@ slot.
 
 ### Live migration state
 
-**Migrations 0001–0016 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
-us-east-1), plus the jurisdiction seed.
+**Migrations 0001–0022 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
+us-east-1), plus the jurisdiction seed. 0017–0022 went on in one pass; the structural
+invariants were re-run afterwards and the behavioural checks that had been outstanding
+since step 4 were finished.
 
-**0017, 0018 and 0019 are written and tested locally but NOT applied.** The Supabase connection
-dropped before they could be. Apply them in order, then re-run the invariant block below —
-0018 adds `app.is_my_counterparty()`, which must appear in the pinned-`search_path` check,
-and three tables that must appear with RLS forced.
+State after that pass: **51 jurisdictions, none active; every other table empty.** The
+step-4 verification fixtures have been removed.
 
-#### ⚠️ Outstanding: verification fixtures left in the live project
+#### What was verified live, and why it is verified live at all
 
-`0015` and `0016` applied cleanly and the structural invariants were re-verified (table
-below). Behavioural verification of the NDA gate was **partially completed** before the
-connection dropped:
+Local Postgres and Supabase have diverged twice before — migrations 0008 and 0009 exist
+because of it, both times because the local environment was _more_ restrictive than
+production and the suite passed on code that would have failed. So structural claims get
+re-run against the real project rather than inferred from a green local suite.
 
-| Check                                             | Result             |
-| ------------------------------------------------- | ------------------ |
-| Buyer with no NDA sees the teaser                 | Confirmed — 1 row  |
-| Buyer with no NDA sees no `listing_details`       | Confirmed — 0 rows |
-| Buyer with no NDA sees no `listing_financials`    | Confirmed — 0 rows |
-| Buyer who has only _requested_ still sees nothing | Confirmed — 0 rows |
-| `published_at` stamped on first move to `live`    | Confirmed          |
-| Seller issues, buyer signs, gate opens            | **Not run**        |
-| Revocation closes the gate                        | **Not run**        |
-| A second buyer is not admitted                    | **Not run**        |
+| Check                                               | Result                                        |
+| --------------------------------------------------- | --------------------------------------------- |
+| Every `public` table has RLS enabled **and** forced | 0 exceptions across 30 tables                 |
+| Every `app` function pins `search_path`             | 0 exceptions                                  |
+| `anon` can execute nothing in `public`              | 0 functions                                   |
+| The `authenticated` grant allowlist                 | Identical to the 32 entries the suite asserts |
 
-**Fixtures from that run are still in the database and must be removed.** They are three
-`auth.users` rows with fixed uuids, their roles, one listing with its details, financials
-and one NDA, and `US-NY` was switched to active. Nothing else was touched.
+The NDA round trip, which had never been completed live:
 
-```sql
--- Remove the step-4 verification fixtures.
-delete from public.listing_ndas
- where listing_id = '44444444-4444-4444-4444-444444444444';
-delete from public.listing_financials
- where listing_id = '44444444-4444-4444-4444-444444444444';
-delete from public.listing_details
- where listing_id = '44444444-4444-4444-4444-444444444444';
-delete from public.listing_status_history
- where listing_id = '44444444-4444-4444-4444-444444444444';
-delete from public.listings
- where id = '44444444-4444-4444-4444-444444444444';
-delete from public.user_roles where user_id in (
-  '11111111-1111-1111-1111-111111111111',
-  '22222222-2222-2222-2222-222222222222',
-  '33333333-3333-3333-3333-333333333333');
-delete from auth.users where id in (
-  '11111111-1111-1111-1111-111111111111',
-  '22222222-2222-2222-2222-222222222222',
-  '33333333-3333-3333-3333-333333333333');
+| Check                                             | Result                                              |
+| ------------------------------------------------- | --------------------------------------------------- |
+| Buyer with no NDA sees the teaser                 | Confirmed — 1 row                                   |
+| Buyer with no NDA sees no `listing_details`       | Confirmed — 0 rows                                  |
+| Buyer with no NDA sees no `listing_financials`    | Confirmed — 0 rows                                  |
+| Buyer who has only _requested_ still sees nothing | Confirmed — 0 rows                                  |
+| `published_at` stamped on first move to `live`    | Confirmed                                           |
+| Seller issues, buyer signs, gate opens            | Confirmed — 1 detail row, 1 financial row           |
+| Revocation closes the gate                        | Confirmed — 0 rows; teaser still visible            |
+| A second buyer is not admitted                    | Confirmed — 0 rows while the first holds a live NDA |
 
--- Decide deliberately rather than leaving it as a side effect of testing.
--- US-NY was activated to satisfy the listing's foreign key. Leave it active only
--- if New York is genuinely a launch state.
-update public.jurisdictions set is_active = false where code = 'US-NY';
+And the admin panel from 0022:
 
--- Expect every count to be 0, and 51 jurisdictions.
-select
-  (select count(*) from public.listings) as listings,
-  (select count(*) from public.listing_details) as details,
-  (select count(*) from public.listing_ndas) as ndas,
-  (select count(*) from public.listing_status_history) as history,
-  (select count(*) from auth.users) as users,
-  (select count(*) from public.jurisdictions) as jurisdictions,
-  (select count(*) from public.jurisdictions where is_active) as active_jurisdictions;
-```
+| Check                                      | Result                                                      |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| An admin reads `listing_details`           | 0 rows — the line the whole migration defends               |
+| An admin reads `listing_financials`        | 0 rows                                                      |
+| An admin reads the review queue            | `has_profile: true`, `financial_years: 0`                   |
+| A reviewer returns a listing with a reason | Recorded on the correct history row, and only that row      |
+| The seller reads the reason                | Confirmed                                                   |
+| A buyer reads the reason                   | 0 rows from the table; the timeline view has no such column |
+| `platform_stats` / `verification_queue`    | Answer an admin, and are not granted to `anon`              |
 
-Then finish the behavioural checks that did not run — the full round trip is covered by
-`supabase/tests/listings-rls.test.ts` locally, but local Postgres and Supabase have
-diverged twice before (see migrations 0008 and 0009), which is why the live pass exists.
+Two notes from doing it, both worth keeping:
 
-The 0014 invariant checks below were also re-run at this point and passed:
+- **Revocation is a status change, not a timestamp write.** Setting `revoked_at` directly
+  is silently ignored — `enforce_nda_transition()` freezes it and stamps it itself. A first
+  attempt at the revocation check wrote the column and concluded the gate had failed. The
+  application already uses `status = 'revoked'`, which is the supported verb.
+- **Every row written in one transaction shares `now()`.** Ordering status history by
+  `changed_at` alone therefore sorts arbitrarily among them. Harmless in the app, where
+  each change is its own request, but it made a probe read the wrong row — and the
+  timeline query now breaks the tie on `id`.
+
+The invariant block, kept here because it is the thing to run after any migration goes on:
 
 ```sql
 -- expect 0 / 0 / 0
@@ -196,12 +184,11 @@ select
     where n.nspname='public' and has_function_privilege('anon', p.oid, 'EXECUTE')) as anon_fns;
 ```
 
-Verified against the live project after applying, using the same invariants the test suite
-asserts:
+Earlier passes, kept for the record — the numbers moved as tables were added:
 
 | Check                                                    | Result                                       |
 | -------------------------------------------------------- | -------------------------------------------- |
-| Tables in `public` missing RLS or FORCE                  | 0 of 22                                      |
+| Tables in `public` missing RLS or FORCE                  | 0 of 22 (0 of 30 after 0022)                 |
 | Functions in `app` without a pinned `search_path`        | 0                                            |
 | Functions in `public` executable by `anon`               | 0                                            |
 | Listings helpers in `app` executable by `anon`           | 0                                            |
@@ -246,10 +233,10 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 - [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
-- [x] Migrations applied to the production Supabase project (us-east-1)
-- [ ] **Step-4 verification fixtures removed from the live project** (SQL above)
-- [ ] **NDA round trip verified live** — issue, sign, revoke, and a second buyer denied
-- [ ] **0017, 0018 and 0019 applied** to the live project, and invariants re-run
+- [x] Migrations 0001–0022 applied to the production Supabase project (us-east-1)
+- [x] Step-4 verification fixtures removed from the live project
+- [x] NDA round trip verified live — issue, sign, revoke, and a second buyer denied
+- [x] Admin panel verified live — an operator reads no confidential half
 - [ ] AI provider keys set, or accepted as absent (features degrade, they do not break)
 - [ ] Leaked-password protection enabled in Auth settings
 - [ ] Unused us-west-2 project deleted

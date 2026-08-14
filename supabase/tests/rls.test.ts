@@ -257,6 +257,56 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       expect(rows.map((r) => r.proname)).toEqual([]);
     });
 
+    it('keeps anon out of every app helper that is not a trigger', async () => {
+      /*
+       * The `app` schema is not published by PostgREST, so this is a second
+       * line rather than the first. It is here because 0006 granted `anon`
+       * EXECUTE across the whole schema, that grant is still in force, and it
+       * applies to helpers written years later unless somebody remembers to
+       * revoke — which four migrations have now had to do by hand.
+       *
+       * Pinning the list is what turns remembering into a build failure. Two
+       * categories are legitimately here:
+       *
+       *   - trigger functions, which Postgres refuses to call directly
+       *     ("trigger functions can only be called as triggers"), so the grant
+       *     buys nothing;
+       *   - the handful of predicates that policies evaluate before there is a
+       *     session at all — the jurisdiction and legal-template policies, which
+       *     an anonymous visitor legitimately reaches.
+       *
+       * Anything else appearing here is a new helper that inherited the blanket
+       * grant, and the fix is a `revoke ... from public, anon` in its migration.
+       */
+      const expected = [
+        'can_access_deal',
+        'can_administer_conversation',
+        'can_create_deal',
+        'conversation_role',
+        'has_platform_role',
+        'is_active_conversation_member',
+        'is_firm_administrator',
+        'is_firm_member',
+        'is_platform_admin',
+        'topic_conversation_id',
+        'user_firm_ids',
+      ];
+
+      const { rows } = await db.query<{ proname: string }>(
+        `select p.proname
+           from pg_proc p
+           join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'app'
+            and has_function_privilege('anon', p.oid, 'EXECUTE')
+            -- Trigger functions are unreachable by a direct call whatever the
+            -- grant says, so they are not what this test is watching for.
+            and p.prorettype <> 'trigger'::regtype
+          order by p.proname`,
+      );
+
+      expect(rows.map((r) => r.proname)).toEqual(expected);
+    });
+
     it('lets authenticated execute create_firm', async () => {
       // The other half of the check above — locking anon out must not have
       // locked out the role that is supposed to call it.

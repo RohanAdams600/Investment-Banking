@@ -103,20 +103,45 @@ lockdown works rather than assuming an absence of grants means an absence of acc
 
 ## Accepted linter findings
 
-Supabase's database linter reports five warnings, all of the same class and all
-intentional: **SECURITY DEFINER functions callable by `authenticated`.**
+Supabase's database linter reports warnings of one class, all intentional: **SECURITY
+DEFINER functions callable by `authenticated`.**
 
 | Function                | Why it is definer-rights                                                                             | What contains it                                                                 |
 | ----------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `create_firm`           | The caller has no rights on `firms`; the firm and its first owner must be created in one transaction | Takes no user identifier — it can only create a firm owned by the caller         |
+| `create_deal`           | Same shape — the deal, its first conversation, and its membership rows in one transaction            | Membership is written for the caller; the caller cannot name somebody else       |
 | `list_my_sessions`      | `auth.sessions` is not exposed through PostgREST                                                     | Filtered on `auth.uid()`; takes no user identifier                               |
 | `revoke_session`        | Same                                                                                                 | `user_id = auth.uid()` predicate on the delete makes the caller-supplied id safe |
 | `revoke_other_sessions` | Same                                                                                                 | Filtered on `auth.uid()`; keeps the current session                              |
 | `withdraw_message`      | The SELECT policy makes a client-side soft delete impossible (see above)                             | Re-checks sender identity and live membership                                    |
+| `match_summary`         | Reads every buyer's scores, which no user may read                                                   | `app.controls_listing()` inside the body; returns counts, never identities       |
+| `matched_buyers`        | Joins buyer profiles and criteria across rows the seller cannot select                               | `app.controls_listing()` inside the body; excludes buyers who opted out          |
+| `platform_stats`        | Counts rows across tables no one user can see                                                        | `app.is_platform_admin()` inside the body; returns "how many", never "which"     |
+| `verification_queue`    | Joins `user_roles`, which is restricted to the caller's own rows                                     | `app.is_platform_admin()` inside the body                                        |
 
 The pattern is what the linter flags, not a defect. Every one of these exists _because_ the
 caller lacks direct rights, and each either takes no user identifier or re-checks ownership
 inside. None is granted to `anon` — verified, not assumed.
+
+### One ERROR-level finding, also accepted
+
+`public.listing_status_timeline` is reported as a **Security Definer View**. It is one, and
+deliberately: it exists precisely to show rows the caller's own policy withholds.
+
+The reasoning is above, under "A column RLS could not hide". The status history table now
+admits only the listing's controllers and platform admins, because it carries a reviewer's
+note written for the seller. But a buyer browsing a live listing has a legitimate interest
+in its timeline — a business going under LOI is market information. A definer view with the
+three access grounds in its `where` clause serves that, and has no `reason` column to leak.
+
+The alternatives were both worse. Widening the policy again reinstates the leak, since RLS
+cannot withhold one column from a reader who can see the row. Column-level `GRANT` can, but
+it applies per role and not per row, so it would hide the reason from the seller too — the
+one person it was written for.
+
+Verified against the live project rather than assumed: a signed-in stranger reads 0 rows
+from `listing_status_history` and sees only the discoverable listing's transitions through
+the view.
 
 Leaked-password protection is now enabled, so it no longer appears in the linter output.
 
