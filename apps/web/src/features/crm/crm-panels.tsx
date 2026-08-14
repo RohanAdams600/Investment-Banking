@@ -36,7 +36,7 @@ import {
   setTaskStatus,
   updateLead,
 } from './actions';
-import type { CrmContact, CrmLead, CrmStage, CrmTask } from './queries';
+import type { CrmContact, CrmLead, CrmNote, CrmStage, CrmTask } from './queries';
 
 /**
  * The CRM's screens.
@@ -268,7 +268,13 @@ export function TaskList({ tasks, contacts }: { tasks: CrmTask[]; contacts: CrmC
 // Contacts
 // ===========================================================================
 
-export function ContactPanel({ contacts }: { contacts: CrmContact[] }) {
+export function ContactPanel({
+  contacts,
+  notes,
+}: {
+  contacts: CrmContact[];
+  notes: Map<string, CrmNote[]>;
+}) {
   const [state, action] = useActionState(saveContact, emptyCrmState);
   const [removeState, remove] = useActionState(deleteContact, emptyCrmState);
   const [leadState, lead] = useActionState(createLead, emptyCrmState);
@@ -378,11 +384,32 @@ export function ContactPanel({ contacts }: { contacts: CrmContact[] }) {
                         <SmallSubmit label="Add to pipeline" primary />
                       </form>
 
-                      <form action={note} className="space-y-2">
-                        <input type="hidden" name="contactId" value={contact.id} />
-                        <Textarea label="Note" name="body" rows={2} required />
-                        <SmallSubmit label="Save note" />
-                      </form>
+                      <div className="space-y-2">
+                        {(notes.get(contact.id) ?? []).length > 0 ? (
+                          <ul className="border-border-subtle space-y-2 rounded border p-2">
+                            {(notes.get(contact.id) ?? []).map((entry) => (
+                              <li key={entry.id} className="text-xs">
+                                {/*
+                                  Plain text. A note can contain anything
+                                  somebody typed, and nothing in this product
+                                  renders a user string as HTML.
+                                */}
+                                <p className="whitespace-pre-wrap">{entry.body}</p>
+                                <p className="text-text-muted">
+                                  {entry.authorName ?? 'Someone'} ·{' '}
+                                  {new Date(entry.createdAt).toLocaleDateString()}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+
+                        <form action={note} className="space-y-2">
+                          <input type="hidden" name="contactId" value={contact.id} />
+                          <Textarea label="Note" name="body" rows={2} required />
+                          <SmallSubmit label="Save note" />
+                        </form>
+                      </div>
 
                       <form action={remove}>
                         <input type="hidden" name="id" value={contact.id} />

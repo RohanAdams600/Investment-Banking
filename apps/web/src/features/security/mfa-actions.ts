@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { recordAuditEvent } from '@/lib/audit';
+import {
+  STEP_UP_ACTIONS,
+  StepUpRequiredError,
+  requireStepUp,
+  stepUpPrompt,
+} from '@/lib/auth/assurance';
 import { createClient } from '@/lib/supabase/server';
 import type { MfaActionState } from './types';
 
@@ -130,15 +136,26 @@ export async function unenrollMfa(
 
   const supabase = await createClient();
 
-  // Removing a second factor is exactly the action an attacker with a stolen
-  // session would want, so it requires that the current session actually used
-  // the second factor — not merely that the account has one.
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal?.currentLevel !== 'aal2') {
-    return {
-      error: 'Sign in with your authenticator app before removing two-factor authentication.',
-      notice: null,
-    };
+  /*
+   * Removing a second factor is exactly the action an attacker with a stolen
+   * session would want, so it requires that the current session actually *used*
+   * the second factor — not merely that the account has one.
+   *
+   * Through `requireStepUp` rather than the inline check this used to carry.
+   * Two copies of "did this session complete a challenge" is one copy too many,
+   * and it is a rule easy to write backwards: `nextLevel` says the account has
+   * MFA enrolled, which a stolen session's account also does.
+   *
+   * This is the one call site that blocks unconditionally, and correctly —
+   * somebody with no second factor has nothing to remove.
+   */
+  try {
+    await requireStepUp(STEP_UP_ACTIONS.mfaRemoval);
+  } catch (thrown) {
+    if (thrown instanceof StepUpRequiredError) {
+      return { error: stepUpPrompt(STEP_UP_ACTIONS.mfaRemoval), notice: null };
+    }
+    throw thrown;
   }
 
   const { error } = await supabase.auth.mfa.unenroll({ factorId: parsed.data.factorId });

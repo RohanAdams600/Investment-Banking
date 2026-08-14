@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { can } from '@ib/core';
 
 import { ContactPanel, PipelineBoard, TaskList } from '@/features/crm/crm-panels';
-import { listContacts, listLeads, listStages, listTasks } from '@/features/crm/queries';
+import { listContacts, listLeads, listNotes, listStages, listTasks } from '@/features/crm/queries';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -23,11 +23,12 @@ export default async function CrmPage() {
   if (actor.platformRoles.length === 0) redirect('/onboarding');
   if (!can(actor, 'crm:manage')) redirect('/dashboard');
 
-  const [stages, leads, contacts, tasks] = await Promise.all([
+  const [stages, leads, contacts, tasks, notes] = await Promise.all([
     listStages(),
     listLeads(),
     listContacts(),
     listTasks(),
+    listNotes(),
   ]);
 
   return (
@@ -45,7 +46,7 @@ export default async function CrmPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <TaskList tasks={tasks} contacts={contacts} />
-        <ContactPanel contacts={contacts} />
+        <ContactPanel contacts={contacts} notes={notes} />
       </div>
     </main>
   );

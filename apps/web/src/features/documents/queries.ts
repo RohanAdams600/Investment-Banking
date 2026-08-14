@@ -41,6 +41,14 @@ export interface VaultDocument {
   createdAt: string;
   /** Filled in for documents the caller controls; empty otherwise. */
   releasedTo: DocumentRelease[];
+  /**
+   * Who has opened it, for documents the caller controls.
+   *
+   * On the row rather than fetched per card, because the panel promises the
+   * uploader can see this and a promise behind a second click is one most
+   * people never collect on.
+   */
+  openedBy: AccessEntry[];
 }
 
 export interface DocumentRelease {
@@ -69,7 +77,8 @@ export async function listDocuments(dealId: string): Promise<VaultDocument[]> {
   // audit, and the people in a deal room are not confidential to each other —
   // the business is. Same distinction migration 0018 exists to make.
   const names = await loadNames(uploaderIds as string[]);
-  const releases = await loadReleases(rows.map((r) => r.id as string));
+  const ids = rows.map((r) => r.id as string);
+  const [releases, access] = await Promise.all([loadReleases(ids), loadAccessEntries(ids)]);
 
   return rows.map((row) => ({
     id: row.id,
@@ -90,44 +99,8 @@ export async function listDocuments(dealId: string): Promise<VaultDocument[]> {
     withdrawnReason: row.withdrawn_reason ?? null,
     createdAt: row.created_at,
     releasedTo: releases.get(row.id as string) ?? [],
+    openedBy: access.get(row.id as string) ?? [],
   }));
-}
-
-export async function loadDocument(documentId: string): Promise<VaultDocument | null> {
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .from('deal_documents')
-    .select('*')
-    .eq('id', documentId)
-    .maybeSingle();
-
-  if (!data) return null;
-  const row = data as Row;
-
-  const names = row.uploaded_by ? await loadNames([row.uploaded_by]) : new Map<string, string>();
-  const releases = await loadReleases([row.id]);
-
-  return {
-    id: row.id,
-    dealId: row.deal_id,
-    uploadedBy: row.uploaded_by ?? null,
-    uploaderName: row.uploaded_by ? (names.get(row.uploaded_by) ?? null) : null,
-    firmId: row.firm_id ?? null,
-    title: row.title,
-    category: row.category,
-    visibility: row.visibility,
-    storagePath: row.storage_path,
-    fileName: row.file_name,
-    contentType: row.content_type,
-    sizeBytes: Number(row.size_bytes),
-    replacesDocumentId: row.replaces_document_id ?? null,
-    supersededAt: row.superseded_at ?? null,
-    withdrawnAt: row.withdrawn_at ?? null,
-    withdrawnReason: row.withdrawn_reason ?? null,
-    createdAt: row.created_at,
-    releasedTo: releases.get(row.id as string) ?? [],
-  };
 }
 
 /**
@@ -169,6 +142,49 @@ async function loadReleases(documentIds: string[]): Promise<Map<string, Document
   return map;
 }
 
+/**
+ * Who opened each document, grouped.
+ *
+ * One query for the page rather than one per card. The policy admits the
+ * document's controller to every entry and a reader to their own, so a buyer
+ * calling this gets their own reads back — which is the correct answer, not a
+ * leak: you are entitled to see what the platform logged about you.
+ */
+async function loadAccessEntries(documentIds: string[]): Promise<Map<string, AccessEntry[]>> {
+  const map = new Map<string, AccessEntry[]>();
+  if (documentIds.length === 0) return map;
+
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from('document_access_log')
+    .select('id, document_id, actor_id, action, created_at')
+    .in('document_id', documentIds)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (!data) return map;
+
+  const rows = data as Row[];
+  const names = await loadNames([
+    ...new Set(rows.map((r) => r.actor_id).filter(Boolean) as string[]),
+  ]);
+
+  for (const row of rows) {
+    const list = map.get(row.document_id) ?? [];
+    list.push({
+      id: String(row.id),
+      actorId: row.actor_id ?? null,
+      actorName: row.actor_id ? (names.get(row.actor_id) ?? null) : null,
+      action: row.action,
+      createdAt: row.created_at,
+    });
+    map.set(row.document_id, list);
+  }
+
+  return map;
+}
+
 async function loadNames(userIds: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (userIds.length === 0) return map;
@@ -188,41 +204,6 @@ export interface AccessEntry {
   actorName: string | null;
   action: 'download' | 'view' | 'denied';
   createdAt: string;
-}
-
-/**
- * Who opened a document.
- *
- * The single most requested thing a seller wants from a data room, and what
- * makes releasing a file survivable at all. Readable by whoever controls the
- * document and by the person whose reads it records — deliberately not by
- * everybody in the deal, because how often the other bidder is in the tax
- * returns is a negotiating signal.
- */
-export async function loadAccessLog(documentId: string): Promise<AccessEntry[]> {
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .from('document_access_log')
-    .select('id, actor_id, action, created_at')
-    .eq('document_id', documentId)
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  if (!data) return [];
-
-  const rows = data as Row[];
-  const names = await loadNames([
-    ...new Set(rows.map((r) => r.actor_id).filter(Boolean) as string[]),
-  ]);
-
-  return rows.map((row) => ({
-    id: String(row.id),
-    actorId: row.actor_id ?? null,
-    actorName: row.actor_id ? (names.get(row.actor_id) ?? null) : null,
-    action: row.action,
-    createdAt: row.created_at,
-  }));
 }
 
 export interface RoomMember {

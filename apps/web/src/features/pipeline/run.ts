@@ -2,7 +2,6 @@ import 'server-only';
 
 import {
   INDUSTRY_KEYS,
-  estimateValuation,
   summariseReadiness,
   valueAllMethods,
   type IndustryKey,
@@ -337,24 +336,4 @@ function asIndustry(value: string | null): IndustryKey | undefined {
   return value !== null && (INDUSTRY_KEYS as string[]).includes(value)
     ? (value as IndustryKey)
     : undefined;
-}
-
-/** The estimate on its own, for the seller's valuation panel. */
-export function quickEstimate(snapshot: ListingSnapshot) {
-  const earnings = snapshot.sdeCents ?? snapshot.ebitdaCents;
-  const industry = asIndustry(snapshot.industry);
-  if (earnings === null || industry === undefined) return null;
-
-  try {
-    return estimateValuation({
-      industry,
-      revenue: snapshot.revenueCents ?? earnings,
-      sde: snapshot.sdeCents ?? undefined,
-      ebitda: snapshot.ebitdaCents ?? undefined,
-    });
-  } catch {
-    // A business at or below break-even. The multi-method view still says
-    // something useful, and that is what the panel falls back to.
-    return null;
-  }
 }

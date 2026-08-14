@@ -212,32 +212,67 @@ export async function listTasks(): Promise<CrmTask[]> {
 
 export interface CrmNote {
   id: string;
+  contactId: string | null;
+  leadId: string | null;
   body: string;
   authorId: string | null;
+  authorName: string | null;
   createdAt: string;
 }
 
-export async function listNotes(subject: {
-  contactId?: string;
-  leadId?: string;
-}): Promise<CrmNote[]> {
+/**
+ * Every note in the caller's world, grouped by what it is about.
+ *
+ * One query for the page rather than one per contact. A note somebody can write
+ * and never read back is not a note, and per-card fetching is how "and never
+ * read back" happens in practice — the second click is one most people do not
+ * make.
+ */
+export async function listNotes(): Promise<Map<string, CrmNote[]>> {
   const supabase = await createClient();
 
-  let query = supabase
+  const { data } = await supabase
     .from('crm_notes')
-    .select('id, body, author_id, created_at')
+    .select('id, contact_id, lead_id, body, author_id, created_at')
     .order('created_at', { ascending: false })
-    .limit(200);
+    .limit(500);
 
-  if (subject.contactId) query = query.eq('contact_id', subject.contactId);
-  if (subject.leadId) query = query.eq('lead_id', subject.leadId);
+  const rows = (data ?? []) as Row[];
+  const names = await loadAuthorNames([
+    ...new Set(rows.map((r) => r.author_id).filter(Boolean) as string[]),
+  ]);
 
-  const { data } = await query;
+  const map = new Map<string, CrmNote[]>();
 
-  return ((data ?? []) as Row[]).map((row) => ({
-    id: row.id,
-    body: row.body,
-    authorId: row.author_id ?? null,
-    createdAt: row.created_at,
-  }));
+  for (const row of rows) {
+    const key = (row.contact_id ?? row.lead_id) as string | null;
+    if (!key) continue;
+
+    const note: CrmNote = {
+      id: row.id,
+      contactId: row.contact_id ?? null,
+      leadId: row.lead_id ?? null,
+      body: row.body,
+      authorId: row.author_id ?? null,
+      authorName: row.author_id ? (names.get(row.author_id) ?? null) : null,
+      createdAt: row.created_at,
+    };
+
+    map.set(key, [...(map.get(key) ?? []), note]);
+  }
+
+  return map;
+}
+
+async function loadAuthorNames(userIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (userIds.length === 0) return map;
+
+  const supabase = await createClient();
+  const { data } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+
+  for (const row of (data ?? []) as Row[]) {
+    if (row.full_name) map.set(row.id, row.full_name);
+  }
+  return map;
 }

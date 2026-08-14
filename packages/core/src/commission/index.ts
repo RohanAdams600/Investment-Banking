@@ -14,7 +14,5 @@ export {
   commissionCsv,
   csvField,
   exportFilename,
-  exportTotals,
-  type ExportTotals,
   type ExportableCommission,
 } from './export';

@@ -5,7 +5,6 @@ import {
   commissionCsv,
   csvField,
   exportFilename,
-  exportTotals,
   type ExportableCommission,
 } from './export';
 
@@ -133,48 +132,6 @@ describe('commissionCsv', () => {
 
   it('produces a header-only file for no records', () => {
     expect(commissionCsv([]).trim().split('\n')).toHaveLength(1);
-  });
-});
-
-describe('exportTotals', () => {
-  it('reconstitutes: co-broker plus net equals gross', () => {
-    const records = [
-      record({ totalFeeCents: 10_000_000, coBrokerFeeCents: 4_000_000, netFeeCents: 6_000_000 }),
-      record({ id: 'b', totalFeeCents: 5_000_000, coBrokerFeeCents: 0, netFeeCents: 5_000_000 }),
-    ];
-    const totals = exportTotals(records);
-    expect(totals.coBrokerCents + totals.netCents).toBe(totals.grossCents);
-  });
-
-  it('counts a waived record but gives it no money', () => {
-    // A write-off is a thing that happened. Leaving it out of the count would
-    // make the file disagree with the screen; the reason is on the row.
-    const totals = exportTotals([
-      record(),
-      record({ id: 'w', status: 'waived', waivedReason: 'goodwill' }),
-    ]);
-    expect(totals.records).toBe(2);
-    expect(totals.grossCents).toBe(18_000_000);
-  });
-
-  it('separates earned from settled', () => {
-    const totals = exportTotals([
-      record({ status: 'earned', netFeeCents: 1_000_000 }),
-      record({ id: 'b', status: 'settled', netFeeCents: 2_000_000 }),
-    ]);
-    expect(totals.earnedCents).toBe(1_000_000);
-    expect(totals.settledCents).toBe(2_000_000);
-  });
-
-  it('returns zeros for an empty year', () => {
-    expect(exportTotals([])).toEqual({
-      records: 0,
-      grossCents: 0,
-      coBrokerCents: 0,
-      netCents: 0,
-      earnedCents: 0,
-      settledCents: 0,
-    });
   });
 });
 

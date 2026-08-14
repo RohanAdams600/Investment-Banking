@@ -140,44 +140,6 @@ export function commissionCsv(records: readonly ExportableCommission[]): string 
   return `${rows.join('\n')}\n`;
 }
 
-export interface ExportTotals {
-  records: number;
-  grossCents: Cents;
-  coBrokerCents: Cents;
-  netCents: Cents;
-  earnedCents: Cents;
-  settledCents: Cents;
-}
-
-/**
- * Totals for the footer of whatever this is pasted into.
- *
- * Waived records are counted in `records` and contribute nothing to the money.
- * A write-off is a thing that happened — leaving it out of the count would make
- * the file disagree with the screen, and the reason it was waived is on the row.
- */
-export function exportTotals(records: readonly ExportableCommission[]): ExportTotals {
-  const live = records.filter((record) => record.status !== 'waived');
-
-  const sum = (pick: (record: ExportableCommission) => number, from = live) =>
-    from.reduce((total, record) => total + pick(record), 0);
-
-  return {
-    records: records.length,
-    grossCents: sum((r) => r.totalFeeCents),
-    coBrokerCents: sum((r) => r.coBrokerFeeCents),
-    netCents: sum((r) => r.netFeeCents),
-    earnedCents: sum(
-      (r) => r.netFeeCents,
-      live.filter((r) => r.status === 'earned'),
-    ),
-    settledCents: sum(
-      (r) => r.netFeeCents,
-      live.filter((r) => r.status === 'settled'),
-    ),
-  };
-}
-
 /** `cairn-commissions-2026-08-14.csv` — sorts by date in a folder listing. */
 export function exportFilename(firmName: string, on: Date = new Date()): string {
   const slug =

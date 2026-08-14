@@ -28,7 +28,7 @@ import {
   withdrawDocument,
   type VaultState,
 } from './actions';
-import type { RoomMember, VaultDocument } from './queries';
+import type { AccessEntry, DocumentRelease, RoomMember, VaultDocument } from './queries';
 
 /**
  * The vault, from the side that has to decide who sees what.
@@ -347,6 +347,8 @@ function DocumentCard({
           <ReleaseControls dealId={dealId} document={document} members={members} />
         ) : null}
 
+        {mine ? <AccessLog entries={document.openedBy} /> : null}
+
         {mine && !inactive ? <WithdrawControls dealId={dealId} documentId={document.id} /> : null}
       </CardContent>
     </Card>
@@ -500,6 +502,64 @@ function ReleaseControls({
 
       <p aria-live="polite" className="text-text-muted text-xs">
         {releaseState.message ?? revokeState.message}
+      </p>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Who opened it
+// ===========================================================================
+
+/**
+ * The panel's promise, kept.
+ *
+ * Every card tells the reader "opening is recorded, and the uploader can see
+ * it". This is where the uploader sees it — and it is the single most requested
+ * thing a seller wants from a data room, because it is what makes releasing a
+ * tax return survivable at all.
+ *
+ * Precise about the claim, in the same words the storage layer uses: a link was
+ * issued to this person at this time. Not that the file was read, and not where
+ * it went afterwards. No system can tell you that, and implying otherwise would
+ * be worse than saying nothing.
+ */
+function AccessLog({ entries }: { entries: DocumentRelease[] | AccessEntry[] }) {
+  const log = entries as AccessEntry[];
+
+  return (
+    <div className="border-border-subtle space-y-2 rounded border p-3">
+      <h3 className="text-text-secondary text-xs font-medium">Opened by</h3>
+
+      {log.length === 0 ? (
+        <p className="text-text-muted text-xs">Nobody has opened it yet.</p>
+      ) : (
+        <ul className="space-y-1">
+          {log.slice(0, 10).map((entry) => (
+            <li key={entry.id} className="flex justify-between gap-3 text-xs">
+              <span>
+                {entry.actorName ?? 'Unnamed'}
+                {/*
+                  A refused request is the interesting row. A run of them
+                  against one document is somebody probing.
+                */}
+                {entry.action === 'denied' ? <span className="text-danger"> · refused</span> : null}
+              </span>
+              <span className="text-text-muted tabular-nums">
+                {new Date(entry.createdAt).toLocaleString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {log.length > 10 ? (
+        <p className="text-text-muted text-xs">and {log.length - 10} earlier.</p>
+      ) : null}
+
+      <p className="text-text-muted text-xs">
+        A link was issued to each of these people at that time. Whether they read the file, and
+        where it went afterwards, is not something any system can tell you.
       </p>
     </div>
   );
