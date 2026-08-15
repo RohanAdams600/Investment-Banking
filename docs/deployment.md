@@ -2,9 +2,16 @@
 
 ## Current state
 
-Everything in the roadmap is built. The database is live, all 25 migrations are applied,
-and the application builds clean. **It is not deployed to a domain** — that is the step
-below.
+Everything in the roadmap is built and the application builds clean.
+
+**Two things stand between this and a live site**, and one of them is a single command:
+
+1. **Migration 0027 is not applied.** 0001–0026 are on the live project. 0027 rewrites 38
+   policies for performance and adds fifteen indexes; it changes no behaviour and the
+   suite proves it. See "Applying 0027" below.
+2. **It is not deployed to a domain.** That is the six-step walk-through that follows.
+
+Neither is a code change. The build is green, 819 tests pass, and the linters are clean.
 
 ---
 
@@ -200,10 +207,32 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
+### Applying 0027
+
+The only outstanding migration. It is safe to apply to a live database — it drops and
+recreates each policy inside one transaction, and every predicate is byte-identical to
+the one it replaces apart from wrapping `auth.uid()` in a scalar subquery.
+
+```bash
+psql "$SUPABASE_DB_URL" -1 -f supabase/migrations/0027_policy_initplan_and_indexes.sql
+```
+
+`-1` matters: it wraps the whole file in a transaction, so a failure halfway through
+leaves the old policies in place rather than a database with some tables unprotected.
+
+Verify afterwards with the two schema tests that enforce what it did:
+
+```bash
+DATABASE_URL=... pnpm vitest run supabase/tests/rls.test.ts
+```
+
+They assert that no policy calls `auth.uid()` bare, and that every foreign key whose
+parent delete would scan the child has an index. Both fail loudly if 0027 is missing.
+
 ### Live migration state
 
-**Migrations 0001–0025 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
-us-east-1), plus the jurisdiction seed. 0017–0022 went on in one pass; the structural
+**Migrations 0001–0026 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
+us-east-1), plus the jurisdiction seed. **0027 is not.** 0017–0022 went on in one pass; the structural
 invariants were re-run afterwards and the behavioural checks that had been outstanding
 since step 4 were finished.
 
@@ -310,20 +339,46 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 
 ### Security (step 11)
 
-- Content Security Policy. Deliberately not set yet — it needs the real third-party origins
-  (Supabase, Twilio, Maps, analytics) enumerated first, and a permissive placeholder CSP is
-  worse than none because it looks like coverage. Baseline headers (HSTS, nosniff,
-  frame-deny, referrer policy, permissions policy) are already set in `next.config.ts`.
-- Rate limiting on auth and search endpoints
+- Content Security Policy is written and nonce-based, shipping **report-only** until
+  `CSP_ENFORCE=true`. Baseline headers (HSTS, nosniff, frame-deny, referrer policy,
+  permissions policy) are set in `next.config.ts`.
+- Rate limiting exists but is **in-process**: each serverless instance keeps its own
+  counters, so the effective limit is the configured one multiplied by the number of warm
+  instances. `setRateLimiter()` in `apps/web/src/lib/rate-limit.ts` is the seam for a
+  shared store. Adequate for launch traffic; not a defence against a determined attacker.
 - Structured logging and where logs are shipped
 - Anomaly alerting hooks
+
+### What the Supabase linter reports, and why
+
+Run `get_advisors` after any migration. Three families come back, and two of them are
+expected — worth writing down so nobody re-derives it:
+
+- **`security_definer_view` (ERROR) on `listing_status_timeline`.** Correct that it is a
+  definer view, wrong that it is a problem. The view exists precisely to show rows the
+  caller's own policy withholds — `listing_status_history` carries a reviewer's reason and
+  RLS cannot hide a single column — so its `WHERE` clause is the access check. Two tests in
+  `admin-rls.test.ts` verify a stranger gets nothing for a listing that is not on the
+  market, and that an unfiltered select returns nothing that is not already public. If
+  those tests are ever weakened, this stops being a false positive.
+- **`authenticated_security_definer_function_executable` (WARN), 13 functions.** All
+  intentional and all guarded internally: `is_platform_admin()`, `controls_listing()`, or a
+  `= auth.uid()` predicate inside the body. Audited function by function.
+- **`multiple_permissive_policies` (WARN), 12 tables.** Deliberate. Each is an OR'd access
+  path — "mine, or my firm's, or an admin's" — and collapsing them into one policy would
+  make a boolean nobody can read. The cost is real and accepted.
+
+`auth_rls_initplan` and the foreign-key findings were **fixed** in 0027 rather than
+documented, and two schema tests now prevent them coming back.
 
 ### Launch readiness (step 12)
 
 - [ ] `isBrandFullyConfigured` is true — real support email and mailing address configured
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
-- [x] Migrations 0001–0025 applied to the production Supabase project (us-east-1)
+- [x] Migrations 0001–0026 applied to the production Supabase project (us-east-1)
+- [ ] **Migration 0027 applied** — see "Applying 0027" above. Until it is, the RLS suite
+      fails two schema tests and every policy re-evaluates `auth.uid()` per row.
 - [x] Step-4 verification fixtures removed from the live project
 - [x] NDA round trip verified live — issue, sign, revoke, and a second buyer denied
 - [x] Admin panel verified live — an operator reads no confidential half
@@ -339,3 +394,20 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
       product down; leaving it undone forever is how a policy becomes decoration.
 - [ ] Legal templates (NDA, broker agreement, terms, privacy policy) reviewed by counsel
 - [ ] Branch protection gating `main` on CI
+- [ ] `CRON_SECRET` set, and a scheduler pointed at `/api/cron/due-tasks`. Without it the
+      route refuses every caller and nobody is reminded about a due task. Everything else
+      still works.
+
+### Known gaps, stated plainly
+
+Not blockers, but nobody should discover these from a customer:
+
+- **Nothing sends email.** Notifications are rows; they appear in-app and on the
+  dashboard badge immediately. The preferences page says so with a "Not sending yet"
+  badge, and `wantsEmail()` is the switch a sender would read.
+- **Lists cap.** Browse, contacts and the data room now say when they truncate. Tasks,
+  notes, matches, commissions and the admin queues still cap silently — further from
+  reach, and cheaper to hit, but not yet honest.
+- **No document watermarking**, and no listing photos.
+- **Payments and escrow are out of scope**, by design. Commission is record-keeping with a
+  clean seam for Stripe Connect later.
