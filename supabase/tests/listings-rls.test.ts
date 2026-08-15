@@ -172,7 +172,7 @@ describe.skipIf(!hasDatabase)('listings', () => {
 
     const firms = await db.query<{ id: string }>(
       `insert into public.firms (name, kind) values
-         ('Cairn Brokerage','brokerage'), ('Unrelated Brokerage','brokerage') returning id`,
+         ('Ridge Brokerage','brokerage'), ('Unrelated Brokerage','brokerage') returning id`,
     );
     brokerFirm = firms.rows[0]!.id;
     otherFirm = firms.rows[1]!.id;

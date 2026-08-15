@@ -176,7 +176,7 @@ export const ADVISOR_FEATURES: Feature[] = [
   },
   {
     title: 'Your fee arrangement, written down',
-    body: 'Record the engagement terms and what is owed on a closing, kept alongside the deal rather than in a spreadsheet. Cairn does not move money and does not take a cut of yours.',
+    body: `Record the engagement terms and what is owed on a closing, kept alongside the deal rather than in a spreadsheet. ${brand.name} does not move money and does not take a cut of yours.`,
   },
 ];
 

@@ -33,7 +33,8 @@ expensive configuration mistake available here, and it is silent.
 
 ### 2. Fill in the Supabase values
 
-From the Supabase dashboard, project **Cairn** (`treltiukpuxhnzuplegu`, us-east-1) →
+From the Supabase dashboard, project **Cairn** — the project was created before the
+rename and its name is cosmetic — (`treltiukpuxhnzuplegu`, us-east-1) →
 Settings → API:
 
 | Copy from                   | Into                            |

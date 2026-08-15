@@ -7,7 +7,7 @@ import { brand, isBrandFullyConfigured, unconfiguredBrandFields } from '@ib/core
  * Two jobs. The obvious one is making the legal pages reachable — a marketplace
  * whose terms are only findable by typing the URL does not really have terms.
  *
- * The second is the line about what Cairn is not. A platform that hosts
+ * The second is the line about what the platform is not. A platform that hosts
  * valuations, matches buyers to sellers and drafts documents looks like a
  * broker, and in most states being one requires a licence. Saying plainly and in
  * every page's footer that the platform is not acting as anybody's broker,

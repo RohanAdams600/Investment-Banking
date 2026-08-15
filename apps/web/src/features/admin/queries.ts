@@ -153,7 +153,7 @@ export interface JurisdictionRow {
 }
 
 /**
- * The states Cairn operates in.
+ * The states the platform operates in.
  *
  * A switch, not a claim. Turning a jurisdiction on records that the operator
  * has done their own licensing work for that state — it does not verify

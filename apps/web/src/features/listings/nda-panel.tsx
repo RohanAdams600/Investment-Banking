@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Lock, ShieldCheck } from 'lucide-react';
-import { NDA_STATUS_LABELS } from '@ib/core';
+import { NDA_STATUS_LABELS, brand } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
 
 import { requestNda, signNda } from './actions';
@@ -88,9 +88,9 @@ export function NdaPanel({ listingId, nda }: { listingId: string; nda: ListingNd
 
             <p className="text-text-muted text-xs">
               This is an electronic signature and it is recorded, with the time, against your
-              account. Cairn provides the template and the record; it does not act as your lawyer,
-              and nothing here is legal advice. Have the agreement reviewed if the terms matter to
-              you.
+              account. {brand.name} provides the template and the record; it does not act as your
+              lawyer, and nothing here is legal advice. Have the agreement reviewed if the terms
+              matter to you.
             </p>
 
             <SubmitButton label="Sign and open the profile" />

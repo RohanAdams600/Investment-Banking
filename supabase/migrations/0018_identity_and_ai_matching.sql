@@ -232,7 +232,7 @@ create policy profiles_select_listing_representative on public.profiles
     )
   );
 
--- Firms behind live listings are visible for the same reason: "listed by Cairn
+-- Firms behind live listings are visible for the same reason: "listed by Ridge
 -- Brokerage" is the credential a buyer actually weighs.
 create policy firms_select_listing_representative on public.firms
   for select to authenticated

@@ -234,7 +234,7 @@ const jurisdictionSchema = z.object({
  *
  * This is a switch, and it is worth being blunt about what it does not do:
  * turning New York on does not make the platform compliant in New York. It
- * records that the operator has done that work. Nothing in Cairn verifies a
+ * records that the operator has done that work. Nothing in the platform verifies a
  * licence, and no screen should ever imply otherwise.
  */
 export async function setJurisdiction(_prev: AdminState, formData: FormData): Promise<AdminState> {

@@ -20,7 +20,7 @@ const base: OutreachInput = {
     { label: 'Location match', detail: 'This business is in a state you named.', points: 15 },
     { label: 'Industry mismatch', detail: 'Should not appear.', points: 0 },
   ],
-  brandName: 'Cairn',
+  brandName: 'Ashlar',
   senderPostalAddress: '100 State Street, Albany, NY 12207',
   unsubscribeUrl: 'https://example.com/unsubscribe/abc',
 };
@@ -111,7 +111,7 @@ describe('composeOutreach', () => {
   it('identifies the human sender, not just the platform', () => {
     const { body } = composeOutreach(base);
     expect(body).toContain('Sam Reyes');
-    expect(body).toContain('Sent through Cairn');
+    expect(body).toContain('Sent through Ashlar');
   });
 
   it('is deterministic', () => {

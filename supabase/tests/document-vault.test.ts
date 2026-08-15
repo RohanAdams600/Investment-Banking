@@ -51,7 +51,7 @@ describe.skipIf(!hasDatabase)('document vault', () => {
     );
 
     const firmRow = await db.query<{ id: string }>(
-      `insert into public.firms (name, kind) values ('Cairn Brokerage','brokerage') returning id`,
+      `insert into public.firms (name, kind) values ('Ridge Brokerage','brokerage') returning id`,
     );
     firm = firmRow.rows[0]!.id;
 

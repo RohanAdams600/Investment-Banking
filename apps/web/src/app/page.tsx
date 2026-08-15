@@ -65,8 +65,9 @@ export default function HomePage() {
         </div>
 
         <p className="text-text-muted mt-4 text-sm">
-          Browsing needs no account. The valuation takes about five minutes and does not require you
-          to list anything.
+          Browsing the market takes a free account — sellers are entitled to know who is looking.
+          The valuation takes about five minutes, needs no account, and does not require you to list
+          anything.
         </p>
       </section>
 
@@ -152,8 +153,7 @@ export default function HomePage() {
               <div className="space-y-1">
                 <h2 className="text-xl font-semibold">See what is on the market</h2>
                 <p className="text-text-muted text-sm">
-                  Browsing needs no account. A seller hears from you when you request access, not
-                  before.
+                  Free to join. A seller hears from you when you request access, not before.
                 </p>
               </div>
               <Button asChild size="lg">

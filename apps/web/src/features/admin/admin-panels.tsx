@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { brand } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from '@ib/ui';
 
 import { emptyAdminState, reviewListing, setJurisdiction, setVerification } from './actions';
@@ -268,7 +269,7 @@ export function JurisdictionTable({ rows }: { rows: JurisdictionRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Where Cairn operates</CardTitle>
+        <CardTitle>Where {brand.name} operates</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">

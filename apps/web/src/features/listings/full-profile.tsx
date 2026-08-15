@@ -1,4 +1,4 @@
-import { formatMoney } from '@ib/core';
+import { brand, formatMoney } from '@ib/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
 
 import type { ListingFullProfile } from './types';
@@ -101,8 +101,8 @@ export function FullProfile({ profile }: { profile: ListingFullProfile }) {
             </div>
 
             <p className="text-text-muted mt-3 text-xs">
-              Figures as reported by the seller. They have not been audited or verified by Cairn,
-              and confirming them is part of your own diligence.
+              Figures as reported by the seller. They have not been audited or verified by{' '}
+              {brand.name}, and confirming them is part of your own diligence.
             </p>
           </CardContent>
         </Card>

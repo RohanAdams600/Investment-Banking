@@ -34,15 +34,15 @@ export type BrandConfig = z.infer<typeof brandSchema>;
  * which has not happened yet.
  */
 const DEFAULTS = {
-  name: 'Cairn',
+  name: 'Ashlar',
   /*
    * The tagline is the second half of the browser title and the fallback OG
    * description, so it has one job: say what this is to somebody who has never
    * heard of it. "Mark the way." was evocative and told a stranger nothing —
-   * a search result reading "Cairn — Mark the way." could be a hiking app.
+   * a search result reading that could have been a hiking app.
    */
   tagline: 'The marketplace for buying and selling businesses',
-  legalName: 'Cairn Markets, Inc.',
+  legalName: 'Ashlar Markets, Inc.',
   url: 'http://localhost:3000',
   supportEmail: 'support@example.com',
   mailingAddress: 'Address pending — see docs/brand',
@@ -89,7 +89,7 @@ export const unconfiguredBrandFields: string[] = LAUNCH_BLOCKING_DEFAULTS.filter
 
 export const isBrandFullyConfigured = unconfiguredBrandFields.length === 0;
 
-/** `"Deal Room" -> "Deal Room | Cairn"` */
+/** `"Deal Room" -> "Deal Room | Ashlar"` */
 export function pageTitle(title?: string): string {
   return title ? `${title} | ${brand.name}` : `${brand.name} — ${brand.tagline}`;
 }

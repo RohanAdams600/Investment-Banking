@@ -25,7 +25,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  *
  * ## What it does not do
  *
- * It does not send email. Nothing in Cairn sends email yet; this writes to the
+ * It does not send email. Nothing in the platform sends email yet; this writes to the
  * inbox and the count on the dashboard. When a sender exists, `wantsEmail()` is
  * the switch it reads and this is the loop it hangs off.
  */

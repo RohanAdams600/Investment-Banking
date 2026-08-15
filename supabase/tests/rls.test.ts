@@ -65,7 +65,7 @@ describe.skipIf(!hasDatabase)('row level security', () => {
     // Seeded as superuser, standing in for the service role.
     const firms = await db.query<{ id: string }>(
       `insert into public.firms (name, kind) values
-         ('Cairn Brokerage', 'brokerage'),
+         ('Ridge Brokerage', 'brokerage'),
          ('Rival Partners', 'private_equity')
        returning id`,
     );

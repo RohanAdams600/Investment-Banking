@@ -7,6 +7,7 @@ import {
   INDUSTRY_PROFILES,
   LISTING_STATUS_LABELS,
   OWNER_DEPENDENCE_LABELS,
+  brand,
   formatBand,
   type IndustryKey,
 } from '@ib/core';
@@ -138,8 +139,8 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
           </dl>
 
           <p className="text-text-muted text-xs">
-            Figures are ranges as published by the seller, not exact amounts, and Cairn has not
-            verified them.
+            Figures are ranges as published by the seller, not exact amounts, and {brand.name} has
+            not verified them.
           </p>
         </CardContent>
       </Card>
@@ -159,7 +160,7 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
             ) : null}
             <p className="text-text-muted text-xs">
               Message them through the deal room once you have signed the confidentiality agreement.
-              Cairn is the platform, not your broker or your advisor.
+              {brand.name} is the platform, not your broker or your advisor.
             </p>
           </CardContent>
         </Card>

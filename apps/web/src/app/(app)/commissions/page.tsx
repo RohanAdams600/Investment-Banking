@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Receipt } from 'lucide-react';
-import { can, truncationNotice } from '@ib/core';
+import { brand, can, truncationNotice } from '@ib/core';
 import { EmptyState } from '@ib/ui';
 
 import {
@@ -84,7 +84,7 @@ export default async function CommissionsPage({
       <header className="space-y-1">
         <h1 className="text-3xl font-semibold">Commissions</h1>
         <p className="text-text-muted text-sm">
-          {firm.name} · record-keeping only. Cairn does not move money.
+          {firm.name} · record-keeping only. {brand.name} does not move money.
         </p>
       </header>
 
@@ -139,7 +139,7 @@ export default async function CommissionsPage({
         </a>
         <p className="text-text-muted text-xs">
           These records are your own bookkeeping. They are not a tax filing, not a 1099, and not
-          advice about either — Cairn does not move money and has no payment rail.
+          advice about either — {brand.name} does not move money and has no payment rail.
         </p>
       </div>
     </main>

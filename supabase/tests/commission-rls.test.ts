@@ -48,7 +48,7 @@ describe.skipIf(!hasDatabase)('commission', () => {
     );
 
     const firms = await db.query<{ id: string }>(
-      `insert into public.firms (name, kind) values ('Cairn Brokerage','brokerage'), ('Rival Brokerage','brokerage') returning id`,
+      `insert into public.firms (name, kind) values ('Ridge Brokerage','brokerage'), ('Rival Brokerage','brokerage') returning id`,
     );
     firm = firms.rows[0]!.id;
     rivalFirm = firms.rows[1]!.id;

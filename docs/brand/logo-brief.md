@@ -26,9 +26,13 @@ Explicitly ruled out — these read as stock and undercut the positioning:
 **Wanted instead:** a form that survives at 16px. If the concept only reads at 200px it is
 an illustration, not a mark. Draw it at 16px first and scale up.
 
-If the name is **Cairn**, the obvious and good answer is two or three stacked forms —
-offset, not centered, so it reads as placed by a person rather than generated. Resist
-making them literal stones.
+The name is **Ashlar** — finely cut stone laid in precise courses, the opposite of
+rubble — so the obvious and good answer is two or three stacked squared forms, offset
+rather than centered, so the stack reads as laid by a person rather than generated.
+Resist making them literal stones.
+
+The mark that shipped predates the rename and already works: squared forms narrowing
+upward under a gold capstone. That is an ashlar course. It needs no rework.
 
 ## Deliverables
 

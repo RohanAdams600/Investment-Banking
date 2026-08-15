@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { brand } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Textarea } from '@ib/ui';
 
 import { approveOutreachDraft, discardOutreachDraft, updateOutreachDraft } from './actions';
@@ -51,7 +52,8 @@ export function OutreachQueue({
             <p className="text-text-muted mt-2 text-xs">
               These are the two things a commercial message always needs. They are not the whole of
               your obligations — rules vary by state and by channel, and SMS carries consent
-              requirements this does not check. Cairn provides the tooling; compliance stays yours.
+              requirements this does not check. {brand.name} provides the tooling; compliance stays
+              yours.
             </p>
           </div>
         ) : null}

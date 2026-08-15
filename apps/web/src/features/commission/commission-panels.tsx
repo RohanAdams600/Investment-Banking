@@ -2,7 +2,13 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { FEE_STRUCTURES, calculateCommission, formatMoney, type FeeStructure } from '@ib/core';
+import {
+  FEE_STRUCTURES,
+  brand,
+  calculateCommission,
+  formatMoney,
+  type FeeStructure,
+} from '@ib/core';
 import {
   AIDisclaimer,
   Badge,
@@ -325,8 +331,9 @@ export function CommissionStatement({
         </p>
 
         <p className="text-text-muted text-xs">
-          &ldquo;Settled&rdquo; records that your firm considers the fee paid. Cairn does not move
-          money and has no payment rail — it is your assertion, not a confirmation from a processor.
+          &ldquo;Settled&rdquo; records that your firm considers the fee paid. {brand.name} does not
+          move money and has no payment rail — it is your assertion, not a confirmation from a
+          processor.
         </p>
 
         <AIDisclaimer variant="tax" />

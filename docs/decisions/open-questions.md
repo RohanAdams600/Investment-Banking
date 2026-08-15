@@ -7,8 +7,11 @@ recommendation — but the call belongs to the founder.
 
 ## 1. Company name — RESOLVED
 
-**Decision: Cairn.** Tagline "The marketplace for buying and selling businesses." Working legal entity name
-"Cairn Markets, Inc." pending incorporation.
+**Decision: Ashlar.** Tagline "The marketplace for buying and selling businesses."
+Working legal entity name "Ashlar Markets, Inc." pending incorporation.
+
+The name was Cairn until a preliminary screen found the field crowded — see
+`docs/brand/naming.md` for what was found and what it does not cover.
 
 Wired into `.env.example` and the defaults in `packages/core/src/brand`. Nothing else in
 the codebase hard-codes it.
@@ -16,8 +19,9 @@ the codebase hard-codes it.
 **Still outstanding, and these are yours to run:**
 
 - `.com` availability and acquisition cost
-- Trademark clearance — Cairn Capital operates in asset management, which is close enough
-  to the category to be worth a real search before spending on the domain
+- **Trademark clearance by an attorney.** A preliminary screen has been run and is
+  recorded in `docs/brand/naming.md`. It is not a clearance opinion and does not cover
+  state registrations, common-law use, or a likelihood-of-confusion analysis.
 - Incorporation, which settles `BRAND_LEGAL_NAME` and `BRAND_MAILING_ADDRESS`
 
 Until the support email and mailing address are real, `unconfiguredBrandFields` reports

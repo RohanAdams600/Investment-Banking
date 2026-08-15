@@ -18,7 +18,16 @@
  * their mailing address is wrong.
  */
 
+import { existsSync } from 'node:fs';
+
 const strict = process.argv.includes('--strict');
+
+/**
+ * Next reads env files relative to the app directory, not the workspace root.
+ * `apps/web/.env.local` is therefore the only one the running site sees.
+ */
+const APP_ENV = 'apps/web/.env.local';
+const ROOT_ENV = '.env.local';
 
 const BLOCKING = 'blocking';
 const LAUNCH = 'launch';
@@ -60,6 +69,23 @@ const checks = [
         (key) => key.startsWith('NEXT_PUBLIC_') && /SERVICE_ROLE/i.test(key),
       ),
     fix: 'A service-role key is exposed with a NEXT_PUBLIC_ prefix. Remove it now — it bypasses Row Level Security for anybody who reads the page source.',
+  },
+  {
+    level: BLOCKING,
+    name: 'The env file is where Next will look for it',
+    /*
+     * The trap this exists for: `next dev` and `next build` read env files
+     * relative to `apps/web`, so a `.env.local` at the workspace root is
+     * invisible to the application. Preflight reads both, which used to mean it
+     * reported every variable set while the running site rendered "Supabase is
+     * not configured" — the two disagreeing, silently, in the direction that
+     * makes you trust the wrong one.
+     *
+     * A root file is only a problem when there is no app-level file, because
+     * then it is certainly the one somebody meant to be using.
+     */
+    ok: () => existsSync(APP_ENV) || !existsSync(ROOT_ENV),
+    fix: `Move .env.local into apps/web/ — Next reads env files relative to the app, not the workspace root, so a root .env.local is loaded by this script and by nothing else:\n      mv .env.local apps/web/.env.local`,
   },
   {
     level: LAUNCH,
