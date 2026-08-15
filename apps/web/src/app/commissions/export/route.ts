@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { can, commissionCsv, exportFilename } from '@ib/core';
 
 import { listCommissions } from '@/features/commission/queries';
-import { listMyFirms } from '@/features/deals/queries';
+import { resolveFirmScope } from '@/features/firms/firm-scope';
 import { recordAuditEvent } from '@/lib/audit';
 import { getActor } from '@/lib/auth/actor';
 
@@ -28,18 +28,31 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Your role does not include commission records.', { status: 403 });
   }
 
-  const firms = await listMyFirms();
-  if (firms.length === 0) {
+  const scope = await resolveFirmScope(request.nextUrl.searchParams.get('firm'));
+
+  if (scope.options.length === 0) {
     return new NextResponse('Commissions belong to a firm.', { status: 404 });
   }
 
-  const requested = request.nextUrl.searchParams.get('firm');
-  const firm = requested ? firms.find((f) => f.id === requested) : firms[0];
+  /*
+   * Two refusals rather than a fallback.
+   *
+   * Naming a firm the caller does not belong to is answered with 403, not with
+   * somebody else's file. Naming none while belonging to several is answered
+   * with 400 — the alternative is guessing, and a CSV of the wrong brokerage's
+   * fees is the kind of thing that gets forwarded to an accountant before
+   * anybody notices the filename.
+   */
+  if (!scope.firm) {
+    return new NextResponse(
+      scope.mustChoose
+        ? 'You belong to more than one firm. Add ?firm=<id> to say which.'
+        : 'Not your firm.',
+      { status: scope.mustChoose ? 400 : 403 },
+    );
+  }
 
-  // Not "fall back to the first firm". A request naming a firm the caller does
-  // not belong to is a request to answer with a refusal, not with somebody
-  // else's numbers.
-  if (!firm) return new NextResponse('Not your firm.', { status: 403 });
+  const firm = scope.firm;
 
   const records = await listCommissions(firm.id);
 

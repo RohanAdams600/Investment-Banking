@@ -29,12 +29,44 @@ export async function listDeals(): Promise<DealSummary[]> {
   }));
 }
 
-/** Firms the caller belongs to, for optionally attributing a deal. */
+/**
+ * Firms the caller is actually a **member** of.
+ *
+ * Goes through `firm_members` rather than reading `firms` directly, and that is
+ * not a stylistic preference — reading `firms` returns the wrong answer.
+ *
+ * `firms` has two SELECT policies since 0018, and they are OR'd:
+ * `firms_select_members` admits your own, and
+ * `firms_select_listing_representative` admits any firm behind a live listing,
+ * so a buyer can see who is representing a business. That second policy is
+ * correct and load-bearing. It also means `select * from firms` answers "firms I
+ * can see", which stopped being the same thing as "firms I belong to" the day it
+ * shipped — and nothing caught it, because there were no live listings yet.
+ *
+ * The consequence was a broker being offered a rival brokerage as a place to
+ * file a deal, and the commissions page putting a rival's name in its header
+ * before showing an empty statement. No data leaked — every downstream policy
+ * still required membership — but the page was lying about whose it was.
+ *
+ * `firm_members` has one policy and it is the membership itself, so this cannot
+ * drift the same way.
+ */
 export async function listMyFirms(): Promise<FirmOption[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.from('firms').select('id, name').order('name');
+  const { data, error } = await supabase
+    .from('firm_members')
+    .select('firm_id, firms(id, name)')
+    .order('firm_id');
 
   if (error || !data) return [];
-  return data.map((row) => ({ id: row.id as string, name: row.name as string }));
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = data as Array<{ firms: any }>;
+
+  return rows
+    .map((row) => (Array.isArray(row.firms) ? row.firms[0] : row.firms))
+    .filter((firm): firm is { id: string; name: string } => Boolean(firm?.id))
+    .map((firm) => ({ id: firm.id, name: firm.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

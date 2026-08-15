@@ -8,6 +8,8 @@ import { recordAuditEvent } from '@/lib/audit';
 import { getActor } from '@/lib/auth/actor';
 import { createClient } from '@/lib/supabase/server';
 
+import { resolveFirmScope } from '@/features/firms/firm-scope';
+
 import { crmScope } from './queries';
 
 /**
@@ -31,11 +33,28 @@ function fail(error: string): CrmState {
 }
 
 /**
+ * The firm this form was rendered for.
+ *
+ * Carried on every CRM form as a hidden field rather than re-derived here,
+ * because the page already resolved it and a second derivation could disagree —
+ * a broker who switched firms in another tab would otherwise write into
+ * whichever one this request happened to resolve.
+ *
+ * It is not trusted: `crmContext` checks it against actual membership.
+ */
+function formDataFirm(formData: FormData): string | null {
+  const value = formData.get('firmId');
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+/**
  * Everything here needs the same three things: a session, the capability, and
  * which owner columns to write. Resolved once so a new action cannot forget one
  * — the check that gets skipped is always the one that had to be copied.
  */
-async function crmContext(): Promise<
+async function crmContext(
+  requestedFirmId?: string | null,
+): Promise<
   { ok: true; userId: string; scope: ReturnType<typeof crmScope> } | { ok: false; state: CrmState }
 > {
   const actor = await getActor();
@@ -45,8 +64,31 @@ async function crmContext(): Promise<
     return { ok: false, state: fail('Your role does not include a pipeline.') };
   }
 
-  const firmId = actor.firmMemberships[0]?.firmId ?? null;
-  return { ok: true, userId: actor.userId, scope: crmScope(firmId, actor.userId) };
+  /*
+   * Which firm this write belongs to.
+   *
+   * This used to be `actor.firmMemberships[0]` — right for the majority who
+   * belong to one firm, and silently wrong for everybody else. A contact filed
+   * against the wrong brokerage is visible to that brokerage's brokers, which
+   * is a disclosure the person who typed it never made.
+   *
+   * `resolveFirmScope` reads membership rather than visibility, so a firm id
+   * arriving from a form is honoured only if it is genuinely theirs.
+   */
+  const firm = await resolveFirmScope(requestedFirmId);
+
+  if (firm.mustChoose) {
+    return {
+      ok: false,
+      state: fail('You belong to more than one firm. Choose which one this is for first.'),
+    };
+  }
+
+  return {
+    ok: true,
+    userId: actor.userId,
+    scope: crmScope(firm.firm?.id ?? null, actor.userId),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +126,7 @@ const contactSchema = z.object({
 });
 
 export async function saveContact(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = contactSchema.safeParse({
@@ -137,7 +179,7 @@ export async function saveContact(_prev: CrmState, formData: FormData): Promise<
 const deleteSchema = z.object({ id: z.string().uuid() });
 
 export async function deleteContact(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = deleteSchema.safeParse({ id: formData.get('id') });
@@ -186,7 +228,7 @@ const leadSchema = z.object({
 });
 
 export async function createLead(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = leadSchema.safeParse({
@@ -233,7 +275,7 @@ const moveSchema = z.object({
 
 /** Moves a lead along the board, or changes what it is. */
 export async function updateLead(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const stageId = formData.get('stageId');
@@ -299,7 +341,7 @@ const taskSchema = z.object({
 });
 
 export async function createTask(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = taskSchema.safeParse({
@@ -335,7 +377,7 @@ const taskStatusSchema = z.object({
 });
 
 export async function setTaskStatus(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = taskStatusSchema.safeParse({
@@ -382,7 +424,7 @@ const noteSchema = z.object({
 });
 
 export async function addNote(_prev: CrmState, formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const parsed = noteSchema.safeParse({
@@ -417,8 +459,8 @@ export async function addNote(_prev: CrmState, formData: FormData): Promise<CrmS
 // ---------------------------------------------------------------------------
 
 /** Gives a firm or a solo seller a working board. Idempotent. */
-export async function seedBoard(_prev: CrmState, _formData: FormData): Promise<CrmState> {
-  const context = await crmContext();
+export async function seedBoard(_prev: CrmState, formData: FormData): Promise<CrmState> {
+  const context = await crmContext(formDataFirm(formData));
   if (!context.ok) return context.state;
 
   const supabase = await createClient();

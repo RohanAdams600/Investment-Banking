@@ -11,7 +11,8 @@ import {
   RecordCommissionForm,
 } from '@/features/commission/commission-panels';
 import { listCommissions, loadAgreement, totalsFor } from '@/features/commission/queries';
-import { listMyFirms } from '@/features/deals/queries';
+import { FirmPicker } from '@/features/firms/firm-picker';
+import { resolveFirmScope } from '@/features/firms/firm-scope';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -37,7 +38,11 @@ export default async function CommissionsPage({
   // owner or admin of the firm on top of it, so this is the outer gate only.
   if (!can(actor, 'commission:view_own')) redirect('/dashboard');
 
-  const firms = await listMyFirms();
+  const params = await searchParams;
+  const requested = typeof params.firm === 'string' ? params.firm : null;
+  const scope = await resolveFirmScope(requested);
+
+  const firms = scope.options;
 
   if (firms.length === 0) {
     return (
@@ -51,9 +56,23 @@ export default async function CommissionsPage({
     );
   }
 
-  const params = await searchParams;
-  const requested = typeof params.firm === 'string' ? params.firm : null;
-  const firm = firms.find((f) => f.id === requested) ?? firms[0]!;
+  /*
+   * A broker at two firms picks before seeing a fee schedule.
+   *
+   * This page used to fall back to `firms[0]`, which put one brokerage's name in
+   * the header above another's numbers as soon as somebody belonged to two. On a
+   * money screen that is not a cosmetic problem — a fee schedule read as the
+   * wrong firm's is a fee somebody quotes to a client.
+   */
+  if (scope.mustChoose) {
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-2xl items-center px-6">
+        <FirmPicker options={scope.options} basePath="/commissions" what="a fee schedule" />
+      </main>
+    );
+  }
+
+  const firm = scope.firm!;
 
   const [agreement, records] = await Promise.all([
     loadAgreement(firm.id),

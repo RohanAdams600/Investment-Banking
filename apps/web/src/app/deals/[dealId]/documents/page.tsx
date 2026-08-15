@@ -5,6 +5,8 @@ import { can } from '@ib/core';
 
 import { DocumentList, UploadPanel } from '@/features/documents/vault-panels';
 import { listDocuments, listRoomMembers } from '@/features/documents/queries';
+import { FirmPicker } from '@/features/firms/firm-picker';
+import { resolveFirmScope } from '@/features/firms/firm-scope';
 import { getDeal } from '@/features/messaging/queries';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -19,8 +21,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function DealDocumentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ dealId: string }>;
+  searchParams: Promise<{ firm?: string }>;
 }) {
   if (!isSupabaseConfigured()) redirect('/dashboard');
 
@@ -36,12 +40,26 @@ export default async function DealDocumentsPage({
   const deal = await getDeal(dealId);
   if (!deal) notFound();
 
-  const [documents, members] = await Promise.all([listDocuments(dealId), listRoomMembers(dealId)]);
+  const { firm: requestedFirm } = await searchParams;
 
-  // The firm the uploader is acting for. A broker in one firm is the common
-  // case; somebody in several picks the first, which is wrong often enough that
-  // it needs a selector before this ships to a multi-firm user.
-  const firmId = actor.firmMemberships[0]?.firmId ?? null;
+  const [documents, members, scope] = await Promise.all([
+    listDocuments(dealId),
+    listRoomMembers(dealId),
+    resolveFirmScope(requestedFirm),
+  ]);
+
+  /*
+   * A broker at two brokerages must say which one before uploading.
+   *
+   * The vault is append-only: a document filed against the wrong firm cannot be
+   * moved, only withdrawn, and the other firm's administrators can see it in
+   * the meantime. That is worth one deliberate click from the small minority
+   * who have a choice to make.
+   *
+   * Reading is unaffected — the list above is already loaded, and which firm you
+   * are acting as does not change what you may open.
+   */
+  const firmId = scope.firm?.id ?? null;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -63,7 +81,17 @@ export default async function DealDocumentsPage({
         canRelease={can(actor, 'document:set_permissions')}
       />
 
-      {can(actor, 'document:upload') ? <UploadPanel dealId={dealId} firmId={firmId} /> : null}
+      {can(actor, 'document:upload') ? (
+        scope.mustChoose ? (
+          <FirmPicker
+            options={scope.options}
+            basePath={`/deals/${dealId}/documents`}
+            what="a document you upload"
+          />
+        ) : (
+          <UploadPanel dealId={dealId} firmId={firmId} />
+        )
+      ) : null}
 
       <p className="text-text-muted text-sm">
         Every document you open is recorded, and whoever uploaded it can see that record. It says a

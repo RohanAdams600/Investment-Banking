@@ -1128,3 +1128,112 @@ describe.skipIf(!hasDatabase)('listings', () => {
     });
   });
 });
+
+/**
+ * The widening in 0018, and what it quietly changed elsewhere.
+ *
+ * `firms_select_listing_representative` lets a buyer see who is representing a
+ * live listing, which is right and load-bearing — a deal offered by nobody in
+ * particular does not get taken seriously.
+ *
+ * It also means `select * from firms` stopped answering "firms I belong to" on
+ * the day it shipped, and no test noticed because there were no live listings
+ * yet. `listMyFirms()` in the application read `firms` directly and started
+ * offering brokers a rival brokerage as somewhere to file a deal.
+ *
+ * These tests pin both halves: the widening still works, and the membership
+ * question still has a different, narrower answer.
+ */
+describe.skipIf(!hasDatabase)('firm visibility after the 0018 widening', () => {
+  let db: Client;
+
+  let seller: string;
+  let rivalBroker: string;
+  let brokerageId: string;
+  let rivalFirmId: string;
+
+  beforeAll(async () => {
+    db = await connect();
+    await applyMigrations(db);
+
+    await db.query(
+      `insert into public.jurisdictions (code, name, country_code, is_active)
+       values ('US-NY','New York','US',true)`,
+    );
+
+    seller = await createAuthUser(db, 'firmvis-seller@example.com');
+    rivalBroker = await createAuthUser(db, 'firmvis-rival@example.com');
+
+    await db.query(
+      `insert into public.user_roles (user_id, role) values ($1,'broker'), ($2,'broker')`,
+      [seller, rivalBroker],
+    );
+
+    const firms = await db.query<{ id: string }>(
+      `insert into public.firms (name, kind)
+       values ('Anchor Brokerage','brokerage'), ('Rival Partners','brokerage') returning id`,
+    );
+    brokerageId = firms.rows[0]!.id;
+    rivalFirmId = firms.rows[1]!.id;
+
+    await db.query(
+      `insert into public.firm_members (firm_id, user_id, role) values ($1,$2,'owner'), ($3,$4,'owner')`,
+      [brokerageId, seller, rivalFirmId, rivalBroker],
+    );
+
+    const listing = await db.query<{ id: string }>(
+      `insert into public.listings (seller_id, firm_id, headline, industry, jurisdiction_code)
+       values ($1, $2, 'A route business', 'home_services', 'US-NY') returning id`,
+      [seller, brokerageId],
+    );
+
+    await db.query(`update public.listings set status = 'pending_review' where id = $1`, [
+      listing.rows[0]!.id,
+    ]);
+    await db.query(`update public.listings set status = 'live' where id = $1`, [
+      listing.rows[0]!.id,
+    ]);
+  });
+
+  afterAll(async () => {
+    await db?.end();
+  });
+
+  it('lets a rival see the firm behind a live listing', async () => {
+    // The widening working as intended. "Listed by Anchor Brokerage" is the
+    // credential a buyer actually weighs.
+    const { rows } = await actingAs<{ name: string }>(
+      db,
+      rivalBroker,
+      'select name from public.firms order by name',
+    );
+    expect(rows.map((r) => r.name)).toContain('Anchor Brokerage');
+  });
+
+  it('does not make that firm one of theirs', async () => {
+    // The half the application got wrong. Reading `firms` answers "firms I can
+    // see"; membership is a different question with a narrower answer, and it
+    // has to be asked of `firm_members`.
+    const { rows } = await actingAs<{ firm_id: string }>(
+      db,
+      rivalBroker,
+      'select firm_id from public.firm_members',
+    );
+
+    expect(rows.map((r) => r.firm_id)).toEqual([rivalFirmId]);
+    expect(rows.map((r) => r.firm_id)).not.toContain(brokerageId);
+  });
+
+  it('shows the two questions giving different answers', async () => {
+    // Stated as its own assertion because this is the shape of the bug: two
+    // queries that agreed for months and then stopped, silently.
+    const visible = await actingAs<{ id: string }>(db, rivalBroker, 'select id from public.firms');
+    const mine = await actingAs<{ firm_id: string }>(
+      db,
+      rivalBroker,
+      'select firm_id from public.firm_members',
+    );
+
+    expect(visible.rowCount).toBeGreaterThan(mine.rowCount);
+  });
+});

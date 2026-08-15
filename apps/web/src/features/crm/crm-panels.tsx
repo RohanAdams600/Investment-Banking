@@ -50,7 +50,16 @@ import type { CrmContact, CrmLead, CrmNote, CrmStage, CrmTask } from './queries'
 // The board
 // ===========================================================================
 
-export function PipelineBoard({ stages, leads }: { stages: CrmStage[]; leads: CrmLead[] }) {
+export function PipelineBoard({
+  stages,
+  leads,
+  firmId,
+}: {
+  stages: CrmStage[];
+  leads: CrmLead[];
+  /** The firm this board was rendered for. Null for a seller with no firm. */
+  firmId: string | null;
+}) {
   const [state, action] = useActionState(updateLead, emptyCrmState);
   const [seedState, seed] = useActionState(seedBoard, emptyCrmState);
 
@@ -68,6 +77,7 @@ export function PipelineBoard({ stages, leads }: { stages: CrmStage[]; leads: Cr
             point, not a process you have to adopt.
           </p>
           <form action={seed}>
+            <FirmField firmId={firmId} />
             <Submit label="Set up my board" />
           </form>
           {seedState.error ? (
@@ -138,6 +148,7 @@ export function PipelineBoard({ stages, leads }: { stages: CrmStage[]; leads: Cr
                       that never closed.
                     */}
                     <form action={action} className="flex flex-wrap items-center gap-1">
+                      <FirmField firmId={firmId} />
                       <input type="hidden" name="leadId" value={lead.id} />
                       <select
                         name="stageId"
@@ -189,7 +200,15 @@ export function PipelineBoard({ stages, leads }: { stages: CrmStage[]; leads: Cr
 // Tasks
 // ===========================================================================
 
-export function TaskList({ tasks, contacts }: { tasks: CrmTask[]; contacts: CrmContact[] }) {
+export function TaskList({
+  tasks,
+  contacts,
+  firmId,
+}: {
+  tasks: CrmTask[];
+  contacts: CrmContact[];
+  firmId: string | null;
+}) {
   const [state, action] = useActionState(setTaskStatus, emptyCrmState);
   const [createState, create] = useActionState(createTask, emptyCrmState);
 
@@ -220,6 +239,7 @@ export function TaskList({ tasks, contacts }: { tasks: CrmTask[]; contacts: CrmC
                     </p>
                   </div>
                   <form action={action}>
+                    <FirmField firmId={firmId} />
                     <input type="hidden" name="taskId" value={task.id} />
                     <input type="hidden" name="status" value="done" />
                     <SmallSubmit label="Done" />
@@ -271,9 +291,11 @@ export function TaskList({ tasks, contacts }: { tasks: CrmTask[]; contacts: CrmC
 export function ContactPanel({
   contacts,
   notes,
+  firmId,
 }: {
   contacts: CrmContact[];
   notes: Map<string, CrmNote[]>;
+  firmId: string | null;
 }) {
   const [state, action] = useActionState(saveContact, emptyCrmState);
   const [removeState, remove] = useActionState(deleteContact, emptyCrmState);
@@ -295,6 +317,7 @@ export function ContactPanel({
         </CardHeader>
         <CardContent>
           <form action={action} className="space-y-4">
+            <FirmField firmId={firmId} />
             <div className="grid gap-3 sm:grid-cols-2">
               <Input label="Name" name="fullName" required />
               <Input
@@ -370,6 +393,7 @@ export function ContactPanel({
                   {expanded === contact.id ? (
                     <div className="mt-3 space-y-3">
                       <form action={lead} className="space-y-2">
+                        <FirmField firmId={firmId} />
                         <input type="hidden" name="contactId" value={contact.id} />
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Select label="Add as a lead from" name="source" defaultValue="manual">
@@ -405,6 +429,7 @@ export function ContactPanel({
                         ) : null}
 
                         <form action={note} className="space-y-2">
+                          <FirmField firmId={firmId} />
                           <input type="hidden" name="contactId" value={contact.id} />
                           <Textarea label="Note" name="body" rows={2} required />
                           <SmallSubmit label="Save note" />
@@ -412,6 +437,7 @@ export function ContactPanel({
                       </div>
 
                       <form action={remove}>
+                        <FirmField firmId={firmId} />
                         <input type="hidden" name="id" value={contact.id} />
                         <SmallSubmit label="Remove contact" />
                       </form>
@@ -437,6 +463,21 @@ export function ContactPanel({
 }
 
 // ===========================================================================
+
+/**
+ * The firm this form belongs to, carried on the request.
+ *
+ * Rendered rather than re-derived server-side, because the page already decided
+ * and a second derivation could disagree — a broker who switched firms in
+ * another tab would otherwise write into whichever one this request resolved.
+ *
+ * Not a trust boundary: the action checks it against actual membership before
+ * writing anything.
+ */
+function FirmField({ firmId }: { firmId: string | null }) {
+  if (!firmId) return null;
+  return <input type="hidden" name="firmId" value={firmId} />;
+}
 
 function Stat({ label, value, emphasis }: { label: string; value: number; emphasis?: boolean }) {
   return (
