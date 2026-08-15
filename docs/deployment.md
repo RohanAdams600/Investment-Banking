@@ -3,7 +3,7 @@
 ## Current state
 
 Everything in the roadmap is built, every migration is applied, and the application builds
-clean. 821 tests pass and the linters are clean.
+clean. 839 tests pass and the linters are clean.
 
 **One thing stands between this and a live site: it is not deployed to a domain.** That is
 the six-step walk-through that follows, and none of it is a code change.
@@ -104,7 +104,7 @@ Useful:
 
 ```bash
 pnpm preflight                              # what is not configured yet
-pnpm test                                   # 731 tests
+pnpm test                                   # 839 tests
 pnpm typecheck                              # all workspace packages
 pnpm lint
 pnpm --filter @ib/ui tokens:build           # after editing any design token
@@ -190,7 +190,7 @@ worse than leaving it forward.
 in `public` has RLS both enabled and forced.
 
 **Project:** `Cairn`, ref `treltiukpuxhnzuplegu`, region **us-east-1**, org `Cairn Capital`.
-All twenty-two migrations and the jurisdiction seed are applied. Verified live: cross-tenant
+All twenty-nine migrations and the jurisdiction seed are applied. Verified live: cross-tenant
 isolation, self-grant admin denial, append-only guarantees, and anonymous access — the last
 one exercised through PostgREST with the publishable key, which is the path a browser
 actually takes rather than a direct SQL connection.
@@ -223,7 +223,7 @@ from `/admin/verification`, and the grant is written to the audit log either way
 
 Why this exists at all: `user_roles_insert_self_non_admin` forbids self-granting `admin`,
 correctly — otherwise every signup could promote itself. But nothing else granted it
-either, so 0001–0027 shipped a locked room with the key inside. It was only visible by
+either, so 0001–0027 shipped a locked room with the key inside — 0028 is the way out. It was only visible by
 asking the live database what it contained.
 
 **3. Open a jurisdiction** at `/admin/jurisdictions`. All 51 ship closed, deliberately:
@@ -294,7 +294,7 @@ DATABASE_URL=... pnpm vitest run supabase/tests/rls.test.ts
 
 ### Live migration state
 
-**Migrations 0001–0027 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
+**Migrations 0001–0029 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
 us-east-1), plus the jurisdiction seed.
 
 Verified after 0027 against the live project:
@@ -453,7 +453,7 @@ documented, and two schema tests now prevent them coming back.
 - [ ] `isBrandFullyConfigured` is true — real support email and mailing address configured
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
-- [x] Migrations 0001–0026 applied to the production Supabase project (us-east-1)
+- [x] Migrations 0001–0029 applied to the production Supabase project (us-east-1)
 - [x] **Migration 0027 applied** and verified against the live project — see the table
       above. Do not take a dashboard SQL Editor run on trust; it reported success once
       while applying nothing.
