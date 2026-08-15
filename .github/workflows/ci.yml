@@ -25,9 +25,16 @@ jobs:
     # close to unreviewable by eye — a `using` where a `with check` was needed,
     # a missing FORCE — and every one of those is obvious the moment a wrong
     # role runs a query. So CI runs the queries.
+    #
+    # Pinned to the major version the production project runs. Local Postgres
+    # and Supabase have diverged twice before — migrations 0008 and 0009 exist
+    # because of it, both times because the local environment was *more*
+    # restrictive and the suite passed on code that would have failed live. A
+    # CI database on a different major than production is the same trap with a
+    # longer fuse.
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: cairn_test

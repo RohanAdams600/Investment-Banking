@@ -202,6 +202,31 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
+### The scheduler
+
+`vercel.json` declares one cron: `/api/cron/due-tasks`, daily at 13:00 UTC. Deliberately
+the only thing in that file — build settings are left to Vercel's own detection, because a
+wrong `buildCommand` guessed into the repo breaks a deploy in a way that is tedious to
+trace back to a JSON file nobody remembers adding.
+
+It works because Vercel sends `Authorization: Bearer $CRON_SECRET` on cron invocations
+whenever an environment variable of exactly that name exists — which is the header the
+route already checks, in constant time. So there is nothing to wire up beyond setting
+`CRON_SECRET`. Without it the route refuses every caller, including Vercel's.
+
+13:00 UTC is roughly 9am US Eastern, and the route looks 24 hours ahead, so somebody who
+works mornings hears about the afternoon's tasks while there is still an afternoon.
+
+**On any other host**, ignore the file and point a scheduler at the same path with the same
+header:
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/due-tasks
+```
+
+Nothing about the route is Vercel-specific; that was the point of building it as an
+authenticated endpoint rather than a platform-specific hook.
+
 ### Verifying a migration actually landed
 
 Worth its own section, because 0027 taught the lesson. It was pasted into the dashboard
