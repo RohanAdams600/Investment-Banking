@@ -51,6 +51,54 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
+/**
+ * Reads every row, not the first thousand.
+ *
+ * PostgREST applies a `max-rows` ceiling to any query that does not set its own
+ * — 1000 on Supabase by default. Nothing errors when you hit it. The response
+ * is a normal 200 with a thousand rows in it, and the rest are simply not
+ * there.
+ *
+ * For most lists that is a display bug. Here it is a correctness bug in the
+ * thing the product exists to do: the matcher scoring "every buyer" against a
+ * listing would silently mean "the first thousand buyers", and the buyers past
+ * that line would never be told about a business that fits them, forever, with
+ * nothing anywhere reporting a problem.
+ *
+ * So this pages with `.range()` until a short page comes back. The hard stop is
+ * a guard against an infinite loop if a page ever comes back full but
+ * unchanging, not a limit on the data.
+ */
+const PAGE = 1000;
+const MAX_PAGES = 200;
+
+async function fetchAll<T = Row>(
+  build: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+  label: string,
+): Promise<T[]> {
+  const all: T[] = [];
+
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const from = page * PAGE;
+    const { data, error } = await build(from, from + PAGE - 1);
+
+    if (error) {
+      console.error(`[matcher] paged read failed for ${label}`, error);
+      return all;
+    }
+
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+
+    if (rows.length < PAGE) return all;
+  }
+
+  // Reaching here means 200,000 rows, which is a scale this design should be
+  // reconsidered at rather than silently truncated at.
+  console.error(`[matcher] ${label} exceeded ${MAX_PAGES * PAGE} rows; results are incomplete`);
+  return all;
+}
+
 /** Statuses at which a listing is on the market and worth matching. */
 const MARKET_STATUSES = ['live', 'under_loi', 'under_contract'];
 
@@ -329,12 +377,18 @@ export async function recomputeMatchesForListing(listingId: string): Promise<num
   const scored = toProfile(listing as Row, (details ?? undefined) as Row | undefined);
   if (!scored) return 0;
 
-  const { data: criteria } = await service
-    .from('acquisition_criteria')
-    .select('*')
-    .is('superseded_at', null);
+  const criteria = await fetchAll(
+    (from, to) =>
+      service
+        .from('acquisition_criteria')
+        .select('*')
+        .is('superseded_at', null)
+        .order('id')
+        .range(from, to),
+    'acquisition_criteria',
+  );
 
-  if (!criteria || criteria.length === 0) return 0;
+  if (criteria.length === 0) return 0;
 
   // The seller's half of the match. Loaded once for the whole batch, since
   // every buyer here is being scored against the same seller.
@@ -446,26 +500,40 @@ export async function recomputeMatchesForBuyer(buyerId: string): Promise<number>
 
   const buyer = toCriteria(criteriaRow as Row, profiles.get(buyerId), roles.get(buyerId) ?? []);
 
-  const { data: listings } = await service
-    .from('listings')
-    .select(LISTING_COLUMNS)
-    .in('status', MARKET_STATUSES);
-
-  if (!listings || listings.length === 0) return 0;
-
-  const { data: allDetails } = await service
-    .from('listing_details')
-    .select(
-      'listing_id, revenue_cents, earnings_cents, asking_price_cents, customer_concentration, recurring_revenue_share',
-    )
-    .in(
-      'listing_id',
-      listings.map((l) => (l as Row).id),
-    );
-
-  const detailsByListing = new Map<string, Row>(
-    (allDetails ?? []).map((d) => [(d as Row).listing_id as string, d as Row]),
+  const listings = await fetchAll(
+    (from, to) =>
+      service
+        .from('listings')
+        .select(LISTING_COLUMNS)
+        .in('status', MARKET_STATUSES)
+        .order('id')
+        .range(from, to),
+    'listings',
   );
+
+  if (listings.length === 0) return 0;
+
+  // One row per listing, so this hits the ceiling at exactly the same point the
+  // listings read does — and a listing whose details are missing is dropped by
+  // `toProfile`, so the failure would look like "that business is unscoreable"
+  // rather than like a truncation.
+  const allDetails = await fetchAll(
+    (from, to) =>
+      service
+        .from('listing_details')
+        .select(
+          'listing_id, revenue_cents, earnings_cents, asking_price_cents, customer_concentration, recurring_revenue_share',
+        )
+        .in(
+          'listing_id',
+          listings.map((l) => (l as Row).id),
+        )
+        .order('listing_id')
+        .range(from, to),
+    'listing_details',
+  );
+
+  const detailsByListing = new Map<string, Row>(allDetails.map((d) => [d.listing_id as string, d]));
 
   const scorable = listings
     .map((listing) => toProfile(listing as Row, detailsByListing.get((listing as Row).id)))
@@ -529,9 +597,18 @@ async function loadSellerPreferencesFor(
 ): Promise<Map<string, SellerPreferences>> {
   if (sellerIds.length === 0) return new Map();
 
-  const { data } = await service.from('seller_preferences').select('*').in('user_id', sellerIds);
+  const rows = await fetchAll(
+    (from, to) =>
+      service
+        .from('seller_preferences')
+        .select('*')
+        .in('user_id', sellerIds)
+        .order('user_id')
+        .range(from, to),
+    'seller_preferences',
+  );
 
-  return new Map(((data ?? []) as Row[]).map((row) => [row.user_id as string, toPreferences(row)]));
+  return new Map(rows.map((row) => [row.user_id as string, toPreferences(row)]));
 }
 
 async function loadBuyerProfiles(
@@ -540,12 +617,18 @@ async function loadBuyerProfiles(
 ): Promise<Map<string, Row>> {
   if (buyerIds.length === 0) return new Map();
 
-  const { data } = await service
-    .from('buyer_profiles')
-    .select('user_id, funding_source, prior_acquisitions')
-    .in('user_id', buyerIds);
+  const rows = await fetchAll(
+    (from, to) =>
+      service
+        .from('buyer_profiles')
+        .select('user_id, funding_source, prior_acquisitions')
+        .in('user_id', buyerIds)
+        .order('user_id')
+        .range(from, to),
+    'buyer_profiles',
+  );
 
-  return new Map(((data ?? []) as Row[]).map((row) => [row.user_id as string, row]));
+  return new Map(rows.map((row) => [row.user_id as string, row]));
 }
 
 /** Platform roles per buyer, used to derive what kind of buyer they are. */
@@ -555,10 +638,27 @@ async function loadRoles(
 ): Promise<Map<string, string[]>> {
   if (buyerIds.length === 0) return new Map();
 
-  const { data } = await service.from('user_roles').select('user_id, role').in('user_id', buyerIds);
+  /*
+   * The one where the row count is not the id count.
+   *
+   * A buyer holds several roles, so a thousand buyers is several thousand rows
+   * — this hits the ceiling well before the lists it is derived from do. A
+   * buyer whose roles fall past it is treated as an `individual`, which quietly
+   * changes the seller-fit score a seller reads and acts on.
+   */
+  const rows = await fetchAll(
+    (from, to) =>
+      service
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', buyerIds)
+        .order('user_id')
+        .range(from, to),
+    'user_roles',
+  );
 
   const byUser = new Map<string, string[]>();
-  for (const row of (data ?? []) as Row[]) {
+  for (const row of rows) {
     const list = byUser.get(row.user_id as string) ?? [];
     list.push(row.role as string);
     byUser.set(row.user_id as string, list);

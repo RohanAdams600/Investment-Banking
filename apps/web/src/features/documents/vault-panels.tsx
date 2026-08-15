@@ -347,7 +347,9 @@ function DocumentCard({
           <ReleaseControls dealId={dealId} document={document} members={members} />
         ) : null}
 
-        {mine ? <AccessLog entries={document.openedBy} /> : null}
+        {mine ? (
+          <AccessLog entries={document.openedBy} complete={document.accessLogComplete} />
+        ) : null}
 
         {mine && !inactive ? <WithdrawControls dealId={dealId} documentId={document.id} /> : null}
       </CardContent>
@@ -524,7 +526,22 @@ function ReleaseControls({
  * it went afterwards. No system can tell you that, and implying otherwise would
  * be worse than saying nothing.
  */
-function AccessLog({ entries }: { entries: DocumentRelease[] | AccessEntry[] }) {
+function AccessLog({
+  entries,
+  complete,
+}: {
+  entries: DocumentRelease[] | AccessEntry[];
+  /**
+   * Whether the log this came from was the whole log.
+   *
+   * The empty state below is a claim about the world — "nobody has opened it" —
+   * and the query behind it fetches the newest 500 events across every document
+   * in the room. On a busy data room an older document's reads fall outside
+   * that window, and the card would say nobody looked when somebody did. That
+   * is the wrong way for a confidentiality surface to be wrong.
+   */
+  complete: boolean;
+}) {
   const log = entries as AccessEntry[];
 
   return (
@@ -532,7 +549,11 @@ function AccessLog({ entries }: { entries: DocumentRelease[] | AccessEntry[] }) 
       <h3 className="text-text-secondary text-xs font-medium">Opened by</h3>
 
       {log.length === 0 ? (
-        <p className="text-text-muted text-xs">Nobody has opened it yet.</p>
+        <p className="text-text-muted text-xs">
+          {complete
+            ? 'Nobody has opened it yet.'
+            : 'Nothing recent. This deal room has more activity than one page of log, so older opens are not shown here.'}
+        </p>
       ) : (
         <ul className="space-y-1">
           {log.slice(0, 10).map((entry) => (

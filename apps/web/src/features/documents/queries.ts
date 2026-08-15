@@ -55,6 +55,15 @@ export interface VaultDocument {
    * people never collect on.
    */
   openedBy: AccessEntry[];
+  /**
+   * Whether `openedBy` is the whole story for this document.
+   *
+   * False when the access log came back capped. It matters because the panel's
+   * empty state says "nobody has opened it yet" — and on a truncated log that
+   * is a false negative on a confidentiality question. A seller reading it
+   * concludes the buyer never looked at the financials.
+   */
+  accessLogComplete: boolean;
 }
 
 export interface DocumentRelease {
@@ -117,7 +126,8 @@ export async function listDocuments(dealId: string): Promise<Capped<VaultDocumen
       withdrawnReason: row.withdrawn_reason ?? null,
       createdAt: row.created_at,
       releasedTo: releases.get(row.id as string) ?? [],
-      openedBy: access.get(row.id as string) ?? [],
+      openedBy: access.rows.get(row.id as string) ?? [],
+      accessLogComplete: access.complete,
     })),
   };
 }
@@ -131,20 +141,45 @@ export async function listDocuments(dealId: string): Promise<Capped<VaultDocumen
  * uses it is uploader-facing, but the query does not need to be, because the
  * database already decided.
  */
+const GRANTS_LIMIT = 5000;
+
 async function loadReleases(documentIds: string[]): Promise<Map<string, DocumentRelease[]>> {
   const map = new Map<string, DocumentRelease[]>();
   if (documentIds.length === 0) return map;
 
   const supabase = await createClient();
 
+  /*
+   * An explicit bound, because there was none — and "no limit" is not the same
+   * as "everything". PostgREST applies its own `max-rows` ceiling (1000 on
+   * Supabase by default), so an unbounded query was already being capped,
+   * silently, by a number nothing in this repository mentions.
+   *
+   * A grant list is the record of who was shown a document. An incomplete one
+   * is not a display problem, so this asks for a bound it will not hit and
+   * shouts if it ever does, rather than quietly dropping rows.
+   */
   const { data } = await supabase
     .from('document_grants')
     .select('document_id, grantee_id, granted_at, revoked_at')
-    .in('document_id', documentIds);
+    .in('document_id', documentIds)
+    .limit(overFetch(GRANTS_LIMIT));
 
   if (!data) return map;
 
-  const rows = data as Row[];
+  const page = capped(data as Row[], GRANTS_LIMIT);
+
+  if (page.truncated) {
+    // Deliberately loud and deliberately not swallowed into the UI. If this
+    // ever fires, the release lists on that page are wrong and the fix is a
+    // per-document query, not a bigger constant.
+    console.error('[vault] grant list hit its ceiling; release lists on this page are incomplete', {
+      documents: documentIds.length,
+      limit: GRANTS_LIMIT,
+    });
+  }
+
+  const rows = page.rows;
   const names = await loadNames([...new Set(rows.map((r) => r.grantee_id as string))]);
 
   for (const row of rows) {
@@ -169,9 +204,17 @@ async function loadReleases(documentIds: string[]): Promise<Map<string, Document
  * calling this gets their own reads back — which is the correct answer, not a
  * leak: you are entitled to see what the platform logged about you.
  */
-async function loadAccessEntries(documentIds: string[]): Promise<Map<string, AccessEntry[]>> {
+const ACCESS_LOG_LIMIT = 500;
+
+interface AccessEntries {
+  rows: Map<string, AccessEntry[]>;
+  /** False when the log was capped, so an empty list means "not in the window". */
+  complete: boolean;
+}
+
+async function loadAccessEntries(documentIds: string[]): Promise<AccessEntries> {
   const map = new Map<string, AccessEntry[]>();
-  if (documentIds.length === 0) return map;
+  if (documentIds.length === 0) return { rows: map, complete: true };
 
   const supabase = await createClient();
 
@@ -180,11 +223,16 @@ async function loadAccessEntries(documentIds: string[]): Promise<Map<string, Acc
     .select('id, document_id, actor_id, action, created_at')
     .in('document_id', documentIds)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(overFetch(ACCESS_LOG_LIMIT));
 
-  if (!data) return map;
+  if (!data) return { rows: map, complete: true };
 
-  const rows = data as Row[];
+  // Newest-first across *every* document in the room, so the cap does not fall
+  // evenly: a document whose reads are all older than the newest 500 events
+  // gets none of them. Hence the flag — the card must not claim nobody opened
+  // it when the answer is "not in this window".
+  const page = capped(data as Row[], ACCESS_LOG_LIMIT);
+  const rows = page.rows;
   const names = await loadNames([
     ...new Set(rows.map((r) => r.actor_id).filter(Boolean) as string[]),
   ]);
@@ -201,7 +249,7 @@ async function loadAccessEntries(documentIds: string[]): Promise<Map<string, Acc
     map.set(row.document_id, list);
   }
 
-  return map;
+  return { rows: map, complete: !page.truncated };
 }
 
 async function loadNames(userIds: string[]): Promise<Map<string, string>> {
