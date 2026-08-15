@@ -84,8 +84,6 @@ export const RATE_LIMITS = {
   editMessage: { limit: 20, windowMs: 60_000 },
   /** Changing who can read a deal room deserves a much tighter bound. */
   membershipChange: { limit: 10, windowMs: 60_000 },
-  /** Minting signed URLs; each one is a fresh grant of access to a file. */
-  attachmentUrl: { limit: 60, windowMs: 60_000 },
   /** Exporting a transcript is rare and worth noticing. */
   exportTranscript: { limit: 3, windowMs: 3_600_000 },
   /** Bringing a business to market. Nobody legitimately does this in bulk. */

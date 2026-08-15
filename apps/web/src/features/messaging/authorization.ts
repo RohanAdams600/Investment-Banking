@@ -60,23 +60,6 @@ export const getConversationMembership = cache(
   },
 );
 
-/** Whether the conversation belongs to the deal in the URL. */
-export async function conversationBelongsToDeal(
-  conversationId: string,
-  dealId: string,
-): Promise<boolean> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('deal_conversations')
-    .select('id')
-    .eq('id', conversationId)
-    .eq('deal_id', dealId)
-    .maybeSingle();
-
-  return !error && data !== null;
-}
-
 export class MessagingError extends Error {
   readonly status: number;
 

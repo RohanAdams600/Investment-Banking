@@ -70,11 +70,27 @@ export default async function DealMessagesPage({ params, searchParams }: PagePro
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-semibold">{deal.name}</h1>
-        <p className="text-text-muted text-sm">
-          Messages are visible only to members of each conversation.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold">{deal.name}</h1>
+          <p className="text-text-muted text-sm">
+            Messages are visible only to members of each conversation.
+          </p>
+        </div>
+
+        {/*
+          Where files go, now that the chat does not take them.
+          The composer used to carry a paperclip that uploaded to storage and
+          recorded the object nowhere — so the file was unreachable as soon as
+          the page closed. The vault is the same job done properly: released to
+          named people, versioned, and logged when opened.
+        */}
+        <Link
+          href={`/deals/${dealId}/documents`}
+          className="border-border-subtle hover:border-border-default rounded-md border px-3 py-2 text-sm transition-colors"
+        >
+          Documents
+        </Link>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">

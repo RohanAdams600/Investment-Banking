@@ -298,6 +298,76 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       expect(rows).toEqual([]);
     });
 
+    it('never calls auth.uid() bare in a policy', async () => {
+      /*
+       * A performance invariant, enforced like a security one, because it fails
+       * the same way: invisibly, until there is enough data to matter.
+       *
+       * `auth.uid()` written bare in a policy is a per-row expression —
+       * Postgres calls it once for every row it examines. Wrapped in a scalar
+       * subquery it becomes an InitPlan: evaluated once, compared as a
+       * constant. Same answer, and the difference between a browse page that
+       * loads and one that times out.
+       *
+       * The natural thing to write is the bare call, so this exists to catch
+       * the next policy somebody adds rather than to congratulate 0027.
+       */
+      const { rows } = await db.query<{ tablename: string; policyname: string }>(
+        `select tablename, policyname
+           from pg_policies
+          where schemaname = 'public'
+            and (
+              -- Strip the wrapped form, then see what is left. Postgres regex
+              -- is POSIX and has no lookbehind, so "not preceded by SELECT"
+              -- cannot be written directly — the first version of this test
+              -- tried and silently matched all 38 policies including the
+              -- correct ones.
+              regexp_replace(
+                coalesce(qual, ''), '\\( SELECT auth\\.(uid|jwt)\\(\\)( AS \\w+)?\\)', '', 'g'
+              ) ~ 'auth\\.(uid|jwt)\\(\\)'
+              or regexp_replace(
+                coalesce(with_check, ''), '\\( SELECT auth\\.(uid|jwt)\\(\\)( AS \\w+)?\\)', '', 'g'
+              ) ~ 'auth\\.(uid|jwt)\\(\\)'
+            )
+          order by tablename, policyname`,
+      );
+
+      expect(rows).toEqual([]);
+    });
+
+    it('indexes every foreign key whose parent delete would scan the child', async () => {
+      /*
+       * `on delete cascade` and `on delete restrict` both make the *parent's*
+       * delete look through the child table. With no index on the referencing
+       * column that is a sequential scan, so deleting one contact reads every
+       * task on the platform.
+       *
+       * Deliberately not "index every foreign key". The linter asks for 39;
+       * most of those are `created_by` and `actor_id` audit columns that
+       * nothing filters on, and an index there is pure write cost. The rule is
+       * the delete behaviour, and `set null` is excluded because those columns
+       * are the audit trail rather than a query path.
+       */
+      const { rows } = await db.query<{ tbl: string; col: string; ondelete: string }>(
+        `select c.conrelid::regclass::text as tbl, a.attname as col,
+                case c.confdeltype when 'c' then 'cascade' else 'restrict' end as ondelete
+           from pg_constraint c
+           join lateral unnest(c.conkey) k(attnum) on true
+           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum
+          where c.contype = 'f'
+            and c.connamespace = 'public'::regnamespace
+            and c.confdeltype in ('c', 'r')
+            and array_length(c.conkey, 1) = 1
+            and not exists (
+              select 1 from pg_index i
+               where i.indrelid = c.conrelid and i.indkey[0] = k.attnum
+            )
+          order by tbl, col`,
+      );
+
+      expect(rows).toEqual([]);
+    });
+
     it('does not let anon execute any function in the exposed public schema', async () => {
       // PostgREST publishes `public` functions as /rest/v1/rpc/<name>, and
       // Supabase's default privileges grant EXECUTE to anon. A SECURITY DEFINER

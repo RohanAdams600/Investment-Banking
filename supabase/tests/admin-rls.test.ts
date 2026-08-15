@@ -419,6 +419,83 @@ describe.skipIf(!hasDatabase)('admin', () => {
       expect(columns.rows.map((c) => c.column_name)).not.toContain('reason');
     });
 
+    it('does not show a stranger the timeline of a listing that is not on the market', async () => {
+      /*
+       * The test the whole view depends on.
+       *
+       * `listing_status_timeline` is a SECURITY DEFINER view — it exists to
+       * show rows the caller's own policy withholds, so it runs as its owner
+       * and bypasses RLS on `listing_status_history` completely. Supabase's
+       * linter flags it as an ERROR for exactly that reason, and the linter is
+       * right to: the WHERE clause is the *only* thing standing between a
+       * stranger and every seller's history.
+       *
+       * A draft listing is not discoverable and the buyer does not control it,
+       * so both surviving branches must be false. If this ever returns a row,
+       * the view is publishing when a seller decided to list, when they pulled
+       * it, and how many times they tried — for every business on the platform.
+       */
+      const draft = await db.query<{ id: string }>(
+        `insert into public.listings (seller_id, headline, industry, jurisdiction_code)
+         values ($1, 'A quiet draft nobody has published', 'home_services', 'US-NY')
+         returning id`,
+        [seller],
+      );
+      const draftId = draft.rows[0]!.id;
+
+      // A row exists to be leaked. Written directly, because the seller
+      // reaching pending_review is a status change the trigger records.
+      await db.query("update public.listings set status = 'pending_review' where id = $1", [
+        draftId,
+      ]);
+
+      const history = await db.query<{ count: string }>(
+        'select count(*) as count from public.listing_status_history where listing_id = $1',
+        [draftId],
+      );
+      expect(Number(history.rows[0]!.count)).toBeGreaterThan(0);
+
+      const leaked = await actingAs(
+        db,
+        buyer,
+        'select id from public.listing_status_timeline where listing_id = $1',
+        [draftId],
+      );
+      expect(leaked.rowCount).toBe(0);
+
+      // And the seller still sees their own, which is the half the view is for.
+      const own = await actingAs(
+        db,
+        seller,
+        'select id from public.listing_status_timeline where listing_id = $1',
+        [draftId],
+      );
+      expect(own.rowCount).toBeGreaterThan(0);
+
+      await db.query('delete from public.listings where id = $1', [draftId]);
+    });
+
+    it('does not let a stranger read the whole timeline table', async () => {
+      // The unfiltered version of the same question. A definer view with a
+      // correct WHERE clause and a definer view queried without a predicate are
+      // the same object; this asks it the way an attacker would.
+      const everything = await actingAs<{ listing_id: string }>(
+        db,
+        buyer,
+        'select listing_id from public.listing_status_timeline',
+      );
+
+      for (const row of everything.rows) {
+        // Whatever comes back must be a listing the market can already see.
+        const discoverable = await db.query<{ ok: boolean }>(
+          `select status in ('live','under_loi','under_contract') as ok
+             from public.listings where id = $1`,
+          [row.listing_id],
+        );
+        expect(discoverable.rows[0]?.ok, row.listing_id).toBe(true);
+      }
+    });
+
     it('still shows the seller why their listing came back', async () => {
       await db.query("update public.listings set status = 'pending_review' where id = $1", [
         listing,

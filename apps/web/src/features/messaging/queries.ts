@@ -60,22 +60,6 @@ export async function listMessages(
   };
 }
 
-export async function getMessage(messageId: string): Promise<MessageDto | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data, error } = await supabase
-    .from('messages')
-    .select('id, conversation_id, sender_id, body, created_at, edited_at, profiles(full_name)')
-    .eq('id', messageId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return toMessageDto(data as unknown as MessageRow, user?.id ?? null);
-}
-
 function toMessageDto(row: MessageRow, currentUserId: string | null): MessageDto {
   return {
     id: row.id,

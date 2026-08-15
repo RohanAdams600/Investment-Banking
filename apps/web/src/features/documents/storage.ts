@@ -7,10 +7,15 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * The vault's storage layer.
  *
- * Same shape as message attachments, and separate for the same reason the
- * bucket is separate: the two have different access rules, and a shared module
- * would end up with a parameter that decides which rule applies — which is the
- * kind of parameter somebody eventually passes wrong.
+ * Deliberately the only way a file enters or leaves this product.
+ *
+ * There was a second one: a chat attachment path with its own bucket, its own
+ * signed URLs and its own picker. It could upload — and then nothing recorded
+ * the object anywhere, so the file was unreachable the moment the page closed
+ * and the recipient never learned it existed. In a data room that is worse than
+ * having no paperclip at all, so it was removed rather than finished: this
+ * module already does the same job with grants, versions, an access log and a
+ * step-up prompt on download.
  *
  * The design rests on the object key:
  *

@@ -45,18 +45,3 @@ export const getActor = cache(async (): Promise<Actor | null> => {
     })),
   };
 });
-
-/**
- * The actor, or a thrown error if there is no session.
- *
- * For routes and layouts that are meaningless without a signed-in user. Throwing
- * rather than returning null means a caller cannot forget the null check and
- * carry on with `actor?.userId` quietly evaluating to undefined.
- */
-export async function requireActor(): Promise<Actor> {
-  const actor = await getActor();
-  if (!actor) {
-    throw new Error('Not authenticated');
-  }
-  return actor;
-}
