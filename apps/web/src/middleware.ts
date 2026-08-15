@@ -32,13 +32,19 @@ export async function middleware(request: NextRequest) {
    */
   const nonce = crypto.randomUUID().replace(/-/g, '');
 
+  // Read once and passed to both, so the policy and the header it is sent under
+  // cannot disagree — `upgrade-insecure-requests` is only valid in an enforcing
+  // policy, and a second call to `isCspEnforced()` is a second chance to drift.
+  const enforced = isCspEnforced();
+
   const csp = buildCsp({
     nonce,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     development: process.env.NODE_ENV === 'development',
+    enforced,
   });
 
-  const headerName = cspHeaderName(isCspEnforced());
+  const headerName = cspHeaderName(enforced);
 
   // Set on the *request* as well as the response. Next reads the nonce out of
   // the request's CSP header to stamp its own inline scripts — without this the

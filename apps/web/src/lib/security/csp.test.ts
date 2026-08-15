@@ -100,9 +100,29 @@ describe('buildCsp', () => {
     expect(directive(policy(), 'img-src')).toContain('blob:');
   });
 
-  it('upgrades insecure requests in production and not in development', () => {
-    expect(policy({ development: false })).toContain('upgrade-insecure-requests');
-    expect(policy({ development: true })).not.toContain('upgrade-insecure-requests');
+  it('upgrades insecure requests in an enforced production policy', () => {
+    expect(policy({ development: false, enforced: true })).toContain('upgrade-insecure-requests');
+  });
+
+  it('leaves it out in development, where localhost is http', () => {
+    expect(policy({ development: true, enforced: true })).not.toContain(
+      'upgrade-insecure-requests',
+    );
+  });
+
+  it('leaves it out of a report-only policy', () => {
+    /*
+     * Browsers ignore this directive when it arrives report-only, and log a
+     * console warning saying so — on every page load, for every visitor. It
+     * bought nothing and was noisy, and a directive that is present but inert
+     * reads like coverage to anyone auditing the header.
+     *
+     * Found by rendering the site in a real browser and reading the console,
+     * which is the only way this class of thing gets found.
+     */
+    expect(policy({ development: false, enforced: false })).not.toContain(
+      'upgrade-insecure-requests',
+    );
   });
 
   it('contains no wildcard source anywhere', () => {

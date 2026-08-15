@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Cairn">
+  <!--
+    A cairn: three stacked forms, narrowing upward, with a scarce gold capstone.
+
+    Geometric rather than literal stones, per docs/brand/logo-brief.md — and
+    drawn to survive 16px, which is the only size that actually matters for a
+    tab. Detail below about three shapes disappears at that scale, so there is
+    none.
+
+    The navy plate is deliberate. A transparent mark inherits the browser's tab
+    colour and vanishes in one theme or the other; a plate looks the same in
+    both, which is what makes the tab findable.
+  -->
+  <rect width="32" height="32" rx="7" fill="#0B1220" />
+  <rect x="6" y="20.5" width="20" height="5" rx="2.5" fill="#E8EDF5" />
+  <rect x="8.5" y="13.75" width="15" height="5" rx="2.5" fill="#8FA9CB" />
+  <rect x="11.5" y="7" width="9" height="5" rx="2.5" fill="#C9A24B" />
+</svg>

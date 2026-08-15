@@ -43,6 +43,14 @@ export interface CspOptions {
   supabaseUrl?: string | null;
   /** Loosens the policy for the dev server's websocket and eval-based HMR. */
   development?: boolean;
+  /**
+   * Whether this policy will be sent as `Content-Security-Policy` rather than
+   * `Content-Security-Policy-Report-Only`.
+   *
+   * Only one directive cares, and it is the reason this option exists — see
+   * `upgrade-insecure-requests` below.
+   */
+  enforced?: boolean;
 }
 
 /**
@@ -118,9 +126,19 @@ export function buildCsp(options: CspOptions): string {
     ([directive, values]) => `${directive} ${values.join(' ')}`,
   );
 
-  if (!options.development) {
-    // Mixed content is a downgrade attack on a product that moves confidential
-    // documents. Not set in development, where localhost is http.
+  if (!options.development && options.enforced) {
+    /*
+     * Mixed content is a downgrade attack on a product that moves confidential
+     * documents. Not set in development, where localhost is http.
+     *
+     * And not set report-only, which is the subtler half. Browsers *ignore*
+     * this directive in a report-only policy and log a warning saying so — so
+     * including it there bought nothing and printed a console warning on every
+     * page load, for every visitor. Worse than useless: a directive that is
+     * present but inert reads, to anyone auditing the header, like coverage.
+     *
+     * Caught by rendering the site in a real browser and reading the console.
+     */
     parts.push('upgrade-insecure-requests');
   }
 
