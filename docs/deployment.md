@@ -2,16 +2,11 @@
 
 ## Current state
 
-Everything in the roadmap is built and the application builds clean.
+Everything in the roadmap is built, every migration is applied, and the application builds
+clean. 821 tests pass and the linters are clean.
 
-**Two things stand between this and a live site**, and one of them is a single command:
-
-1. **Migration 0027 is not applied.** 0001–0026 are on the live project. 0027 rewrites 38
-   policies for performance and adds fifteen indexes; it changes no behaviour and the
-   suite proves it. See "Applying 0027" below.
-2. **It is not deployed to a domain.** That is the six-step walk-through that follows.
-
-Neither is a code change. The build is green, 819 tests pass, and the linters are clean.
+**One thing stands between this and a live site: it is not deployed to a domain.** That is
+the six-step walk-through that follows, and none of it is a code change.
 
 ---
 
@@ -207,34 +202,49 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
-### Applying 0027
+### Verifying a migration actually landed
 
-The only outstanding migration. It is safe to apply to a live database — it drops and
-recreates each policy inside one transaction, and every predicate is byte-identical to
-the one it replaces apart from wrapping `auth.uid()` in a scalar subquery.
+Worth its own section, because 0027 taught the lesson. It was pasted into the dashboard
+SQL Editor and reported as run; it had not applied at all — zero of 38 policies rewritten,
+zero of 15 indexes created. A dashboard paste that silently does nothing looks identical
+to one that worked.
 
-```bash
-psql "$SUPABASE_DB_URL" -1 -f supabase/migrations/0027_policy_initplan_and_indexes.sql
+So do not trust "I ran it". Ask the database:
+
+```sql
+-- Zero, or 0027 did not land.
+select count(*) from pg_policies
+ where schemaname = 'public'
+   and (regexp_replace(coalesce(qual,''),'\( SELECT auth\.(uid|jwt)\(\)( AS \w+)?\)','','g') ~ 'auth\.(uid|jwt)\(\)'
+     or regexp_replace(coalesce(with_check,''),'\( SELECT auth\.(uid|jwt)\(\)( AS \w+)?\)','','g') ~ 'auth\.(uid|jwt)\(\)');
 ```
 
-`-1` matters: it wraps the whole file in a transaction, so a failure halfway through
-leaves the old policies in place rather than a database with some tables unprotected.
-
-Verify afterwards with the two schema tests that enforce what it did:
+Or locally, which checks the same two invariants and more:
 
 ```bash
 DATABASE_URL=... pnpm vitest run supabase/tests/rls.test.ts
 ```
 
-They assert that no policy calls `auth.uid()` bare, and that every foreign key whose
-parent delete would scan the child has an index. Both fail loudly if 0027 is missing.
-
 ### Live migration state
 
-**Migrations 0001–0026 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
-us-east-1), plus the jurisdiction seed. **0027 is not.** 0017–0022 went on in one pass; the structural
-invariants were re-run afterwards and the behavioural checks that had been outstanding
-since step 4 were finished.
+**Migrations 0001–0027 are applied** to project `Cairn` (`treltiukpuxhnzuplegu`,
+us-east-1), plus the jurisdiction seed.
+
+Verified after 0027 against the live project:
+
+| Check                                                                                  | Result                                               |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Policies still calling `auth.uid()` bare                                               | 0 (was 38)                                           |
+| Policies using the InitPlan form                                                       | 38                                                   |
+| Indexes from 0027 present                                                              | 15 of 15                                             |
+| Unindexed `cascade`/`restrict` foreign keys                                            | 0                                                    |
+| Total policies, before and after                                                       | 86 and 86 — none lost                                |
+| Tables without RLS enabled **and** forced                                              | 0 of 41                                              |
+| `TRUNCATE`/`TRIGGER`/`REFERENCES` to a client role                                     | 0                                                    |
+| `auth_rls_initplan` advisories                                                         | 0 (was 38)                                           |
+| Security advisories                                                                    | Unchanged — 1 ERROR, 13 WARN, all previously audited | 0017–0022 went on in one pass; the structural |
+| invariants were re-run afterwards and the behavioural checks that had been outstanding |
+| since step 4 were finished.                                                            |
 
 State after that pass: **51 jurisdictions, none active; every other table empty.** The
 step-4 verification fixtures have been removed.
@@ -377,8 +387,9 @@ documented, and two schema tests now prevent them coming back.
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
 - [x] Migrations 0001–0026 applied to the production Supabase project (us-east-1)
-- [ ] **Migration 0027 applied** — see "Applying 0027" above. Until it is, the RLS suite
-      fails two schema tests and every policy re-evaluates `auth.uid()` per row.
+- [x] **Migration 0027 applied** and verified against the live project — see the table
+      above. Do not take a dashboard SQL Editor run on trust; it reported success once
+      while applying nothing.
 - [x] Step-4 verification fixtures removed from the live project
 - [x] NDA round trip verified live — issue, sign, revoke, and a second buyer denied
 - [x] Admin panel verified live — an operator reads no confidential half
