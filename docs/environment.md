@@ -31,7 +31,6 @@ placeholder is a wrong disclosure rather than a cosmetic gap.
 | ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SITE_URL`       | Yes      | Canonical origin for sitemaps, OG tags, absolute email links.                                                                         |
 | `NEXT_PUBLIC_ALLOW_INDEXING` | Yes      | `"true"` permits search indexing. Anything else emits `noindex`. Defaults closed so pre-launch content cannot be indexed by omission. |
-| `NEXT_PUBLIC_DEMO_DATA`      | Yes      | `"true"` renders sample statistics and testimonials with a visible marker. **Must be `"false"` in production.**                       |
 
 ## Supabase
 

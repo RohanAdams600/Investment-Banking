@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
 import { brand, pageTitle } from '@ib/core';
 
+import { SiteFooter } from '@/features/marketing/site-footer';
+
 import '@ib/ui/tokens.css';
 import './globals.css';
 
@@ -53,7 +55,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
-      <body className="min-h-screen font-sans">{children}</body>
+      {/*
+        The footer is in the root layout rather than per page, because the
+        disclosure it carries ("not your broker, not your attorney") is only
+        worth anything if it is on every page — including the ones somebody
+        lands on from a search result.
+      */}
+      <body className="flex min-h-screen flex-col font-sans">
+        <div className="flex-1">{children}</div>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

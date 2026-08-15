@@ -2,9 +2,93 @@
 
 ## Current state
 
-The application deploys, but there is nothing behind it — no database, no auth, no
-features. This runbook covers what exists and marks what is pending so it can be filled in
-as each step lands.
+Everything in the roadmap is built. The database is live, all 25 migrations are applied,
+and the application builds clean. **It is not deployed to a domain** — that is the step
+below.
+
+---
+
+## Getting it running, from nothing
+
+Six steps. The first four are mechanical; the last two are where judgement is needed.
+
+### 1. Check what is missing
+
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm preflight
+```
+
+`preflight` sorts what is unset into three buckets and exits non-zero only on the ones
+that stop the site functioning. Run `pnpm preflight:strict` to fail on the launch ones
+too — that is the version a production deploy should run.
+
+The check worth reading twice is "service role key is not exposed to the browser". A
+service-role key with a `NEXT_PUBLIC_` prefix is compiled into the client bundle and
+bypasses every policy in the database for anybody who views source. It is the single most
+expensive configuration mistake available here, and it is silent.
+
+### 2. Fill in the Supabase values
+
+From the Supabase dashboard, project **Cairn** (`treltiukpuxhnzuplegu`, us-east-1) →
+Settings → API:
+
+| Copy from                   | Into                            |
+| --------------------------- | ------------------------------- |
+| Project URL                 | `NEXT_PUBLIC_SUPABASE_URL`      |
+| `anon` / publishable key    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| `service_role` / secret key | `SUPABASE_SERVICE_ROLE_KEY`     |
+
+Then `pnpm dev` and open `http://localhost:3000/api/health`. It should return
+`{"status":"ok"}`. If `databaseReachable` is false, the URL or the anon key is wrong —
+the endpoint makes a real query rather than checking that a variable is non-empty, so a
+false there means the database genuinely did not answer.
+
+### 3. Deploy
+
+Vercel is the path of least resistance for a Next.js app, and nothing here depends on it.
+
+1. Push the branch and import the repository at vercel.com/new.
+2. Set the **root directory** to `apps/web`. The build command and output are detected.
+3. Add every variable from `.env.local` under Settings → Environment Variables. The three
+   Supabase ones are required; the rest can wait.
+4. Deploy, then open `/api/health` on the deployed URL.
+
+Add the deployment's URL to Supabase → Authentication → URL Configuration → Redirect URLs,
+or email confirmation links will point at localhost and silently fail.
+
+### 4. Point a domain at it
+
+Buy the domain, add it in Vercel → Settings → Domains, follow the DNS instructions. Then
+set `NEXT_PUBLIC_SITE_URL` to the real domain and redeploy — it builds every canonical URL
+and every link in an email, and a stale value here is the kind of thing nobody notices
+until a customer clicks a password reset.
+
+### 5. Walk the app with the CSP report-only
+
+The Content Security Policy ships as `Content-Security-Policy-Report-Only`. Open the
+deployed site, open the browser console, and use every page: sign up, create a listing,
+open a deal room, upload a document, download it. Any policy violation appears in the
+console. When there are none, set `CSP_ENFORCE=true` and redeploy.
+
+Doing this before the walk-through is how a policy takes the product down. Leaving it
+undone forever is how a policy becomes decoration.
+
+### 6. Open a state, and publish the legal documents
+
+Nothing works for a real user until both:
+
+- **A jurisdiction is active.** All 51 states are seeded and every one is off. A listing
+  needs a state, and the state has to be one you can legally operate in. `/admin/jurisdictions`.
+- **The legal documents exist.** `/legal/terms` and `/legal/privacy` currently say the
+  document has not been published, and that is deliberate — there is no placeholder text,
+  because plausible terms nobody with a licence has read are worse than an empty page.
+  They render from `legal_templates`, so publishing one is an insert, not a deploy.
+
+The second is the real launch gate and no amount of engineering moves it.
+
+---
 
 ## Local development
 
@@ -17,7 +101,8 @@ pnpm dev                       # http://localhost:3000
 Useful:
 
 ```bash
-pnpm test                                   # 438 tests
+pnpm preflight                              # what is not configured yet
+pnpm test                                   # 731 tests
 pnpm typecheck                              # all workspace packages
 pnpm lint
 pnpm --filter @ib/ui tokens:build           # after editing any design token
@@ -75,9 +160,15 @@ Full list and secrecy classification: `docs/environment.md`.
 Two settings differ by environment and matter:
 
 - `NEXT_PUBLIC_ALLOW_INDEXING` — `"true"` in production only. Defaults closed, so a
-  staging environment cannot be indexed by omission.
-- `NEXT_PUBLIC_DEMO_DATA` — must be `"false"` in production. Sample statistics and
-  testimonials on a live marketing site are a misrepresentation, not a placeholder.
+  staging environment cannot be indexed by omission. It gates `robots.ts` and `sitemap.ts`
+  as well as the per-page meta tag; a crawler reads `/robots.txt` first and may never fetch
+  the page whose tag would have told it to stay away.
+- `CSP_ENFORCE` — `"true"` only after the walk-through above.
+
+`NEXT_PUBLIC_DEMO_DATA` used to be listed here and has been removed. Nothing read it: the
+marketing copy was written with no statistics and no testimonials at all, with tests
+asserting so, which is a stronger guarantee than a flag somebody has to remember to
+set.
 
 ## Deploying
 
@@ -230,7 +321,6 @@ All fixtures were removed — every table is empty except the 51 jurisdictions, 
 ### Launch readiness (step 12)
 
 - [ ] `isBrandFullyConfigured` is true — real support email and mailing address configured
-- [ ] `NEXT_PUBLIC_DEMO_DATA` is `"false"`
 - [ ] `NEXT_PUBLIC_ALLOW_INDEXING` is `"true"` in production only
 - [x] Every table has RLS enabled and forced, verified by test
 - [x] Migrations 0001–0025 applied to the production Supabase project (us-east-1)
