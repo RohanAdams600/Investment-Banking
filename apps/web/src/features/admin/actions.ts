@@ -5,8 +5,9 @@ import { z } from 'zod';
 import { assertCan } from '@ib/core';
 
 import { recordAuditEvent } from '@/lib/audit';
+import { notify } from '@/lib/notify/notify';
 import { getActor } from '@/lib/auth/actor';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * Writes for the admin panel.
@@ -109,6 +110,24 @@ export async function reviewListing(_prev: AdminState, formData: FormData): Prom
     // The reason stays on the status history row. It was written for the seller.
     metadata: { decision },
   });
+
+  /*
+   * Tell the seller, without repeating the reason.
+   *
+   * A returned listing is the case where somebody is definitely waiting to hear,
+   * and the reason is the useful part — but it is also the part that says the
+   * quiet thing out loud ("the headline names the business"). The notification
+   * points at the listing, where the reason already is.
+   */
+  const seller = await sellerOf(listingId);
+  if (seller) {
+    await notify({
+      recipientId: seller,
+      kind: decision === 'live' ? 'listing_approved' : 'listing_returned',
+      entityId: listingId,
+      entityType: 'listing',
+    });
+  }
 
   revalidatePath('/admin/review');
   revalidatePath('/admin');
@@ -260,4 +279,24 @@ export async function setJurisdiction(_prev: AdminState, formData: FormData): Pr
       ? `${parsed.data.code} is open. Your own licensing work is what makes that true.`
       : `${parsed.data.code} is closed to new business.`,
   };
+}
+
+/**
+ * Whose listing it is.
+ *
+ * Service role, because an administrator cannot read `listings.seller_id` for a
+ * listing they do not control — 0016 restricts a non-controller to the status
+ * column. The id is used only to address a notification; nothing read here
+ * reaches its text.
+ */
+async function sellerOf(listingId: string): Promise<string | null> {
+  const service = createServiceRoleClient();
+
+  const { data } = await service
+    .from('listings')
+    .select('seller_id')
+    .eq('id', listingId)
+    .maybeSingle();
+
+  return (data as { seller_id?: string } | null)?.seller_id ?? null;
 }

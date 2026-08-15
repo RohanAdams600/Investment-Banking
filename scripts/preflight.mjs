@@ -89,6 +89,12 @@ const checks = [
   },
   {
     level: OPTIONAL,
+    name: 'Scheduled reminders',
+    ok: () => isSet('CRON_SECRET'),
+    fix: 'No CRON_SECRET, so /api/cron/due-tasks refuses every caller and nobody is reminded about a due task. Set it to a long random string and give the same value to whatever calls the route.',
+  },
+  {
+    level: OPTIONAL,
     name: 'Search engine indexing',
     ok: () => process.env.NEXT_PUBLIC_ALLOW_INDEXING === 'true',
     fix: 'NEXT_PUBLIC_ALLOW_INDEXING is not "true", so robots.txt blocks everything. Correct for staging; wrong for the real site.',

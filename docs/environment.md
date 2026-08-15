@@ -85,6 +85,8 @@ confidential profile** — see `docs/agents.md` and `docs/security.md`.
 | ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `CSP_ENFORCE` | No     | `"true"` sends the Content Security Policy as `Content-Security-Policy`; anything else sends it as `Content-Security-Policy-Report-Only`. Defaults to report-only deliberately — a CSP that breaks production is a worse outage than no CSP is a vulnerability. Flip it after walking the app and reading the violation reports. |
 
+| `CRON_SECRET` | **Yes** | Bearer token for `/api/cron/due-tasks`. Unset means the route refuses every caller — an unset secret is a misconfiguration, not permission — so due-task reminders simply never go out. Set it to a long random string and give the same value to whatever calls the route. |
+
 The policy itself is built in `apps/web/src/lib/security/csp.ts` and the per-request nonce
 is minted in `src/middleware.ts`. There is nothing to configure beyond the flag: the only
 third-party origin is Supabase, and it is derived from `NEXT_PUBLIC_SUPABASE_URL` rather

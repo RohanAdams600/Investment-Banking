@@ -14,6 +14,7 @@ import {
 } from '@ib/core';
 
 import { recordAuditEvent } from '@/lib/audit';
+import { notify, notifyCollapsed } from '@/lib/notify/notify';
 import { getActor } from '@/lib/auth/actor';
 import {
   STEP_UP_ACTIONS,
@@ -22,7 +23,7 @@ import {
   stepUpPrompt,
   type StepUpOutcome,
 } from '@/lib/auth/assurance';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 import { createDocumentDownloadUrl, createDocumentUploadUrl } from './storage';
 
@@ -244,6 +245,16 @@ export async function releaseDocument(_prev: VaultState, formData: FormData): Pr
     metadata: { granteeId: parsed.data.granteeId },
   });
 
+  // A released document nobody is told about is a released document nobody
+  // reads. The notification names neither the file nor the deal — it points at
+  // the room, where both are already gated.
+  await notify({
+    recipientId: parsed.data.granteeId,
+    kind: 'document_released',
+    entityId: parsed.data.dealId,
+    entityType: 'deal',
+  });
+
   revalidatePath(`/deals/${parsed.data.dealId}/documents`);
   return { error: null, message: 'Released.', upload: null };
 }
@@ -416,6 +427,13 @@ export async function requestDocumentUrl(
 
   if (!url) return { url: null, error: 'That document could not be opened.' };
 
+  // Tell the side that released it. This is the half of the access log the
+  // uploader would otherwise have to go looking for, and "who has opened my
+  // financials" is a question sellers ask on the day, not on a page they
+  // remember to visit. Collapsed, because a reviewer opens the same file four
+  // times in an afternoon.
+  await notifyDocumentOwner(documentId, actor.userId);
+
   if (assurance === 'unprotected') {
     // Recorded rather than hidden. A run of these is the operator's evidence
     // that MFA should be required for the roles that touch a data room — which
@@ -428,4 +446,39 @@ export async function requestDocumentUrl(
   }
 
   return { url, error: null };
+}
+
+/**
+ * Tell whoever put the document there that it was opened.
+ *
+ * Service role for one reason: the reader cannot see `uploaded_by`. 0023 gives
+ * a grantee the document row, not the other side's identity, and it should stay
+ * that way — so the id is fetched here, used to address a notification, and
+ * never returned to the caller.
+ *
+ * Silent when the opener is the uploader, which is most opens.
+ */
+async function notifyDocumentOwner(documentId: string, readerId: string): Promise<void> {
+  try {
+    const service = createServiceRoleClient();
+
+    const { data } = await service
+      .from('deal_documents')
+      .select('uploaded_by, deal_id')
+      .eq('id', documentId)
+      .maybeSingle();
+
+    const row = data as { uploaded_by?: string | null; deal_id?: string } | null;
+    const owner = row?.uploaded_by ?? null;
+
+    if (!owner || !row?.deal_id || owner === readerId) return;
+
+    await notifyCollapsed([owner], {
+      kind: 'document_opened',
+      entityId: row.deal_id,
+      entityType: 'deal',
+    });
+  } catch (error) {
+    console.error('[vault] could not notify the uploader', error);
+  }
 }

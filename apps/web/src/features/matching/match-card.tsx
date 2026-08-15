@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
-import { INDUSTRY_PROFILES, formatBand, type IndustryKey } from '@ib/core';
+import { INDUSTRY_PROFILES, formatBand, matchStrength, type IndustryKey } from '@ib/core';
 import { Badge, Card, CardContent } from '@ib/ui';
 
 import { SaveButton } from '@/features/listings/save-button';
@@ -98,9 +98,17 @@ export function MatchCard({ match }: { match: MatchedListing }) {
 }
 
 function scoreVariant(score: number): 'success' | 'info' | 'neutral' {
-  if (score >= 70) return 'success';
-  if (score >= 40) return 'info';
-  return 'neutral';
+  // The bands live in @ib/core because the notifier uses the same ones. Two
+  // independent 70s is how a product ends up emailing about matches it draws
+  // in grey.
+  switch (matchStrength(score)) {
+    case 'strong':
+      return 'success';
+    case 'possible':
+      return 'info';
+    default:
+      return 'neutral';
+  }
 }
 
 function Figure({ label, value }: { label: string; value: string }) {

@@ -5,3 +5,9 @@ export {
   type ComposedOutreach,
   type OutreachInput,
 } from './outreach';
+export {
+  MATCH_STRENGTH_THRESHOLDS,
+  matchStrength,
+  worthNotifying,
+  type MatchStrength,
+} from './strength';

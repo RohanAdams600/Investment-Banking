@@ -6,6 +6,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState } f
 import { CircleUser } from 'lucide-react';
 
 import { signOut } from '@/features/auth/actions';
+import { unreadCount } from '@/features/notifications/queries';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -29,6 +30,19 @@ export const dynamic = 'force-dynamic';
  * database refuses regardless. This is about not offering somebody a door that
  * will not open for them.
  */
+interface DashboardLink {
+  href: string;
+  label: string;
+  hint: string;
+  /**
+   * Whether to offer it. Not access control — every destination re-checks and
+   * the database refuses regardless.
+   */
+  show: boolean;
+  /** A count worth interrupting for. Omitted where there is nothing to count. */
+  count?: number;
+}
+
 export default async function DashboardPage() {
   if (!isSupabaseConfigured()) {
     return (
@@ -50,6 +64,99 @@ export default async function DashboardPage() {
   // and being a dead end.
   if (actor.platformRoles.length === 0) redirect('/onboarding');
 
+  // Returns 0 if the notifications migration has not been applied, because the
+  // RPC is missing and the query errors. That is the behaviour we want: a
+  // dashboard that renders without a feature beats one that 500s with it.
+  const unread = await unreadCount();
+
+  const links: DashboardLink[] = [
+    {
+      href: '/notifications',
+      label: 'Notifications',
+      hint: 'What has happened since you were last here',
+      show: true,
+      count: unread,
+    },
+    {
+      href: '/listings',
+      label: 'Businesses for sale',
+      hint: 'Browse the market',
+      show: can(actor, 'listing:view_teaser'),
+    },
+    {
+      href: '/listings/mine',
+      label: 'My listings',
+      hint: 'Drafts, live listings and access requests',
+      show: can(actor, 'listing:create'),
+    },
+    {
+      href: '/matches',
+      label: 'Matches',
+      hint: 'Listings ranked against your criteria',
+      show: can(actor, 'listing:view_full'),
+    },
+    {
+      href: '/buyer-profile',
+      label: 'Buyer profile',
+      hint: 'How sellers see you',
+      show: can(actor, 'listing:view_full'),
+    },
+    {
+      href: '/watchlist',
+      label: 'Watchlist',
+      hint: 'Listings you saved',
+      show: can(actor, 'listing:view_full'),
+    },
+    {
+      href: '/deals',
+      label: 'Deals',
+      hint: 'Deal rooms you are a party to',
+      show: can(actor, 'deal_room:access'),
+    },
+    {
+      href: '/tools/valuation',
+      label: 'Valuation estimate',
+      hint: 'What a business might be worth',
+      show: true,
+    },
+    {
+      href: '/tools/buyer-criteria',
+      label: 'Acquisition criteria',
+      hint: 'What you are looking to buy',
+      show: can(actor, 'listing:view_full'),
+    },
+    {
+      href: '/tools/legal-documents',
+      label: 'Legal documents',
+      hint: 'Questions to take to counsel',
+      show: true,
+    },
+    {
+      href: '/crm',
+      label: 'Pipeline',
+      hint: 'Contacts, leads and what to do today',
+      show: can(actor, 'crm:manage'),
+    },
+    {
+      href: '/commissions',
+      label: 'Commissions',
+      hint: 'Fee schedule and what you have earned',
+      show: can(actor, 'commission:view_own'),
+    },
+    {
+      href: '/admin',
+      label: 'Platform operations',
+      hint: 'Review, verification and jurisdictions',
+      show: can(actor, 'admin:view_platform_analytics'),
+    },
+    {
+      href: '/settings/security',
+      label: 'Security',
+      hint: 'Two-factor and active sessions',
+      show: true,
+    },
+  ];
+
   return (
     <main className="py-18 mx-auto max-w-2xl space-y-6 px-6">
       <div className="flex items-start justify-between gap-4">
@@ -70,86 +177,7 @@ export default async function DashboardPage() {
           <CardTitle>Where to go</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2">
-          {[
-            {
-              href: '/listings',
-              label: 'Businesses for sale',
-              hint: 'Browse the market',
-              show: can(actor, 'listing:view_teaser'),
-            },
-            {
-              href: '/listings/mine',
-              label: 'My listings',
-              hint: 'Drafts, live listings and access requests',
-              show: can(actor, 'listing:create'),
-            },
-            {
-              href: '/matches',
-              label: 'Matches',
-              hint: 'Listings ranked against your criteria',
-              show: can(actor, 'listing:view_full'),
-            },
-            {
-              href: '/buyer-profile',
-              label: 'Buyer profile',
-              hint: 'How sellers see you',
-              show: can(actor, 'listing:view_full'),
-            },
-            {
-              href: '/watchlist',
-              label: 'Watchlist',
-              hint: 'Listings you saved',
-              show: can(actor, 'listing:view_full'),
-            },
-            {
-              href: '/deals',
-              label: 'Deals',
-              hint: 'Deal rooms you are a party to',
-              show: can(actor, 'deal_room:access'),
-            },
-            {
-              href: '/tools/valuation',
-              label: 'Valuation estimate',
-              hint: 'What a business might be worth',
-              show: true,
-            },
-            {
-              href: '/tools/buyer-criteria',
-              label: 'Acquisition criteria',
-              hint: 'What you are looking to buy',
-              show: can(actor, 'listing:view_full'),
-            },
-            {
-              href: '/tools/legal-documents',
-              label: 'Legal documents',
-              hint: 'Questions to take to counsel',
-              show: true,
-            },
-            {
-              href: '/crm',
-              label: 'Pipeline',
-              hint: 'Contacts, leads and what to do today',
-              show: can(actor, 'crm:manage'),
-            },
-            {
-              href: '/commissions',
-              label: 'Commissions',
-              hint: 'Fee schedule and what you have earned',
-              show: can(actor, 'commission:view_own'),
-            },
-            {
-              href: '/admin',
-              label: 'Platform operations',
-              hint: 'Review, verification and jurisdictions',
-              show: can(actor, 'admin:view_platform_analytics'),
-            },
-            {
-              href: '/settings/security',
-              label: 'Security',
-              hint: 'Two-factor and active sessions',
-              show: true,
-            },
-          ]
+          {links
             .filter((link) => link.show)
             .map((link) => (
               <Link
@@ -157,7 +185,14 @@ export default async function DashboardPage() {
                 href={link.href}
                 className="border-border-subtle hover:border-border-default block rounded-md border p-3 transition-colors"
               >
-                <span className="block text-sm font-medium">{link.label}</span>
+                <span className="flex items-center justify-between gap-2 text-sm font-medium">
+                  {link.label}
+                  {/* Absent rather than zero: a badge reading "0" is worse than
+                      no badge, because it draws the eye to nothing. */}
+                  {link.count ? (
+                    <Badge variant="primary">{link.count > 99 ? '99+' : link.count}</Badge>
+                  ) : null}
+                </span>
                 <span className="text-text-muted block text-xs">{link.hint}</span>
               </Link>
             ))}

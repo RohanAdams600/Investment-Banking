@@ -6,8 +6,9 @@ import type { z } from 'zod';
 import { canTransition, type ListingStatus } from '@ib/core';
 
 import { recordAuditEvent } from '@/lib/audit';
+import { notify } from '@/lib/notify/notify';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import type { ListingActionState } from './types';
 import {
   fullProfileSchema,
@@ -429,6 +430,16 @@ export async function requestNda(
     entityId: parsed.data.listingId,
   });
 
+  /*
+   * The one that mattered most, and was missing.
+   *
+   * A request sitting in a queue nobody is told about is how a marketplace
+   * loses its first deal. The notification says only that somebody asked — the
+   * buyer's name is on the listing page, behind the session, where the seller
+   * decides.
+   */
+  await notifySeller(parsed.data.listingId, 'nda_requested');
+
   revalidatePath(`/listings/${parsed.data.listingId}`);
   return { error: null, message: 'Access requested. The seller will review it.' };
 }
@@ -476,6 +487,8 @@ export async function sendNda(
     entityType: 'listing_nda',
     entityId: parsed.data.ndaId,
   });
+
+  await notifyNdaParty(parsed.data.ndaId, 'buyer', 'nda_issued');
 
   revalidatePath('/listings');
   return { error: null, message: 'NDA issued. The buyer can now sign it.' };
@@ -541,6 +554,8 @@ export async function revokeNda(
     entityId: ndaId.data,
   });
 
+  await notifyNdaParty(ndaId.data, 'buyer', 'nda_revoked');
+
   revalidatePath('/listings');
   return { error: null, message: 'Access revoked.' };
 }
@@ -582,4 +597,69 @@ export async function toggleSaved(
   revalidatePath(`/listings/${parsed.data.listingId}`);
   revalidatePath('/watchlist');
   return { error: null, message: parsed.data.saved ? 'Removed from watchlist.' : 'Saved.' };
+}
+
+// ---------------------------------------------------------------------------
+// Telling the other side
+// ---------------------------------------------------------------------------
+
+/**
+ * The counterparties on an NDA.
+ *
+ * Read with the service role, and that is unavoidable rather than convenient:
+ * at the moment a stranger requests access, neither party can read the other's
+ * row. The buyer cannot see who owns the listing — that is the whole point of
+ * the anonymity — and the seller has not yet been shown the buyer. A
+ * notification has to cross a boundary that no user connection can.
+ *
+ * Nothing read here reaches the notification. `notify()` takes a recipient and
+ * an event; the words come from `@ib/core`, which has no slot for a name.
+ */
+async function notifyNdaParty(
+  ndaId: string,
+  side: 'buyer' | 'seller',
+  kind: 'nda_issued' | 'nda_signed' | 'nda_revoked',
+): Promise<void> {
+  const service = createServiceRoleClient();
+
+  const { data } = await service
+    .from('listing_ndas')
+    .select('listing_id, buyer_id, listings(seller_id)')
+    .eq('id', ndaId)
+    .maybeSingle();
+
+  if (!data) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = data as Record<string, any>;
+  const listing = Array.isArray(row.listings) ? row.listings[0] : row.listings;
+
+  const recipientId = side === 'buyer' ? row.buyer_id : listing?.seller_id;
+  if (!recipientId) return;
+
+  await notify({
+    recipientId,
+    kind,
+    entityId: row.listing_id,
+    entityType: 'listing',
+  });
+}
+
+/** The person whose business it is. */
+async function notifySeller(
+  listingId: string,
+  kind: 'nda_requested' | 'listing_approved' | 'listing_returned',
+): Promise<void> {
+  const service = createServiceRoleClient();
+
+  const { data } = await service
+    .from('listings')
+    .select('seller_id')
+    .eq('id', listingId)
+    .maybeSingle();
+
+  const sellerId = (data as { seller_id?: string } | null)?.seller_id;
+  if (!sellerId) return;
+
+  await notify({ recipientId: sellerId, kind, entityId: listingId, entityType: 'listing' });
 }

@@ -12,10 +12,12 @@ import {
   type IndustryKey,
   type ListingProfile,
   type SellerPreferences,
+  worthNotifying,
 } from '@ib/core';
 
 import { isAiConfigured } from '@/lib/ai/router';
 import { scoreThesisMatch, type ThesisMatchInput } from '@/lib/ai/thesis-match';
+import { notifyCollapsed } from '@/lib/notify/notify';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
@@ -352,11 +354,68 @@ export async function recomputeMatchesForListing(listingId: string): Promise<num
     );
   });
 
+  // Read before write, because "new" is a comparison and the upsert destroys
+  // the left-hand side of it.
+  const previous = await loadPreviousScores(service, listingId);
+
   const { error } = await service
     .from('match_scores')
     .upsert(rows, { onConflict: 'listing_id,buyer_id' });
 
-  return error ? 0 : rows.length;
+  if (error) return 0;
+
+  await announceNewMatches(rows, previous);
+
+  return rows.length;
+}
+
+/**
+ * Buyers who already had a strong match on this listing.
+ *
+ * The set, not the scores. Everything this module returns is a count or
+ * nothing; a map of buyer to score would be the first crack in that.
+ */
+async function loadPreviousScores(service: ServiceClient, listingId: string): Promise<Set<string>> {
+  const { data } = await service
+    .from('match_scores')
+    .select('buyer_id, score, excluded')
+    .eq('listing_id', listingId);
+
+  return new Set(
+    ((data ?? []) as Row[])
+      .filter((row) => worthNotifying(Number(row.score), Boolean(row.excluded)))
+      .map((row) => row.buyer_id as string),
+  );
+}
+
+/**
+ * Tells buyers a business worth their attention came on the market.
+ *
+ * Two conditions, and the second is the one that makes this bearable. The score
+ * has to clear the bar the match card draws in green — and the buyer must not
+ * have already been above that bar on this listing. A seller can press
+ * "rescore" ten times in an afternoon; without the comparison, so would this.
+ *
+ * Nothing about the business travels. The count is the only variable the copy
+ * accepts, and it is `1` here: this is one listing, and a buyer is being told
+ * about one listing.
+ */
+async function announceNewMatches(
+  rows: readonly Row[],
+  previouslyStrong: ReadonlySet<string>,
+): Promise<void> {
+  const newlyStrong = rows
+    .filter((row) => worthNotifying(Number(row.score), Boolean(row.excluded)))
+    .map((row) => row.buyer_id as string)
+    .filter((buyerId) => !previouslyStrong.has(buyerId));
+
+  if (newlyStrong.length === 0) return;
+
+  // Not `entityId: listingId`. A notification carrying the listing id would
+  // link a buyer straight to a listing they may not be able to open, and the
+  // id itself is a fact about which business matched them. `/matches` shows
+  // them exactly what they are entitled to see.
+  await notifyCollapsed(newlyStrong, { kind: 'new_match' });
 }
 
 /**

@@ -18,6 +18,7 @@ export * from './legal';
 export * from './documents';
 export * from './crm';
 export * from './agents';
+export * from './notifications';
 export {
   formatMoney,
   formatMoneyCompact,

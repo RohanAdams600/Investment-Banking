@@ -245,6 +245,24 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          */
         agent_runs: ['SELECT'],
 
+        /*
+         * The inbox. SELECT and UPDATE, no INSERT and no DELETE, and each
+         * absence is load-bearing.
+         *
+         * No INSERT, because a client that could write here could put a
+         * sentence in somebody else's inbox — which is the shape of every
+         * phishing message ever sent. Notifications are written with the
+         * service role from the action that caused them.
+         *
+         * No DELETE, because "mark read" and "make it never have happened" are
+         * different things, and only the first is the reader's to decide. The
+         * UPDATE is narrowed further by a trigger to `read_at` alone.
+         */
+        notifications: ['SELECT', 'UPDATE'],
+
+        // The preferences are entirely the account holder's, so all three.
+        notification_preferences: ['INSERT', 'SELECT', 'UPDATE'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:
