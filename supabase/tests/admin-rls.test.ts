@@ -35,7 +35,8 @@ describe.skipIf(!hasDatabase)('admin', () => {
 
     await db.query(
       `insert into public.jurisdictions (code, name, country_code, is_active)
-       values ('US-NY','New York','US',true), ('US-WY','Wyoming','US',false)`,
+       values ('US-NY','New York','US',true), ('US-WY','Wyoming','US',false)
+       on conflict (code) do update set is_active = excluded.is_active, name = excluded.name`,
     );
 
     admin = await createAuthUser(db, 'admin-panel@example.com');

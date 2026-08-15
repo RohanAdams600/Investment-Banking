@@ -89,7 +89,8 @@ describe.skipIf(!hasDatabase)('row level security', () => {
     await db.query(
       `insert into public.jurisdictions (code, name, country_code, is_active) values
          ('US-NY', 'New York', 'US', true),
-         ('US-WY', 'Wyoming', 'US', false)`,
+         ('US-WY', 'Wyoming', 'US', false)
+       on conflict (code) do update set is_active = excluded.is_active, name = excluded.name`,
     );
   });
 
@@ -889,7 +890,8 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       const denial = await expectDenied(() =>
         actingAsAnon(
           db,
-          `insert into public.jurisdictions (code, name, country_code) values ('US-XX','X','US')`,
+          `insert into public.jurisdictions (code, name, country_code) values ('US-XX','X','US')
+       on conflict (code) do update set is_active = excluded.is_active, name = excluded.name`,
         ),
       );
 
@@ -901,7 +903,8 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         actingAs(
           db,
           ownerId,
-          `insert into public.jurisdictions (code, name, country_code) values ('US-ZZ','Z','US')`,
+          `insert into public.jurisdictions (code, name, country_code) values ('US-ZZ','Z','US')
+       on conflict (code) do update set is_active = excluded.is_active, name = excluded.name`,
         ),
       );
 

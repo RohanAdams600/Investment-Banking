@@ -38,7 +38,8 @@ describe.skipIf(!hasDatabase)('agent runs', () => {
 
     await db.query(
       `insert into public.jurisdictions (code, name, country_code, is_active)
-       values ('US-NY','New York','US',true)`,
+       values ('US-NY','New York','US',true)
+       on conflict (code) do update set is_active = excluded.is_active, name = excluded.name`,
     );
 
     seller = await createAuthUser(db, 'agent-seller@example.com');

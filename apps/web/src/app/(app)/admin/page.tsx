@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
 
-import { loadPlatformStats } from '@/features/admin/queries';
+import { loadPlatformStats, loadReadiness } from '@/features/admin/queries';
 
 export const metadata: Metadata = {
   title: 'Platform operations',
@@ -20,7 +20,8 @@ export const dynamic = 'force-dynamic';
  * detail has to go to the screen where that detail is actually their business.
  */
 export default async function AdminOverviewPage() {
-  const stats = await loadPlatformStats();
+  const [stats, readiness] = await Promise.all([loadPlatformStats(), loadReadiness()]);
+  const outstanding = readiness.filter((check) => !check.ready);
 
   if (!stats) {
     return (
@@ -47,6 +48,32 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
+      {/*
+        First thing on the first screen, and gone entirely once there is nothing
+        left to say. Each of these is something whose absence makes part of the
+        product inert rather than broken — nothing errors, the page just quietly
+        does nothing, which is the kind of failure an operator hears about from
+        a customer rather than from the software.
+      */}
+      {outstanding.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Not set up yet</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {outstanding.map((check) => (
+              <div
+                key={check.name}
+                className="border-warning/40 bg-warning-subtle rounded border p-3"
+              >
+                <p className="text-warning text-sm font-medium capitalize">{check.name}</p>
+                <p className="text-text-secondary mt-1 text-xs">{check.detail}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {cards.map((card) => {
           const body = (

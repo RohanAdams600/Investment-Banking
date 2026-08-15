@@ -202,6 +202,48 @@ An earlier project in `us-west-2` was left in place and is unused. **Delete it i
 dashboard** — the free tier caps you at two active projects, so leaving it costs you the
 slot.
 
+### Starting the platform for the first time
+
+A fresh deployment cannot be used until this is done, and the failure mode is silence
+rather than an error — so it is first.
+
+**1. Sign up in the application** with the address you want to be the operator. An ordinary
+signup; the account holds no roles yet.
+
+**2. Promote it, once**, from the Supabase SQL Editor:
+
+```sql
+select app.bootstrap_admin('you@yourdomain.com');
+```
+
+Returns the user id. It refuses if an administrator already exists — the guard is a
+property of the data rather than a record of having run, so an operator appointed later
+through the panel closes the door just as firmly. Every subsequent operator is appointed
+from `/admin/verification`, and the grant is written to the audit log either way.
+
+Why this exists at all: `user_roles_insert_self_non_admin` forbids self-granting `admin`,
+correctly — otherwise every signup could promote itself. But nothing else granted it
+either, so 0001–0027 shipped a locked room with the key inside. It was only visible by
+asking the live database what it contained.
+
+**3. Open a jurisdiction** at `/admin/jurisdictions`. All 51 ship closed, deliberately:
+opening one is you stating that you have done your own licensing work in that state.
+Nothing in this platform verifies a licence and no seed can make that claim for you. Until
+at least one is open the listing form's location field is an empty dropdown and **no seller
+can list a business**.
+
+**4. Publish the legal templates** at counsel's direction. Terms of use, privacy policy and
+the NDA. `/legal/terms` and `/legal/privacy` render a placeholder until a published version
+exists, and an NDA issued with no template records nothing about which text the buyer
+agreed to.
+
+`/admin` shows what is still outstanding and the panel disappears when nothing is. The same
+answer is available directly:
+
+```sql
+select * from public.launch_readiness();
+```
+
 ### The scheduler
 
 `vercel.json` declares one cron: `/api/cron/due-tasks`, daily at 13:00 UTC. Deliberately

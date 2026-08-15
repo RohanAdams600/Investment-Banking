@@ -229,3 +229,39 @@ export async function loadAuditLog(
     metadata: (row.metadata ?? {}) as Record<string, unknown>,
   }));
 }
+
+export interface ReadinessCheck {
+  name: string;
+  ready: boolean;
+  detail: string;
+}
+
+/**
+ * What is not set up yet.
+ *
+ * The counterpart to a deadlock this platform shipped with: a fresh deployment
+ * had no administrator, no policy could create one, and without an administrator
+ * no jurisdiction could be opened — so the listing form's location field was
+ * empty and nobody could list a business. Every rule involved was right on its
+ * own, and the result was a product that could not be started.
+ *
+ * That is fixed, but the shape of the problem is worth keeping in view: each row
+ * here is something whose absence makes part of the product *inert* rather than
+ * broken. Nothing errors. The page just quietly does nothing, which is the kind
+ * of failure an operator finds out about from a customer.
+ *
+ * So it goes on the first screen an operator sees, and it disappears when there
+ * is nothing left to say.
+ */
+export async function loadReadiness(): Promise<ReadinessCheck[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc('launch_readiness');
+  if (error || !data) return [];
+
+  return (data as Row[]).map((row) => ({
+    name: row.check_name,
+    ready: row.ready === true,
+    detail: row.detail,
+  }));
+}
