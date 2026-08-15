@@ -1,6 +1,13 @@
 import 'server-only';
 
-import type { ContactKind, LeadSource, LeadStatus } from '@ib/core';
+import {
+  capped,
+  overFetch,
+  type Capped,
+  type ContactKind,
+  type LeadSource,
+  type LeadStatus,
+} from '@ib/core';
 
 import { createClient } from '@/lib/supabase/server';
 
@@ -49,7 +56,16 @@ export interface CrmContact {
   createdAt: string;
 }
 
-export async function listContacts(): Promise<CrmContact[]> {
+/**
+ * How many of each list a page shows before it says so.
+ *
+ * Named rather than inline, because the page has to quote the same number the
+ * query used — "showing the first 500" is only true if 500 is what was asked
+ * for, and two constants drift.
+ */
+export const CRM_LIMITS = { contacts: 500, leads: 500, tasks: 200, notes: 500 } as const;
+
+export async function listContacts(): Promise<Capped<CrmContact>> {
   const supabase = await createClient();
 
   // No firm filter. RLS already scopes this to the caller's world, and adding a
@@ -58,23 +74,28 @@ export async function listContacts(): Promise<CrmContact[]> {
     .from('contacts')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(overFetch(CRM_LIMITS.contacts));
 
-  if (error || !data) return [];
+  if (error || !data) return capped<CrmContact>([], CRM_LIMITS.contacts);
 
-  return (data as Row[]).map((row) => ({
-    id: row.id,
-    fullName: row.full_name,
-    email: row.email ?? null,
-    phone: row.phone ?? null,
-    company: row.company ?? null,
-    title: row.title ?? null,
-    kind: row.kind,
-    tags: (row.tags ?? []) as string[],
-    notes: row.notes ?? null,
-    userId: row.user_id ?? null,
-    createdAt: row.created_at,
-  }));
+  const page = capped(data as Row[], CRM_LIMITS.contacts);
+
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      id: row.id,
+      fullName: row.full_name,
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+      company: row.company ?? null,
+      title: row.title ?? null,
+      kind: row.kind,
+      tags: (row.tags ?? []) as string[],
+      notes: row.notes ?? null,
+      userId: row.user_id ?? null,
+      createdAt: row.created_at,
+    })),
+  };
 }
 
 export interface CrmStage {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 
 import { DocumentList, UploadPanel } from '@/features/documents/vault-panels';
 import { listDocuments, listRoomMembers } from '@/features/documents/queries';
@@ -73,9 +73,20 @@ export default async function DealDocumentsPage({
         </p>
       </header>
 
+      {/*
+        The one truncation notice that is not a nicety. A buyer who cannot see a
+        document does not know to ask for it, and "it was in the data room" is a
+        sentence that gets said in a dispute.
+      */}
+      {truncationNotice(documents, 'documents') ? (
+        <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-3 text-sm">
+          {truncationNotice(documents, 'documents')}
+        </p>
+      ) : null}
+
       <DocumentList
         dealId={dealId}
-        documents={documents}
+        documents={documents.rows}
         members={members}
         viewerId={actor.userId}
         canRelease={can(actor, 'document:set_permissions')}

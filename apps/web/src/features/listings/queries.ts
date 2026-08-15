@@ -1,6 +1,13 @@
 import 'server-only';
 
-import { controlsListing, type ListingStatus, type NdaStatus } from '@ib/core';
+import {
+  capped,
+  controlsListing,
+  overFetch,
+  type Capped,
+  type ListingStatus,
+  type NdaStatus,
+} from '@ib/core';
 
 import { getActor } from '@/lib/auth/actor';
 import { createClient } from '@/lib/supabase/server';
@@ -101,15 +108,20 @@ function toTeaser(row: Row, saved = false): ListingTeaser {
  * seller browsing the market should not see their own unpublished drafts mixed
  * into it.
  */
-export async function browseListings(filters: BrowseFilters = {}): Promise<ListingTeaser[]> {
+export const BROWSE_PAGE_SIZE = 100;
+
+export async function browseListings(filters: BrowseFilters = {}): Promise<Capped<ListingTeaser>> {
   const supabase = await createClient();
 
+  // One more than we intend to show. The extra row is the entire mechanism: it
+  // is how the page knows the difference between "there were exactly 100" and
+  // "there were more and you are not being told".
   let query = supabase
     .from('listings')
     .select(TEASER_COLUMNS)
     .in('status', ['live', 'under_loi', 'under_contract'])
     .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(100);
+    .limit(overFetch(BROWSE_PAGE_SIZE));
 
   if (filters.industry) query = query.eq('industry', filters.industry);
   if (filters.jurisdiction) query = query.eq('jurisdiction_code', filters.jurisdiction);
@@ -121,10 +133,15 @@ export async function browseListings(filters: BrowseFilters = {}): Promise<Listi
   }
 
   const { data, error } = await query;
-  if (error || !data) return [];
+  if (error || !data) return capped<ListingTeaser>([], BROWSE_PAGE_SIZE);
 
+  const page = capped(data as Row[], BROWSE_PAGE_SIZE);
   const saved = await savedListingIds();
-  return data.map((row) => toTeaser(row as Row, saved.has((row as Row).id)));
+
+  return {
+    ...page,
+    rows: page.rows.map((row) => toTeaser(row, saved.has(row.id))),
+  };
 }
 
 /** Listings the caller owns or manages, at any status. */

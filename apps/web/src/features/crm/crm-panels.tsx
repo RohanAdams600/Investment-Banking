@@ -292,10 +292,19 @@ export function ContactPanel({
   contacts,
   notes,
   firmId,
+  notice,
 }: {
   contacts: CrmContact[];
   notes: Map<string, CrmNote[]>;
   firmId: string | null;
+  /**
+   * Set when the contact list did not fit.
+   *
+   * Passed in rather than derived, because the duplicate check below runs
+   * against `contacts` — and on a truncated list it can only say "no duplicate
+   * *in what you can see*". Somebody needs to know that before they trust it.
+   */
+  notice?: string | null;
 }) {
   const [state, action] = useActionState(saveContact, emptyCrmState);
   const [removeState, remove] = useActionState(deleteContact, emptyCrmState);
@@ -359,6 +368,11 @@ export function ContactPanel({
           <CardTitle>Contacts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {notice ? (
+            <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-2 text-xs">
+              {notice} The duplicate check above only sees the contacts listed here.
+            </p>
+          ) : null}
           {contacts.length === 0 ? (
             <p className="text-text-muted text-sm">
               Nobody yet. A contact does not need an account — most people in a pipeline never sign

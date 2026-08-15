@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 import { Button, EmptyState } from '@ib/ui';
 
 import { BrowseFilters as Filters } from '@/features/listings/browse-filters';
@@ -52,11 +52,9 @@ export default async function ListingsPage({
     maxAskingCents: toCents(single('maxAsking')),
   };
 
-  const [listings, jurisdictions] = await Promise.all([
-    browseListings(filters),
-    listJurisdictions(),
-  ]);
+  const [page, jurisdictions] = await Promise.all([browseListings(filters), listJurisdictions()]);
 
+  const notice = truncationNotice(page, 'listings');
   const canList = can(actor, 'listing:create');
 
   return (
@@ -78,7 +76,7 @@ export default async function ListingsPage({
 
       <Filters jurisdictions={jurisdictions} current={filters} />
 
-      {listings.length === 0 ? (
+      {page.rows.length === 0 ? (
         <EmptyState
           icon={Search}
           title="Nothing matches yet"
@@ -87,10 +85,15 @@ export default async function ListingsPage({
       ) : (
         <>
           <p className="text-text-muted text-sm" aria-live="polite">
-            {listings.length} {listings.length === 1 ? 'listing' : 'listings'}
+            {page.rows.length} {page.rows.length === 1 ? 'listing' : 'listings'}
+            {/*
+              Said out loud rather than left to be discovered. A capped list
+              that does not mention the cap looks exactly like a complete one.
+            */}
+            {notice ? <span className="text-warning block">{notice}</span> : null}
           </p>
           <ul className="space-y-3">
-            {listings.map((listing) => (
+            {page.rows.map((listing) => (
               <li key={listing.id}>
                 <ListingCard listing={listing} />
               </li>

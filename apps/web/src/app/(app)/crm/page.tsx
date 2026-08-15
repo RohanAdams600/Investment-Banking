@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 
 import { ContactPanel, PipelineBoard, TaskList } from '@/features/crm/crm-panels';
 import { listContacts, listLeads, listNotes, listStages, listTasks } from '@/features/crm/queries';
@@ -74,8 +74,13 @@ export default async function CrmPage({
       <PipelineBoard stages={stages} leads={leads} firmId={firmId} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <TaskList tasks={tasks} contacts={contacts} firmId={firmId} />
-        <ContactPanel contacts={contacts} notes={notes} firmId={firmId} />
+        <TaskList tasks={tasks} contacts={contacts.rows} firmId={firmId} />
+        <ContactPanel
+          contacts={contacts.rows}
+          notes={notes}
+          firmId={firmId}
+          notice={truncationNotice(contacts, 'contacts')}
+        />
       </div>
     </main>
   );

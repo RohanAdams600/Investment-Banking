@@ -1,6 +1,12 @@
 import 'server-only';
 
-import type { DocumentCategory, DocumentVisibility } from '@ib/core';
+import {
+  capped,
+  overFetch,
+  type Capped,
+  type DocumentCategory,
+  type DocumentVisibility,
+} from '@ib/core';
 
 import { createClient } from '@/lib/supabase/server';
 
@@ -58,7 +64,16 @@ export interface DocumentRelease {
   revokedAt: string | null;
 }
 
-export async function listDocuments(dealId: string): Promise<VaultDocument[]> {
+/**
+ * How many documents a data room shows before it says there are more.
+ *
+ * The one list in this product where a silent truncation is genuinely
+ * dangerous: a buyer who cannot see a document does not know to ask for it, and
+ * "it was in the data room" is a sentence that gets said in a dispute.
+ */
+export const VAULT_PAGE_SIZE = 500;
+
+export async function listDocuments(dealId: string): Promise<Capped<VaultDocument>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -66,11 +81,12 @@ export async function listDocuments(dealId: string): Promise<VaultDocument[]> {
     .select('*')
     .eq('deal_id', dealId)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(overFetch(VAULT_PAGE_SIZE));
 
-  if (error || !data) return [];
+  if (error || !data) return capped<VaultDocument>([], VAULT_PAGE_SIZE);
 
-  const rows = data as Row[];
+  const page = capped(data as Row[], VAULT_PAGE_SIZE);
+  const rows = page.rows;
   const uploaderIds = [...new Set(rows.map((r) => r.uploaded_by).filter(Boolean))];
 
   // Names, not ids. A vault that says "uploaded by 8f3c…" is a vault nobody can
@@ -80,27 +96,30 @@ export async function listDocuments(dealId: string): Promise<VaultDocument[]> {
   const ids = rows.map((r) => r.id as string);
   const [releases, access] = await Promise.all([loadReleases(ids), loadAccessEntries(ids)]);
 
-  return rows.map((row) => ({
-    id: row.id,
-    dealId: row.deal_id,
-    uploadedBy: row.uploaded_by ?? null,
-    uploaderName: row.uploaded_by ? (names.get(row.uploaded_by) ?? null) : null,
-    firmId: row.firm_id ?? null,
-    title: row.title,
-    category: row.category,
-    visibility: row.visibility,
-    storagePath: row.storage_path,
-    fileName: row.file_name,
-    contentType: row.content_type,
-    sizeBytes: Number(row.size_bytes),
-    replacesDocumentId: row.replaces_document_id ?? null,
-    supersededAt: row.superseded_at ?? null,
-    withdrawnAt: row.withdrawn_at ?? null,
-    withdrawnReason: row.withdrawn_reason ?? null,
-    createdAt: row.created_at,
-    releasedTo: releases.get(row.id as string) ?? [],
-    openedBy: access.get(row.id as string) ?? [],
-  }));
+  return {
+    ...page,
+    rows: rows.map((row) => ({
+      id: row.id,
+      dealId: row.deal_id,
+      uploadedBy: row.uploaded_by ?? null,
+      uploaderName: row.uploaded_by ? (names.get(row.uploaded_by) ?? null) : null,
+      firmId: row.firm_id ?? null,
+      title: row.title,
+      category: row.category,
+      visibility: row.visibility,
+      storagePath: row.storage_path,
+      fileName: row.file_name,
+      contentType: row.content_type,
+      sizeBytes: Number(row.size_bytes),
+      replacesDocumentId: row.replaces_document_id ?? null,
+      supersededAt: row.superseded_at ?? null,
+      withdrawnAt: row.withdrawn_at ?? null,
+      withdrawnReason: row.withdrawn_reason ?? null,
+      createdAt: row.created_at,
+      releasedTo: releases.get(row.id as string) ?? [],
+      openedBy: access.get(row.id as string) ?? [],
+    })),
+  };
 }
 
 /**

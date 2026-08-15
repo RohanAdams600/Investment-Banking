@@ -10,6 +10,7 @@ export {
 export * from './access';
 export * from './listings';
 export * from './matching';
+export * from './pagination';
 export * from './commission';
 export * from './questionnaire';
 export * from './valuation';
