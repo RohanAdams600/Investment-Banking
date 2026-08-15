@@ -405,9 +405,15 @@ Not blockers, but nobody should discover these from a customer:
 - **Nothing sends email.** Notifications are rows; they appear in-app and on the
   dashboard badge immediately. The preferences page says so with a "Not sending yet"
   badge, and `wantsEmail()` is the switch a sender would read.
-- **Lists cap.** Browse, contacts and the data room now say when they truncate. Tasks,
-  notes, matches, commissions and the admin queues still cap silently — further from
-  reach, and cheaper to hit, but not yet honest.
+- **Lists cap, and now say so.** Every user-facing list over-fetches by one row and shows
+  a notice when there is more. The commission CSV export is the exception: it refuses with
+  a 409 rather than hand over a file that opens in Excel and sums to the wrong number.
+  Notes are the one list still capping quietly; they are grouped per contact and the cap
+  is far from reach.
+- **PostgREST's `max-rows` is 1000 and applies to any query that sets no limit of its
+  own.** The matcher now pages with `.range()` rather than trusting an unbounded read —
+  see `fetchAll()` in `features/matching/recompute.ts`. Worth remembering when writing any
+  new query that means "all of them": no limit does not mean no ceiling.
 - **No document watermarking**, and no listing photos.
 - **Payments and escrow are out of scope**, by design. Commission is record-keeping with a
   clean seam for Stripe Connect later.
