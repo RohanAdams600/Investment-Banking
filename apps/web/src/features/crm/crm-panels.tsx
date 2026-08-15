@@ -292,19 +292,20 @@ export function ContactPanel({
   contacts,
   notes,
   firmId,
-  notice,
+  truncated = false,
 }: {
   contacts: CrmContact[];
   notes: Map<string, CrmNote[]>;
   firmId: string | null;
   /**
-   * Set when the contact list did not fit.
+   * Whether the contact list did not fit.
    *
-   * Passed in rather than derived, because the duplicate check below runs
-   * against `contacts` — and on a truncated list it can only say "no duplicate
-   * *in what you can see*". Somebody needs to know that before they trust it.
+   * The page already says so at the top. This panel says the *other* half: the
+   * duplicate check below runs against `contacts`, so on a truncated list it can
+   * only mean "no duplicate in what you can see". Somebody needs to know that
+   * before they trust a green tick.
    */
-  notice?: string | null;
+  truncated?: boolean;
 }) {
   const [state, action] = useActionState(saveContact, emptyCrmState);
   const [removeState, remove] = useActionState(deleteContact, emptyCrmState);
@@ -368,9 +369,10 @@ export function ContactPanel({
           <CardTitle>Contacts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {notice ? (
+          {truncated ? (
             <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-2 text-xs">
-              {notice} The duplicate check above only sees the contacts listed here.
+              This list is capped, so the duplicate-email check above can only tell you there is no
+              match <em>among the contacts shown here</em>.
             </p>
           ) : null}
           {contacts.length === 0 ? (

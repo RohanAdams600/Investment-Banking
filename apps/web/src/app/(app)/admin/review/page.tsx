@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 
 import { ReviewQueue } from '@/features/admin/admin-panels';
 import { loadReviewQueue } from '@/features/admin/queries';
@@ -27,7 +27,19 @@ export default async function ListingReviewPage() {
         the market; sending one back returns it to draft with your note attached.
       </p>
 
-      <ReviewQueue items={items} />
+      {/*
+        A review queue that quietly stops at 100 is a queue where the oldest
+        submissions are the ones nobody sees — the ordering is oldest-first, so
+        a cap hides the newest, but a backlog past 100 means the operator needs
+        to know the shape of it rather than just work the top.
+      */}
+      {items.truncated ? (
+        <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-3 text-sm">
+          {truncationNotice(items, 'submissions')} The backlog is longer than one screen of work.
+        </p>
+      ) : null}
+
+      <ReviewQueue items={items.rows} />
     </div>
   );
 }

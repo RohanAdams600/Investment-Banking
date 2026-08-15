@@ -54,7 +54,31 @@ export async function GET(request: NextRequest) {
 
   const firm = scope.firm;
 
-  const records = await listCommissions(firm.id);
+  const page = await listCommissions(firm.id);
+
+  /*
+   * A truncated export is worse than a failed one.
+   *
+   * Everywhere else in the product a capped list shows a notice and the reader
+   * decides what to do. A CSV has no notice: it opens in Excel, gets summed,
+   * and the total is quietly wrong — and this particular total is what a
+   * brokerage reconciles its revenue against. So the export refuses rather than
+   * hands over a file that looks complete.
+   *
+   * The 200 cap is generous for a first year and this is a real ceiling, not a
+   * hypothetical one. When a firm hits it, the fix is a paginated export, not a
+   * bigger number.
+   */
+  if (page.truncated) {
+    return NextResponse.json(
+      {
+        error: `This firm has more than ${page.limit} commission records, which is more than one export can carry. Rather than hand you a file that is silently short, nothing was written. Get in touch and we will pull the full set.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  const records = page.rows;
 
   await recordAuditEvent({
     action: 'commission.exported',

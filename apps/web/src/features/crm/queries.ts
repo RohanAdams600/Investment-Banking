@@ -136,41 +136,45 @@ export interface CrmLead {
   createdAt: string;
 }
 
-export async function listLeads(): Promise<CrmLead[]> {
+export async function listLeads(): Promise<Capped<CrmLead>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('leads')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(overFetch(CRM_LIMITS.leads));
 
-  if (error || !data) return [];
+  if (error || !data) return capped<CrmLead>([], CRM_LIMITS.leads);
 
-  const rows = data as Row[];
+  const page = capped(data as Row[], CRM_LIMITS.leads);
+  const rows = page.rows;
   const contacts = await contactsById(rows.map((r) => r.contact_id as string));
 
-  return rows.map((row) => {
-    const contact = contacts.get(row.contact_id);
-    return {
-      id: row.id,
-      contactId: row.contact_id,
-      // A board of uuids is a board nobody uses. The join is here rather than
-      // in SQL because PostgREST embeds go through the same RLS anyway, and one
-      // extra query is cheaper than a resource-embedding string to get wrong.
-      contactName: contact?.fullName ?? 'Unknown',
-      contactEmail: contact?.email ?? null,
-      listingId: row.listing_id ?? null,
-      source: row.source,
-      status: row.status,
-      stageId: row.stage_id ?? null,
-      assignedTo: row.assigned_to ?? null,
-      message: row.message ?? null,
-      lastContactedAt: row.last_contacted_at ?? null,
-      nextActionAt: row.next_action_at ?? null,
-      createdAt: row.created_at,
-    };
-  });
+  return {
+    ...page,
+    rows: rows.map((row) => {
+      const contact = contacts.get(row.contact_id);
+      return {
+        id: row.id,
+        contactId: row.contact_id,
+        // A board of uuids is a board nobody uses. The join is here rather than
+        // in SQL because PostgREST embeds go through the same RLS anyway, and one
+        // extra query is cheaper than a resource-embedding string to get wrong.
+        contactName: contact?.fullName ?? 'Unknown',
+        contactEmail: contact?.email ?? null,
+        listingId: row.listing_id ?? null,
+        source: row.source,
+        status: row.status,
+        stageId: row.stage_id ?? null,
+        assignedTo: row.assigned_to ?? null,
+        message: row.message ?? null,
+        lastContactedAt: row.last_contacted_at ?? null,
+        nextActionAt: row.next_action_at ?? null,
+        createdAt: row.created_at,
+      };
+    }),
+  };
 }
 
 async function contactsById(ids: string[]): Promise<Map<string, CrmContact>> {
@@ -208,7 +212,7 @@ export interface CrmTask {
  * promise and an undated task is an intention, and mixing them puts the
  * intentions at the top where they push the promises off the screen.
  */
-export async function listTasks(): Promise<CrmTask[]> {
+export async function listTasks(): Promise<Capped<CrmTask>> {
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -216,19 +220,24 @@ export async function listTasks(): Promise<CrmTask[]> {
     .select('*')
     .order('status')
     .order('due_at', { ascending: true, nullsFirst: false })
-    .limit(200);
+    .limit(overFetch(CRM_LIMITS.tasks));
 
-  return ((data ?? []) as Row[]).map((row) => ({
-    id: row.id,
-    title: row.title,
-    detail: row.detail ?? null,
-    contactId: row.contact_id ?? null,
-    leadId: row.lead_id ?? null,
-    assignedTo: row.assigned_to ?? null,
-    dueAt: row.due_at ?? null,
-    status: row.status,
-    completedAt: row.completed_at ?? null,
-  }));
+  const page = capped((data ?? []) as Row[], CRM_LIMITS.tasks);
+
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      detail: row.detail ?? null,
+      contactId: row.contact_id ?? null,
+      leadId: row.lead_id ?? null,
+      assignedTo: row.assigned_to ?? null,
+      dueAt: row.due_at ?? null,
+      status: row.status,
+      completedAt: row.completed_at ?? null,
+    })),
+  };
 }
 
 export interface CrmNote {

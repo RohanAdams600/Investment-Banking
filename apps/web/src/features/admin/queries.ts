@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { capped, overFetch, type Capped } from '@ib/core';
+
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -72,28 +74,35 @@ export interface ReviewItem {
  * market, and needs that without reading the numbers. So the queue answers
  * "is there a profile" and "how many years of figures" and stops there.
  */
-export async function loadReviewQueue(): Promise<ReviewItem[]> {
+export const REVIEW_PAGE_SIZE = 100;
+
+export async function loadReviewQueue(): Promise<Capped<ReviewItem>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('listing_review_queue')
     .select('*')
     .order('updated_at', { ascending: true })
-    .limit(100);
+    .limit(overFetch(REVIEW_PAGE_SIZE));
 
-  if (error || !data) return [];
+  if (error || !data) return capped<ReviewItem>([], REVIEW_PAGE_SIZE);
 
-  return (data as Row[]).map((row) => ({
-    id: row.id,
-    headline: row.headline,
-    industry: row.industry,
-    jurisdictionCode: row.jurisdiction_code ?? null,
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    hasProfile: row.has_profile === true,
-    financialYears: Number(row.financial_years ?? 0),
-  }));
+  const page = capped(data as Row[], REVIEW_PAGE_SIZE);
+
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      id: row.id,
+      headline: row.headline,
+      industry: row.industry,
+      jurisdictionCode: row.jurisdiction_code ?? null,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      hasProfile: row.has_profile === true,
+      financialYears: Number(row.financial_years ?? 0),
+    })),
+  };
 }
 
 export interface VerificationItem {

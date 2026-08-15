@@ -58,6 +58,12 @@ export default async function CrmPage({
     listNotes(),
   ]);
 
+  const notices = [
+    truncationNotice(leads, 'leads'),
+    truncationNotice(contacts, 'contacts'),
+    truncationNotice(tasks, 'tasks'),
+  ].filter((notice): notice is string => notice !== null);
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <header className="space-y-1">
@@ -71,15 +77,28 @@ export default async function CrmPage({
 
       {scope.firm ? <FirmBadge firm={scope.firm} options={scope.options} basePath="/crm" /> : null}
 
-      <PipelineBoard stages={stages} leads={leads} firmId={firmId} />
+      {/*
+        One notice rather than three. The page holds four capped lists, and a
+        warning stripe over each of them would be read as decoration by the
+        second one — which is how a warning stops working.
+      */}
+      {notices.length > 0 ? (
+        <div className="border-warning/40 bg-warning-subtle text-warning space-y-1 rounded border p-3 text-sm">
+          {notices.map((notice) => (
+            <p key={notice}>{notice}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <PipelineBoard stages={stages} leads={leads.rows} firmId={firmId} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <TaskList tasks={tasks} contacts={contacts.rows} firmId={firmId} />
+        <TaskList tasks={tasks.rows} contacts={contacts.rows} firmId={firmId} />
         <ContactPanel
           contacts={contacts.rows}
           notes={notes}
           firmId={firmId}
-          notice={truncationNotice(contacts, 'contacts')}
+          truncated={contacts.truncated}
         />
       </div>
     </main>

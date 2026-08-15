@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Receipt } from 'lucide-react';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 import { EmptyState } from '@ib/ui';
 
 import {
@@ -106,7 +106,19 @@ export default async function CommissionsPage({
         </nav>
       ) : null}
 
-      <CommissionStatement records={records} totals={totalsFor(records)} />
+      {/*
+        The totals below are summed from what is on this page. If the list is
+        capped they are not the firm's totals, and saying "showing the first
+        200" without saying that would be the more dangerous half of the truth.
+      */}
+      {records.truncated ? (
+        <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-3 text-sm">
+          {truncationNotice(records, 'commission records')} The totals below cover only these
+          records, not the firm&rsquo;s full history.
+        </p>
+      ) : null}
+
+      <CommissionStatement records={records.rows} totals={totalsFor(records.rows)} />
 
       <FeeScheduleForm firmId={firm.id} agreement={agreement} />
 

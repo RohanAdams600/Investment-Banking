@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { FitReason } from '@ib/core';
+import { capped, overFetch, type Capped, type FitReason } from '@ib/core';
 
 import { createClient } from '@/lib/supabase/server';
 import type { ListingTeaser } from '@/features/listings/types';
@@ -88,7 +88,9 @@ function toTeaser(row: Row, saved: boolean): ListingTeaser {
  * — "nothing matches" and "your concentration limit ruled out eleven of these"
  * lead to very different next actions.
  */
-export async function listMatches(includeExcluded = false): Promise<MatchedListing[]> {
+export const MATCHES_PAGE_SIZE = 100;
+
+export async function listMatches(includeExcluded = false): Promise<Capped<MatchedListing>> {
   const supabase = await createClient();
 
   let query = supabase
@@ -97,16 +99,18 @@ export async function listMatches(includeExcluded = false): Promise<MatchedListi
       `score, excluded, reasons, exclusion_reasons, computed_at, ai_score, ai_rationale, listings ( ${TEASER_COLUMNS} )`,
     )
     .order('score', { ascending: false })
-    .limit(100);
+    .limit(overFetch(MATCHES_PAGE_SIZE));
 
   if (!includeExcluded) query = query.eq('excluded', false);
 
   const { data, error } = await query;
-  if (error || !data) return [];
+  if (error || !data) return capped<MatchedListing>([], MATCHES_PAGE_SIZE);
+
+  const page = capped(data as Row[], MATCHES_PAGE_SIZE);
 
   const saved = await savedListingIds();
 
-  return data
+  const rows = page.rows
     .map((row) => {
       const r = row as Row;
       const listing = Array.isArray(r.listings) ? r.listings[0] : r.listings;
@@ -126,6 +130,11 @@ export async function listMatches(includeExcluded = false): Promise<MatchedListi
       };
     })
     .filter((match): match is MatchedListing => match !== null);
+
+  // `truncated` comes from the query, not from `rows.length`. The filter above
+  // drops scores whose listing has left the market, so a full page can arrive
+  // here shorter than the cap — and that is not the same fact.
+  return { ...page, rows };
 }
 
 /** How many listings the buyer's own hard limits ruled out. */

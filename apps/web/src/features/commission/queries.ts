@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { FeeBand, FeeStructure } from '@ib/core';
+import { capped, overFetch, type Capped, type FeeBand, type FeeStructure } from '@ib/core';
 
 import { createClient } from '@/lib/supabase/server';
 
@@ -72,7 +72,9 @@ export async function loadAgreement(firmId: string): Promise<StoredAgreement | n
   };
 }
 
-export async function listCommissions(firmId: string): Promise<StoredCommission[]> {
+export const COMMISSIONS_PAGE_SIZE = 200;
+
+export async function listCommissions(firmId: string): Promise<Capped<StoredCommission>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -80,28 +82,33 @@ export async function listCommissions(firmId: string): Promise<StoredCommission[
     .select('*')
     .eq('firm_id', firmId)
     .order('created_at', { ascending: false })
-    .limit(200);
+    .limit(overFetch(COMMISSIONS_PAGE_SIZE));
 
-  if (error || !data) return [];
+  if (error || !data) return capped<StoredCommission>([], COMMISSIONS_PAGE_SIZE);
 
-  return (data as Row[]).map((row) => ({
-    id: row.id,
-    listingId: row.listing_id ?? null,
-    status: row.status,
-    // bigint arrives as a string from Postgres. Coerced here rather than at
-    // every call site, because a string that looks like a number silently
-    // concatenates instead of adding.
-    salePriceCents: Number(row.sale_price_cents),
-    calculatedFeeCents: Number(row.calculated_fee_cents),
-    totalFeeCents: Number(row.total_fee_cents),
-    coBrokerFeeCents: Number(row.co_broker_fee_cents),
-    netFeeCents: Number(row.net_fee_cents),
-    bands: (row.bands ?? []) as FeeBand[],
-    closedAt: row.closed_at ?? null,
-    settledAt: row.settled_at ?? null,
-    waivedReason: row.waived_reason ?? null,
-    createdAt: row.created_at,
-  }));
+  const page = capped(data as Row[], COMMISSIONS_PAGE_SIZE);
+
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      id: row.id,
+      listingId: row.listing_id ?? null,
+      status: row.status,
+      // bigint arrives as a string from Postgres. Coerced here rather than at
+      // every call site, because a string that looks like a number silently
+      // concatenates instead of adding.
+      salePriceCents: Number(row.sale_price_cents),
+      calculatedFeeCents: Number(row.calculated_fee_cents),
+      totalFeeCents: Number(row.total_fee_cents),
+      coBrokerFeeCents: Number(row.co_broker_fee_cents),
+      netFeeCents: Number(row.net_fee_cents),
+      bands: (row.bands ?? []) as FeeBand[],
+      closedAt: row.closed_at ?? null,
+      settledAt: row.settled_at ?? null,
+      waivedReason: row.waived_reason ?? null,
+      createdAt: row.created_at,
+    })),
+  };
 }
 
 export interface CommissionTotals {

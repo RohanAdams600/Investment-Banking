@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Target } from 'lucide-react';
-import { can } from '@ib/core';
+import { can, truncationNotice } from '@ib/core';
 import { AIDisclaimer, Button, EmptyState } from '@ib/ui';
 
 import { MatchCard } from '@/features/matching/match-card';
@@ -41,7 +41,8 @@ export default async function MatchesPage({
     countExcludedMatches(),
   ]);
 
-  const visible = showFiltered ? matches : matches.filter((m) => !m.excluded);
+  const visible = showFiltered ? matches.rows : matches.rows.filter((m) => !m.excluded);
+  const notice = truncationNotice(matches, 'matches');
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -84,6 +85,7 @@ export default async function MatchesPage({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-text-muted text-sm" aria-live="polite">
               {visible.length} {visible.length === 1 ? 'match' : 'matches'}
+              {notice ? <span className="text-warning block">{notice}</span> : null}
             </p>
 
             {excludedCount > 0 ? (
