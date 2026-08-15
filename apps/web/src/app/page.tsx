@@ -5,17 +5,20 @@ import { brand, isBrandFullyConfigured, pageTitle, unconfiguredBrandFields } fro
 import { Badge, Button, Card, CardContent } from '@ib/ui';
 
 import {
+  ADVISOR_FEATURES,
+  ADVISOR_STEPS,
   BUYER_FEATURES,
   BUYER_STEPS,
   HERO,
   LIMITS,
   SELLER_FEATURES,
   SELLER_STEPS,
+  SITE_DESCRIPTION,
 } from '@/features/marketing/content';
 
 export const metadata: Metadata = {
   title: pageTitle(),
-  description: HERO.subhead,
+  description: SITE_DESCRIPTION,
 };
 
 /**
@@ -26,8 +29,11 @@ export const metadata: Metadata = {
  * an NDA" is a stronger claim than "trusted by thousands", and it has the
  * advantage of being true — a test on the copy makes sure it stays that way.
  *
- * Both sides get equal space. A marketplace that reads as built for sellers
- * does not get buyers, and this platform is useless without both.
+ * Three sides, and the order is deliberate. Sellers and buyers get equal weight
+ * because a marketplace that reads as built for one does not get the other.
+ * Advisors come third but they are not an afterthought: bankers and brokers
+ * arrive with several listings rather than one, and a marketplace with no place
+ * for them is one they will not send a client to.
  */
 export default function HomePage() {
   return (
@@ -48,18 +54,19 @@ export default function HomePage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild size="lg">
-            <Link href="/tools/valuation">
+            <Link href={HERO.primaryHref}>
               {HERO.primaryCta}
               <ArrowRight aria-hidden />
             </Link>
           </Button>
           <Button asChild size="lg" variant="secondary">
-            <Link href="/listings">{HERO.secondaryCta}</Link>
+            <Link href={HERO.secondaryHref}>{HERO.secondaryCta}</Link>
           </Button>
         </div>
 
         <p className="text-text-muted mt-4 text-sm">
-          The valuation takes about five minutes and does not require you to list anything.
+          Browsing needs no account. The valuation takes about five minutes and does not require you
+          to list anything.
         </p>
       </section>
 
@@ -102,6 +109,15 @@ export default function HomePage() {
         muted
       />
 
+      {/* Bankers, advisors and brokers */}
+      <Side
+        eyebrow="If you advise on deals"
+        heading="Run your clients’ sales here, start to close."
+        features={ADVISOR_FEATURES}
+        steps={ADVISOR_STEPS}
+        cta={{ href: '/sign-up', label: 'Set up your practice' }}
+      />
+
       {/* What this is not */}
       <section className="border-border-subtle border-t">
         <div className="mx-auto max-w-4xl px-6 py-16">
@@ -134,14 +150,15 @@ export default function HomePage() {
           <Card>
             <CardContent className="flex flex-wrap items-center justify-between gap-4 py-8">
               <div className="space-y-1">
-                <h2 className="text-xl font-semibold">See what your business might be worth</h2>
+                <h2 className="text-xl font-semibold">See what is on the market</h2>
                 <p className="text-text-muted text-sm">
-                  No listing, no obligation, and nothing published.
+                  Browsing needs no account. A seller hears from you when you request access, not
+                  before.
                 </p>
               </div>
               <Button asChild size="lg">
-                <Link href="/tools/valuation">
-                  Start
+                <Link href="/listings">
+                  Browse listings
                   <ArrowRight aria-hidden />
                 </Link>
               </Button>

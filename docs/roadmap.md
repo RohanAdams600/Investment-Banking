@@ -40,7 +40,7 @@ All three resolved — see `docs/decisions/open-questions.md` for the full reaso
 
 | Decision     | Outcome                                                                                                                                                                                                     |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Company name | **Cairn** — "Mark the way."                                                                                                                                                                                 |
+| Company name | **Cairn** — "The marketplace for buying and selling businesses"                                                                                                                                             |
 | Tenancy      | **Multi-tenant from the start.** Firms are the primary data boundary; users can belong to several with different roles in each. Nearly every table carries a tenant column; RLS policies are tenant-scoped. |
 | Jurisdiction | **US multi-state.** The jurisdiction-config layer is built now even if one state ships first, because consent records capture the jurisdiction and template version at acceptance and cannot be backfilled. |
 

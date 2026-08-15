@@ -38,12 +38,26 @@ export interface Step {
   body: string;
 }
 
+/**
+ * The one-sentence answer to "what is this?".
+ *
+ * Used as the meta description on the landing page and as the fallback OG
+ * description everywhere else, so it has to work stripped of all context — as a
+ * single grey line under a blue link, read by somebody who has never heard the
+ * name. That rules out anything atmospheric and rules in naming the market and
+ * the people in it.
+ */
+export const SITE_DESCRIPTION =
+  'A marketplace for buying and selling privately held companies. Owners list, buyers search by industry, state, earnings and price, and investment bankers, M&A advisors and business brokers run their deals here — with every listing anonymous until the seller issues a confidentiality agreement.';
+
 export const HERO = {
-  headline: 'Sell your business without telling the market you are selling.',
+  headline: 'A marketplace for buying and selling businesses.',
   subhead:
-    'A marketplace for lower-middle-market acquisitions. Your business stays anonymous until you decide otherwise — buyers see the shape of the deal, and nothing that identifies you, until you issue them a confidentiality agreement.',
-  primaryCta: 'What is my business worth?',
-  secondaryCta: 'Browse businesses for sale',
+    'Owners list. Buyers search by industry, state, earnings and asking price, or set their criteria once and let the matching bring listings to them. Investment bankers, M&A advisors and business brokers run their clients’ deals here too. Every listing is anonymous until the seller issues a confidentiality agreement — so a company can be on the market without the market knowing.',
+  primaryCta: 'Browse businesses for sale',
+  primaryHref: '/listings',
+  secondaryCta: 'What is my business worth?',
+  secondaryHref: '/tools/valuation',
 } as const;
 
 /**
@@ -138,6 +152,58 @@ export const BUYER_STEPS: Step[] = [
 ];
 
 /**
+ * The third side of the market.
+ *
+ * Bankers, advisors and brokers are not a segment bolted on to a seller
+ * product — they are the people who bring listings in bulk, and a marketplace
+ * that has no place for them is one they will not send a client to. Everything
+ * below is a capability that exists today under the `broker` role: listings
+ * managed for a client, deal rooms, the document vault, the pipeline, and the
+ * commission record.
+ */
+export const ADVISOR_FEATURES: Feature[] = [
+  {
+    title: 'Run your clients’ listings, not just your own',
+    body: 'List on behalf of the owners you represent, control the wording and the price with them, and move a listing through draft, live and under-offer without handing anyone your credentials.',
+  },
+  {
+    title: 'A data room with an access log',
+    body: 'Grant a document to one buyer at a time, replace it with a new version, and see who opened what and when. Revoking access is a click, and the record of who held it stays.',
+  },
+  {
+    title: 'The whole pipeline in one place',
+    body: 'Contacts, tasks and notes across every engagement you are running, with reminders on what is due — so a deal that has gone quiet surfaces before the client asks about it.',
+  },
+  {
+    title: 'Your fee arrangement, written down',
+    body: 'Record the engagement terms and what is owed on a closing, kept alongside the deal rather than in a spreadsheet. Cairn does not move money and does not take a cut of yours.',
+  },
+];
+
+export const ADVISOR_STEPS: Step[] = [
+  {
+    number: 1,
+    title: 'Tell us you advise on deals',
+    body: 'Pick the intermediary role at sign-up. You can hold it alongside a buy-side role if you do both.',
+  },
+  {
+    number: 2,
+    title: 'List for your client',
+    body: 'Build the anonymous teaser and the confidential profile with them. Nothing goes live until they say so.',
+  },
+  {
+    number: 3,
+    title: 'Decide who gets in',
+    body: 'Review who is requesting access and how they would fund it, then issue the confidentiality agreement.',
+  },
+  {
+    number: 4,
+    title: 'Run it to a close',
+    body: 'Deal room, document vault, pipeline and the commission record, with an audit trail behind all of it.',
+  },
+];
+
+/**
  * What the platform is not.
  *
  * On the page, deliberately. A marketplace that handles this much money and
@@ -148,7 +214,7 @@ export const BUYER_STEPS: Step[] = [
 export const LIMITS: Feature[] = [
   {
     title: 'We are not your broker or your advisor',
-    body: `${brand.name} is software. It does not represent either side, does not negotiate, and does not receive a fee for recommending anything. If you want a broker or an advisor, engage one — several use this platform to run their own deals.`,
+    body: `${brand.name} is software. It does not represent either side, does not negotiate, and does not receive a fee for recommending anything. Bankers, advisors and brokers can run a client’s deal here, but that engagement is between you and them — not with us.`,
   },
   {
     title: 'Estimates are estimates',

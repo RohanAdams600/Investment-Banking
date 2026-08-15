@@ -51,7 +51,7 @@ to every surface — page titles, transactional email, generated PDFs, legal foo
 
 ```
 NEXT_PUBLIC_BRAND_NAME="Cairn"
-NEXT_PUBLIC_BRAND_TAGLINE="Mark the way."
+NEXT_PUBLIC_BRAND_TAGLINE="The marketplace for buying and selling businesses"
 BRAND_LEGAL_NAME="Cairn Markets, Inc."   # pending incorporation
 ```
 

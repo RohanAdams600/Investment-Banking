@@ -35,7 +35,13 @@ export type BrandConfig = z.infer<typeof brandSchema>;
  */
 const DEFAULTS = {
   name: 'Cairn',
-  tagline: 'Mark the way.',
+  /*
+   * The tagline is the second half of the browser title and the fallback OG
+   * description, so it has one job: say what this is to somebody who has never
+   * heard of it. "Mark the way." was evocative and told a stranger nothing —
+   * a search result reading "Cairn — Mark the way." could be a hiking app.
+   */
+  tagline: 'The marketplace for buying and selling businesses',
   legalName: 'Cairn Markets, Inc.',
   url: 'http://localhost:3000',
   supportEmail: 'support@example.com',

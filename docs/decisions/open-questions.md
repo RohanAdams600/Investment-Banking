@@ -7,7 +7,7 @@ recommendation — but the call belongs to the founder.
 
 ## 1. Company name — RESOLVED
 
-**Decision: Cairn.** Tagline "Mark the way." Working legal entity name
+**Decision: Cairn.** Tagline "The marketplace for buying and selling businesses." Working legal entity name
 "Cairn Markets, Inc." pending incorporation.
 
 Wired into `.env.example` and the defaults in `packages/core/src/brand`. Nothing else in

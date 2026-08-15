@@ -64,9 +64,9 @@ export const ROLE_OPTIONS: RoleOption[] = [
   },
   {
     role: 'broker',
-    label: 'I represent sellers as an intermediary',
+    label: 'I advise clients on buying or selling',
     description:
-      'Manage listings for clients, run deal rooms, and configure commission arrangements.',
+      'Investment bankers, M&A advisors and business brokers. Manage listings for clients, run deal rooms, and configure commission arrangements.',
     side: 'advise',
   },
 ];

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADVISOR_FEATURES,
+  ADVISOR_STEPS,
   BUYER_FEATURES,
   BUYER_STEPS,
   HERO,
   LIMITS,
   SELLER_FEATURES,
   SELLER_STEPS,
+  SITE_DESCRIPTION,
 } from './content';
 
 /**
@@ -23,12 +26,16 @@ import {
  */
 
 const ALL_TEXT = [
+  SITE_DESCRIPTION,
   HERO.headline,
   HERO.subhead,
   HERO.primaryCta,
   HERO.secondaryCta,
-  ...[...SELLER_FEATURES, ...BUYER_FEATURES, ...LIMITS].flatMap((f) => [f.title, f.body]),
-  ...[...SELLER_STEPS, ...BUYER_STEPS].flatMap((s) => [s.title, s.body]),
+  ...[...SELLER_FEATURES, ...BUYER_FEATURES, ...ADVISOR_FEATURES, ...LIMITS].flatMap((f) => [
+    f.title,
+    f.body,
+  ]),
+  ...[...SELLER_STEPS, ...BUYER_STEPS, ...ADVISOR_STEPS].flatMap((s) => [s.title, s.body]),
 ];
 
 describe('marketing copy', () => {
@@ -86,23 +93,64 @@ describe('marketing copy', () => {
     expect(`${HERO.headline} ${HERO.subhead}`.toLowerCase()).toContain('anonymous');
   });
 
+  it('says it is a marketplace before it says anything else', () => {
+    // The product is a place to buy and sell companies. It was previously
+    // introduced by its valuation tool, which is the free thing at the front
+    // door rather than the thing being sold, and a visitor who reads the
+    // headline should not come away thinking they found a calculator.
+    expect(HERO.headline.toLowerCase()).toMatch(/marketplace/);
+    expect(HERO.headline.toLowerCase()).toMatch(/buy/);
+    expect(HERO.headline.toLowerCase()).toMatch(/sell/);
+
+    // And the first button goes to the market, not the calculator.
+    expect(HERO.primaryHref).toBe('/listings');
+  });
+
+  it('names the professionals it is built for', () => {
+    // "Investment bankers can use it too" is not a positioning statement unless
+    // the words appear somewhere a banker will read them.
+    const advisors = ADVISOR_FEATURES.map((f) => `${f.title} ${f.body}`).join(' ');
+    expect(`${SITE_DESCRIPTION} ${HERO.subhead} ${advisors}`.toLowerCase()).toMatch(
+      /investment banker/,
+    );
+    expect(`${SITE_DESCRIPTION} ${HERO.subhead}`.toLowerCase()).toMatch(/broker/);
+  });
+
+  it('describes itself usefully to somebody who has never heard of it', () => {
+    // This string is the grey line under a search result, read with no context
+    // at all. If it does not say what the product is, nothing else gets read.
+    expect(SITE_DESCRIPTION.toLowerCase()).toMatch(/marketplace/);
+    expect(SITE_DESCRIPTION.split(' ').length).toBeGreaterThan(20);
+  });
+
   it('has substantive body copy everywhere', () => {
     // A heading with a one-line stub under it reads as unfinished, and this is
     // the page that decides whether somebody signs up.
-    for (const item of [...SELLER_FEATURES, ...BUYER_FEATURES, ...LIMITS]) {
+    for (const item of [...SELLER_FEATURES, ...BUYER_FEATURES, ...ADVISOR_FEATURES, ...LIMITS]) {
       expect(item.body.split(' ').length, item.title).toBeGreaterThan(15);
     }
   });
 
-  it('numbers the steps in order on both sides', () => {
+  it('numbers the steps in order on every side', () => {
     expect(SELLER_STEPS.map((s) => s.number)).toEqual([1, 2, 3, 4]);
     expect(BUYER_STEPS.map((s) => s.number)).toEqual([1, 2, 3, 4]);
+    expect(ADVISOR_STEPS.map((s) => s.number)).toEqual([1, 2, 3, 4]);
   });
 
-  it('gives both sides equal weight', () => {
-    // A marketplace that reads as built for one side does not get the other,
-    // and this platform is useless without both.
+  it('gives all three sides equal weight', () => {
+    // A marketplace that reads as built for one side does not get the others.
+    // Sellers and buyers are the trade; advisors bring listings in bulk and
+    // will not send a client somewhere that treats them as an afterthought.
     expect(SELLER_FEATURES.length).toBe(BUYER_FEATURES.length);
+    expect(ADVISOR_FEATURES.length).toBe(BUYER_FEATURES.length);
     expect(SELLER_STEPS.length).toBe(BUYER_STEPS.length);
+    expect(ADVISOR_STEPS.length).toBe(BUYER_STEPS.length);
+  });
+
+  it('does not promise advisors a regulatory status', () => {
+    // A platform cannot license anyone, and copy aimed at intermediaries is
+    // exactly where that would slip in.
+    const advisors = ADVISOR_FEATURES.map((f) => `${f.title} ${f.body}`).join(' ');
+    expect(advisors).not.toMatch(/licen[cs]ed|registered broker|finra|series \d/i);
   });
 });
