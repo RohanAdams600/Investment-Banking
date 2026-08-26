@@ -70,6 +70,7 @@ function parseTeaser(formData: FormData) {
   return teaserSchema.safeParse({
     headline: formData.get('headline') ?? '',
     summary: formData.get('summary') ?? '',
+    background: formData.get('background') ?? '',
     industry: formData.get('industry') ?? '',
     jurisdictionCode: formData.get('jurisdictionCode') ?? '',
     revenueBandLow: formData.get('revenueBandLow') ?? '',
@@ -93,6 +94,7 @@ function teaserColumns(input: z.infer<typeof teaserSchema>) {
   return {
     headline: input.headline,
     summary: input.summary,
+    background: input.background,
     industry: input.industry,
     jurisdiction_code: input.jurisdictionCode,
     revenue_band_low_cents: input.revenueBandLow,
@@ -220,6 +222,8 @@ export async function saveFullProfile(
     competitivePosition: formData.get('competitivePosition') ?? '',
     growthOpportunities: formData.get('growthOpportunities') ?? '',
     knownRisks: formData.get('knownRisks') ?? '',
+    ownershipHistory: formData.get('ownershipHistory') ?? '',
+    priorTransactions: formData.get('priorTransactions') ?? '',
   });
 
   if (!parsed.success) {
@@ -248,6 +252,8 @@ export async function saveFullProfile(
       competitive_position: input.competitivePosition,
       growth_opportunities: input.growthOpportunities,
       known_risks: input.knownRisks,
+      ownership_history: input.ownershipHistory,
+      prior_transactions: input.priorTransactions,
     },
     { onConflict: 'listing_id' },
   );

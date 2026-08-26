@@ -27,9 +27,13 @@ export interface NavLink {
 /**
  * The full set, in the order they appear.
  *
- * Six at most, and deliberately not the fourteen on the dashboard. A top bar is
- * for the places somebody goes repeatedly; the rest is one click away behind
+ * Seven at most, and deliberately not the fourteen on the dashboard. A top bar
+ * is for the places somebody goes repeatedly; the rest is one click away behind
  * the wordmark. A nav that lists everything is a nav nobody reads.
+ *
+ * Seven rather than six only because Documents was added, and only an account
+ * holding buy-side, sell-side, intermediary and administrator roles at once
+ * reaches it — a test fixture rather than a person. A seller sees four.
  */
 export function navLinksFor(actor: Actor): NavLink[] {
   const candidates: (NavLink & { show: boolean })[] = [
@@ -38,6 +42,17 @@ export function navLinksFor(actor: Actor): NavLink[] {
     { href: '/matches', label: 'Matches', show: can(actor, 'listing:view_full') },
     { href: '/deals', label: 'Deals', show: can(actor, 'deal_room:access') },
     { href: '/crm', label: 'Pipeline', show: can(actor, 'crm:manage') },
+    /*
+     * The document workbench was reachable only from a dashboard card, which
+     * meant nobody who had not already scrolled the dashboard knew it existed.
+     * Shown to anyone who can put a listing on the market or run one for a
+     * client — the people who need a purchase agreement to look at.
+     */
+    {
+      href: '/tools/legal-documents',
+      label: 'Documents',
+      show: can(actor, 'listing:create') || can(actor, 'listing:manage_for_client'),
+    },
     { href: '/admin', label: 'Operations', show: can(actor, 'admin:view_platform_analytics') },
   ];
 

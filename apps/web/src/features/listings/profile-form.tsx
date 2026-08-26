@@ -135,6 +135,20 @@ export function ProfileForm({
           </div>
 
           <Textarea
+            label="Ownership history"
+            name="ownershipHistory"
+            maxLength={4000}
+            defaultValue={profile?.ownershipHistory ?? ''}
+            hint="Founders, dates, ownership changes — the version that names the business. Only a buyer who has signed your NDA sees this."
+          />
+          <Textarea
+            label="Prior sale attempts"
+            name="priorTransactions"
+            maxLength={2000}
+            defaultValue={profile?.priorTransactions ?? ''}
+            hint="Any process that did not close, and why. A buyer asks this in week six; hearing it in week one costs you far less."
+          />
+          <Textarea
             label="Key customers"
             name="keyCustomers"
             maxLength={4000}

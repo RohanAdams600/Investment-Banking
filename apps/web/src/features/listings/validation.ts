@@ -70,6 +70,12 @@ export const teaserSchema = z
       .min(10, 'Give the headline at least 10 characters.')
       .max(200, 'Keep the headline under 200 characters.'),
     summary: optionalText(4000),
+    /*
+     * The anonymised history. Capped well below `summary` on purpose: the
+     * longer a seller writes about how the business was built, the more likely
+     * a detail slips in that names it.
+     */
+    background: optionalText(2000),
     industry: z.enum(INDUSTRY_KEYS as [string, ...string[]], {
       errorMap: () => ({ message: 'Choose an industry.' }),
     }),
@@ -131,6 +137,8 @@ export const fullProfileSchema = z.object({
   competitivePosition: optionalText(4000),
   growthOpportunities: optionalText(4000),
   knownRisks: optionalText(4000),
+  ownershipHistory: optionalText(4000),
+  priorTransactions: optionalText(2000),
 });
 
 export const financialYearSchema = z.object({

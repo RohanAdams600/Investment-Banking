@@ -248,6 +248,42 @@ describe.skipIf(!hasDatabase)('listings', () => {
       await setNda(listing, buyer, 'signed', null);
       expect(await detailsVisibleTo(buyer, listing)).toBe(1);
     });
+
+    it('keeps the identifying history behind the same gate', async () => {
+      /*
+       * The business history added in 0030 is split across both tables: an
+       * anonymised `listings.background` on the teaser, and the version that
+       * names founders and dates in `listing_details`. A narrative field is the
+       * easiest thing in this schema to put on the wrong side — nothing about
+       * its type says which half it belongs to — so the split is asserted
+       * rather than trusted to the column it was declared in.
+       */
+      await db.query(
+        `update public.listing_details
+            set ownership_history = 'Founded 1998 by the current owner''s father.',
+                prior_transactions = 'An LOI in 2023 that did not close.'
+          where listing_id = $1`,
+        [listing],
+      );
+      // As the seller: a live listing's copy may only be changed by whoever
+      // controls it, which the moderation guard in 0016 enforces on every
+      // column at once. A superuser with no session is not that person.
+      await actingAs(db, seller, `update public.listings set background = $2 where id = $1`, [
+        listing,
+        'Second-generation ownership, mostly commercial contracts since 2015.',
+      ]);
+
+      const teaser = await actingAs(
+        db,
+        buyer,
+        `select background from public.listings where id = $1`,
+        [listing],
+      );
+      expect(teaser.rows[0]?.background).toContain('Second-generation');
+
+      // No NDA: the anonymised half is readable, the identifying half is not.
+      expect(await detailsVisibleTo(buyer, listing)).toBe(0);
+    });
   });
 
   describe("one buyer's NDA does not open another buyer's door", () => {

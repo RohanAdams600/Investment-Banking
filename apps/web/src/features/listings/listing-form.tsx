@@ -120,6 +120,16 @@ export function ListingForm({
             hint="What a buyer needs to decide whether to ask for more. Still anonymous."
           />
 
+          <Textarea
+            label="How the business got here"
+            name="background"
+            maxLength={2000}
+            rows={5}
+            defaultValue={listing?.background ?? ''}
+            placeholder="Second-generation ownership. Grew from residential callouts to commercial service contracts after 2015, which is now most of the revenue. Three technicians have been here over a decade."
+            hint="The history a buyer is really choosing on — two businesses can earn the same and be nothing alike. Keep it anonymous: founding dates, family names and a distinctive first contract identify a business as surely as its name does. The identifying version goes in the confidential profile."
+          />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
               label="Industry"

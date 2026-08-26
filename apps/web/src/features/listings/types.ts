@@ -27,6 +27,12 @@ export interface ListingTeaser {
   status: ListingStatus;
   headline: string;
   summary: string | null;
+  /**
+   * How the business got here, written so it does not identify which business
+   * it is. Distinct from `summary`, which is the pitch. A buyer choosing
+   * between two firms with identical earnings is choosing on this.
+   */
+  background: string | null;
   industry: string;
   jurisdictionCode: string;
   jurisdictionName: string | null;
@@ -64,6 +70,10 @@ export interface ListingFullProfile {
   competitivePosition: string | null;
   growthOpportunities: string | null;
   knownRisks: string | null;
+  /** Founders, ownership changes, prior sale processes. */
+  ownershipHistory: string | null;
+  /** Sale attempts that did not close, and why. */
+  priorTransactions: string | null;
   financials: ListingFinancialYear[];
 }
 

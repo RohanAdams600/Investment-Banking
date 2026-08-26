@@ -108,6 +108,8 @@ export function FullProfile({ profile }: { profile: ListingFullProfile }) {
         </Card>
       ) : null}
 
+      <Narrative title="Ownership history" body={profile.ownershipHistory} />
+      <Narrative title="Prior sale attempts" body={profile.priorTransactions} />
       <Narrative title="Key customers" body={profile.keyCustomers} />
       <Narrative title="Competitive position" body={profile.competitivePosition} />
       <Narrative title="Growth opportunities" body={profile.growthOpportunities} />

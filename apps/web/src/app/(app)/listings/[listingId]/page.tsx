@@ -100,6 +100,15 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
             <p className="text-text-secondary whitespace-pre-wrap text-sm">{teaser.summary}</p>
           ) : null}
 
+          {teaser.background ? (
+            <div className="border-border-subtle space-y-1 border-l-2 pl-4">
+              <h3 className="text-text-muted text-xs font-medium uppercase tracking-wide">
+                How the business got here
+              </h3>
+              <p className="text-text-secondary whitespace-pre-wrap text-sm">{teaser.background}</p>
+            </div>
+          ) : null}
+
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
             <Row label="Revenue" value={formatBand(teaser.revenueBand)} numeric />
             <Row label="Earnings" value={formatBand(teaser.earningsBand)} numeric />
