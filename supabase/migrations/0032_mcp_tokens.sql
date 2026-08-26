@@ -213,7 +213,7 @@ grant select, insert, update, delete on public.mcp_tokens to authenticated;
 -- so the secret never travels to the database, never appears in a query log, and
 -- never sits in pg_stat_statements.
 
-create or replace function app.resolve_mcp_token(digest text)
+create or replace function public.resolve_mcp_token(digest text)
 returns table (token_id uuid, owner uuid, scopes app.mcp_scope[])
 language sql
 volatile
@@ -228,7 +228,18 @@ as $$
   returning id, user_id, scopes;
 $$;
 
-revoke all on function app.resolve_mcp_token(text) from public, anon, authenticated;
+/*
+ * In `public`, not `app`, and that is a protocol fact rather than a preference:
+ * PostgREST publishes only the exposed schemas, so a function in `app` is
+ * unreachable through `.rpc()` — which is how the route calls it. Every other
+ * RPC in this codebase lives in `public` for the same reason.
+ *
+ * Being in `public` is not being reachable. EXECUTE is revoked from everyone
+ * except the service role, so the only caller is a connection that already has
+ * full control of the database. A schema test asserts no `public` function is
+ * executable by `anon`, and this is one of the rows it checks.
+ */
+revoke all on function public.resolve_mcp_token(text) from public, anon, authenticated;
 
-comment on function app.resolve_mcp_token(text) is
+comment on function public.resolve_mcp_token(text) is
   'Service-role only. Takes a SHA-256 digest, returns the owner and scopes of a live token and stamps last_used_at. Returns no rows for a revoked, expired or unknown token.';

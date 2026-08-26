@@ -9,6 +9,13 @@ export default defineConfig({
       // they exercise the same files the app compiles, not a stale build.
       '@ib/core': resolve(__dirname, 'packages/core/src/index.ts'),
       '@ib/ui': resolve(__dirname, 'packages/ui/src/index.ts'),
+      /*
+       * `server-only` throws on import outside a React Server Component, which
+       * is the point of it — but it also makes a pure function in a server
+       * module untestable. Aliased to an empty module here so the guard stays
+       * real in the build and does not block a unit test of the logic beside it.
+       */
+      'server-only': resolve(__dirname, 'supabase/tests/server-only-stub.ts'),
     },
   },
   esbuild: {

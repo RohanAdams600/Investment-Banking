@@ -280,6 +280,11 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          */
         mcp_tokens: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
 
+        // What was emailed, and whether it arrived. SELECT only: it is a record
+        // of what the platform did, not something a client asserts. Written
+        // with the service role by the sender, exactly as notifications are.
+        email_deliveries: ['SELECT'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:
@@ -393,6 +398,24 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       //
       // `revoke ... from public` does NOT cover this: PUBLIC is the implicit
       // everyone-role, and the grant to anon is a separate explicit one.
+      /*
+       * Exactly one exception, and it is a legal requirement rather than a
+       * convenience.
+       *
+       * CAN-SPAM requires a working opt-out in every commercial message, and one
+       * that demands a password first is not working — the person who most wants
+       * out is the one who no longer remembers having an account. So the
+       * unsubscribe function is reachable without a session.
+       *
+       * It is safe to be: it takes an opaque per-user token, touches one row,
+       * returns the same answer for an unknown token as for a successful opt-out
+       * so it cannot be used to confirm a guess, and reads nothing back. Every
+       * one of those properties is asserted in email-delivery.test.ts.
+       *
+       * A second name appearing here still fails, which is the point.
+       */
+      const ANON_EXECUTABLE_BY_DESIGN = ['unsubscribe_by_token'];
+
       const { rows } = await db.query<{ proname: string }>(
         `select p.proname
            from pg_proc p
@@ -401,7 +424,21 @@ describe.skipIf(!hasDatabase)('row level security', () => {
             and has_function_privilege('anon', p.oid, 'EXECUTE')`,
       );
 
-      expect(rows.map((r) => r.proname)).toEqual([]);
+      const unexpected = rows
+        .map((r) => r.proname)
+        .filter((name) => !ANON_EXECUTABLE_BY_DESIGN.includes(name));
+
+      expect(
+        unexpected,
+        `A public function is reachable by an unauthenticated caller. If that is deliberate, add it to ANON_EXECUTABLE_BY_DESIGN with the reason:\n${unexpected.join('\n')}`,
+      ).toEqual([]);
+
+      // And the reverse: an exception that no longer exists means the list is
+      // stale and quietly excusing nothing.
+      const stale = ANON_EXECUTABLE_BY_DESIGN.filter(
+        (name) => !rows.some((r) => r.proname === name),
+      );
+      expect(stale, `Stale exception:\n${stale.join('\n')}`).toEqual([]);
     });
 
     it('keeps anon out of every app helper that is not a trigger', async () => {

@@ -52,15 +52,19 @@ export async function notify(options: NotifyOptions): Promise<void> {
 
   const service = createServiceRoleClient();
 
-  const { error } = await service.from('notifications').insert({
-    recipient_id: options.recipientId,
-    kind: options.kind,
-    title: copy.title,
-    body: copy.body,
-    href: notificationHref(options.kind, options.entityId ?? null),
-    entity_type: options.entityType ?? null,
-    entity_id: options.entityId ?? null,
-  });
+  const { data: inserted, error } = await service
+    .from('notifications')
+    .insert({
+      recipient_id: options.recipientId,
+      kind: options.kind,
+      title: copy.title,
+      body: copy.body,
+      href: notificationHref(options.kind, options.entityId ?? null),
+      entity_type: options.entityType ?? null,
+      entity_id: options.entityId ?? null,
+    })
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     console.error('[notify] failed to record notification', {
@@ -68,6 +72,29 @@ export async function notify(options: NotifyOptions): Promise<void> {
       error: error.message,
     });
   }
+
+  /*
+   * The email, after the row.
+   *
+   * Deliberately awaited rather than fired and forgotten: a serverless function
+   * that returns before its own promises settle simply loses them, and a
+   * notification nobody receives is the failure this whole change exists to fix.
+   * `deliverEmail` swallows everything and is bounded by an 8s transport
+   * timeout, so the cost to the request is capped and the benefit is that it
+   * actually happens.
+   *
+   * Imported here rather than at the top because deliver.ts imports wantsEmail
+   * from this module, and the cycle is only a problem if it is resolved eagerly.
+   */
+  const { deliverEmail } = await import('./deliver');
+  await deliverEmail({
+    recipientId: options.recipientId,
+    kind: options.kind,
+    title: copy.title,
+    body: copy.body,
+    href: notificationHref(options.kind, options.entityId ?? null),
+    notificationId: inserted?.id ?? null,
+  });
 }
 
 /**
@@ -108,6 +135,19 @@ export async function notifyMany(
       error: error.message,
     });
   }
+
+  /*
+   * One email each. Sequential rather than parallel: a broadcast to forty people
+   * firing forty simultaneous requests is how a provider rate-limits an account,
+   * and the notification row — the part that matters — is already written.
+   */
+  const { deliverEmails } = await import('./deliver');
+  await deliverEmails(unique, {
+    kind: options.kind,
+    title: copy.title,
+    body: copy.body,
+    href,
+  });
 }
 
 /**

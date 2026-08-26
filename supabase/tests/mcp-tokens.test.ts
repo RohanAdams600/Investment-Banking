@@ -213,7 +213,7 @@ describe.skipIf(!hasDatabase)('mcp tokens', () => {
     // `scopes` comes back as a Postgres array literal over the wire for a
     // user-defined enum array, so it is unnested rather than parsed here.
     const { rows } = await db.query<{ owner: string; scope: string }>(
-      `select owner, unnest(scopes)::text as scope from app.resolve_mcp_token($1)`,
+      `select owner, unnest(scopes)::text as scope from public.resolve_mcp_token($1)`,
       [await digestOf(secret)],
     );
     expect(rows[0]!.owner).toBe(owner);
@@ -223,7 +223,7 @@ describe.skipIf(!hasDatabase)('mcp tokens', () => {
   it('stamps last_used_at when it resolves', async () => {
     const secret = 'ash_mcp_stamped';
     await issue(owner, 'Manus', { secret });
-    await db.query(`select * from app.resolve_mcp_token($1)`, [await digestOf(secret)]);
+    await db.query(`select * from public.resolve_mcp_token($1)`, [await digestOf(secret)]);
 
     const { rows } = await db.query<{ last_used_at: Date | null }>(
       `select last_used_at from public.mcp_tokens`,
@@ -236,7 +236,7 @@ describe.skipIf(!hasDatabase)('mcp tokens', () => {
     await issue(owner, 'Manus', { secret });
     await actingAs(db, owner, `update public.mcp_tokens set revoked_at = now()`);
 
-    const { rowCount } = await db.query(`select * from app.resolve_mcp_token($1)`, [
+    const { rowCount } = await db.query(`select * from public.resolve_mcp_token($1)`, [
       await digestOf(secret),
     ]);
     expect(rowCount).toBe(0);
@@ -259,14 +259,14 @@ describe.skipIf(!hasDatabase)('mcp tokens', () => {
       [owner, secret],
     );
 
-    const { rowCount } = await db.query(`select * from app.resolve_mcp_token($1)`, [
+    const { rowCount } = await db.query(`select * from public.resolve_mcp_token($1)`, [
       await digestOf(secret),
     ]);
     expect(rowCount).toBe(0);
   });
 
   it('resolves nothing for a digest nobody issued', async () => {
-    const { rowCount } = await db.query(`select * from app.resolve_mcp_token($1)`, [
+    const { rowCount } = await db.query(`select * from public.resolve_mcp_token($1)`, [
       'f'.repeat(64),
     ]);
     expect(rowCount).toBe(0);
@@ -276,10 +276,10 @@ describe.skipIf(!hasDatabase)('mcp tokens', () => {
     // It resolves credentials; reaching it from a session would be a way to
     // confirm a guessed digest.
     await expectDenied(() =>
-      actingAs(db, owner, `select * from app.resolve_mcp_token(repeat('a', 64))`),
+      actingAs(db, owner, `select * from public.resolve_mcp_token(repeat('a', 64))`),
     );
     await expectDenied(() =>
-      actingAsAnon(db, `select * from app.resolve_mcp_token(repeat('a', 64))`),
+      actingAsAnon(db, `select * from public.resolve_mcp_token(repeat('a', 64))`),
     );
   });
 });

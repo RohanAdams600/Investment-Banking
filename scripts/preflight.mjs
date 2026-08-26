@@ -126,6 +126,19 @@ const checks = [
     fix: 'NEXT_PUBLIC_ALLOW_INDEXING is not "true", so robots.txt blocks everything. Correct for staging; wrong for the real site.',
   },
   {
+    level: LAUNCH,
+    name: 'Email delivery',
+    /*
+     * Launch-blocking rather than optional, unlike the other integrations.
+     * Without it a buyer requests access to a listing and the seller finds out
+     * the next time they happen to sign in — which for a business owner who logs
+     * in twice a month is the deal dying quietly. Every flow in this product
+     * assumes somebody learns that something happened.
+     */
+    ok: () => isSet('RESEND_API_KEY'),
+    fix: 'No RESEND_API_KEY, so nothing is emailed. Notifications appear in-app only, and a seller will not learn about an access request until they next sign in.',
+  },
+  {
     level: OPTIONAL,
     name: 'MCP server for external AI agents',
     /*
