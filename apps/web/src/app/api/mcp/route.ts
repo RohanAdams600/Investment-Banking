@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { brand } from '@ib/core';
+
 import { authenticate, bearerFrom, isMcpConfigured, type McpSession } from '@/lib/mcp/auth';
 import { findTool, toolsFor } from '@/lib/mcp/tools';
 
@@ -104,9 +106,8 @@ export async function POST(request: Request): Promise<Response> {
       return rpcResult(id, {
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
-        serverInfo: { name: 'ashlar', version: '1.0.0' },
-        instructions:
-          'Ashlar is a marketplace for buying and selling businesses. You may read what this token’s owner can read and write drafts for them to review. You cannot send messages, issue confidentiality agreements, or publish anything — no such tool exists here, and a person must click send on anything that reaches another human being. Valuations and match scores are estimates for discussion, not advice; carry their disclaimers into anything you write.',
+        serverInfo: { name: brand.name.toLowerCase(), version: '1.0.0' },
+        instructions: `${brand.name} is a marketplace for buying and selling businesses. You may read what this token’s owner can read and write drafts for them to review. You cannot send messages, issue confidentiality agreements, or publish anything — no such tool exists here, and a person must click send on anything that reaches another human being. Valuations and match scores are estimates for discussion, not advice; carry their disclaimers into anything you write.`,
       });
 
     // A notification: no id, no response expected.
@@ -252,7 +253,7 @@ function jsonSchemaFor(name: string): Record<string, unknown> {
 export function GET(): Response {
   return NextResponse.json(
     {
-      name: 'ashlar',
+      name: brand.name.toLowerCase(),
       protocolVersion: PROTOCOL_VERSION,
       transport: 'streamable-http',
       configured: isMcpConfigured(),
