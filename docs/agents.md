@@ -207,3 +207,81 @@ A `draft_outreach` run cannot report `succeeded`; it ends at `needs_approval`. T
 `outreach_drafts` trigger from 0017 already refuses to mark anything sent without a
 human approver, so this is the second mechanism — it refuses the _claim_ that no send
 was needed. Two, because this is the rule that gets somebody sued.
+
+---
+
+## The MCP server
+
+`/api/mcp` lets an external AI agent — Manus, Claude Desktop, anything speaking
+Model Context Protocol — read this platform on behalf of one user.
+
+### The rule it is built around
+
+**An agent may read anything its owner could read and may write a draft. It may
+not send, publish, issue, or transmit anything to another person.**
+
+That is the platform's standing constraint, and connecting an external model is
+exactly the moment it would be lost by accident — not maliciously, but because a
+plausible next tool is `send_message` and nothing would stop somebody adding it
+on a Tuesday. So it is enforced in three independent places:
+
+| Where                  | What it does                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `app.mcp_scope` (0032) | An enum with no value meaning "send"                                                    |
+| `lib/mcp/tools.ts`     | A fixed allowlist; there is no runtime extension point                                  |
+| Row Level Security     | Every query runs as the token's owner, so a tool cannot reach a row its owner could not |
+
+Any one of those failing leaves the other two standing. `lib/mcp/tools.test.ts`
+asserts the middle one, and was verified to fail — three separate tests — when a
+`send_message` tool was temporarily added.
+
+### The tools
+
+| Tool              | Scope            | Notes                                                                                             |
+| ----------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `search_listings` | `read:listings`  | Anonymised teasers only                                                                           |
+| `get_listing`     | `read:listings`  | Confidential half returned only where an NDA is already signed — the policy decides, not the tool |
+| `list_matches`    | `read:matches`   | Ranked by fit; paid placement does not enter this ordering                                        |
+| `list_tasks`      | `read:pipeline`  | Never message bodies                                                                              |
+| `run_valuation`   | `run:valuation`  | Returns the itemised factors and the disclaimer in the payload                                    |
+| `draft_outreach`  | `draft:outreach` | Writes to the approval queue, stamped `generated_by: mcp-agent`. Sends nothing                    |
+
+Estimates carry their disclaimer in the response rather than in an interface,
+because there is no interface — an agent pastes this into a document read by
+somebody who never saw this platform, and a number whose assumptions travelled
+separately is a number that gets quoted as a price.
+
+### How a session is established
+
+The tempting shortcut is to resolve the token and then query with the service
+role, filtering by `user_id` in TypeScript. That throws away the database's
+independent check on precisely the queries where a second opinion is worth most.
+
+Instead: the bearer token is hashed, `app.resolve_mcp_token` returns its owner,
+and a **five-minute JWT** is signed for that user. Every query runs under it, so
+the policies never learn the caller was a robot.
+
+**This needs `SUPABASE_JWT_SECRET`** (Supabase → Settings → API → JWT Settings).
+Without it `/api/mcp` returns 503 to every caller rather than falling back to
+something that works.
+
+### Tokens
+
+`public.mcp_tokens` holds a SHA-256 digest, never the token. Plaintext is shown
+once at creation. Expiry is mandatory — a credential handed to a third-party
+agent and never reviewed is the one still live when that service is breached.
+
+A token may be **revoked or deleted, never widened**: mutating scopes in place is
+how a read-only agent quietly becomes something else, and it destroys the record
+of what the token was permitted to do while it was in use.
+
+No administrator branch exists on this table, deliberately. An operator has no
+business enumerating which agents a user connected.
+
+### Not yet verified live
+
+The authenticated path has **not** been exercised against the real project — the
+Supabase project was paused when this was written, so the JWT-signing half is
+tested only by construction. Before relying on it: set `SUPABASE_JWT_SECRET`,
+issue a token, then confirm `tools/list` returns the scoped set and that
+`get_listing` withholds the confidential half without an NDA.

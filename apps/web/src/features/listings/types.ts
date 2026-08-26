@@ -50,6 +50,14 @@ export interface ListingTeaser {
   createdAt: string;
   /** Whether the caller has saved this to their watchlist. */
   saved: boolean;
+  /**
+   * Whether the seller paid for this position.
+   *
+   * On the teaser type rather than fetched separately, because a label that can
+   * be lost by forgetting a join is not a disclosure. Every surface that renders
+   * a teaser therefore has the fact in hand and a test asserts it is shown.
+   */
+  promoted: boolean;
 }
 
 /** The confidential half. Only ever populated when the gate opened. */

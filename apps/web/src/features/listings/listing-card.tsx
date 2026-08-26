@@ -27,6 +27,20 @@ export function ListingCard({
       <CardContent className="space-y-3 py-4">
         <div className="flex items-start justify-between gap-3">
           <Link href={`/listings/${listing.id}`} className="min-w-0 flex-1">
+            {/*
+              The paid-placement disclosure.
+
+              Above the headline rather than tucked beside a badge on the right,
+              because it has to be read before the listing is, and rendered from
+              the teaser itself so it cannot be lost by a caller forgetting to
+              pass it. A test asserts a promoted listing cannot render without
+              it — removing the label means deleting a test that says why.
+            */}
+            {listing.promoted ? (
+              <p className="text-accent text-2xs mb-1 font-mono uppercase tracking-[0.14em]">
+                Promoted · paid placement
+              </p>
+            ) : null}
             <h2 className="truncate text-sm font-medium">{listing.headline}</h2>
             <p className="text-text-muted mt-0.5 text-xs">
               {industry?.label ?? listing.industry}

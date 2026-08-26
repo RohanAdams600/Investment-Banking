@@ -54,7 +54,7 @@ const TEASER_COLUMNS = `
   jurisdictions ( name )
 `;
 
-function toTeaser(row: Row, saved = false): ListingTeaser {
+function toTeaser(row: Row, saved = false, promoted = false): ListingTeaser {
   const jurisdiction = Array.isArray(row.jurisdictions) ? row.jurisdictions[0] : row.jurisdictions;
 
   return {
@@ -88,6 +88,7 @@ function toTeaser(row: Row, saved = false): ListingTeaser {
     publishedAt: row.published_at ?? null,
     createdAt: row.created_at,
     saved,
+    promoted,
   };
 }
 
@@ -110,6 +111,16 @@ function toTeaser(row: Row, saved = false): ListingTeaser {
  * into it.
  */
 export const BROWSE_PAGE_SIZE = 100;
+
+/**
+ * Ceiling on how many live promotions are read per browse.
+ *
+ * Generous by two orders of magnitude — a marketplace selling a thousand
+ * concurrent placements has a different product — but present, because
+ * PostgREST caps any unbounded read at 1000 rows and returns a normal 200 while
+ * doing it. An unlabelled paid listing is the failure this guards against.
+ */
+const PROMOTIONS_LIMIT = 500;
 
 export async function browseListings(filters: BrowseFilters = {}): Promise<Capped<ListingTeaser>> {
   const supabase = await createClient();
@@ -137,12 +148,58 @@ export async function browseListings(filters: BrowseFilters = {}): Promise<Cappe
   if (error || !data) return capped<ListingTeaser>([], BROWSE_PAGE_SIZE);
 
   const page = capped(data as Row[], BROWSE_PAGE_SIZE);
-  const saved = await savedListingIds();
+  const [saved, promoted] = await Promise.all([savedListingIds(), activePromotions()]);
 
-  return {
-    ...page,
-    rows: page.rows.map((row) => toTeaser(row, saved.has(row.id))),
-  };
+  /*
+   * Promoted listings sort to the top, and only among themselves by rank —
+   * everything below keeps the recency order the query already established.
+   *
+   * Sorted here rather than in the query because the promotion lives in another
+   * table and PostgREST cannot order by a related aggregate. The set is one page
+   * at most, so the cost is nothing; what matters is that both halves of the
+   * order are visible in one place instead of split between SQL and TypeScript.
+   */
+  const rows = page.rows
+    .map((row) => toTeaser(row, saved.has(row.id), promoted.has(row.id)))
+    .sort((a, b) => {
+      if (a.promoted === b.promoted) return 0;
+      return a.promoted ? -1 : 1;
+    });
+
+  return { ...page, rows };
+}
+
+/**
+ * Listings whose paid placement is live right now.
+ *
+ * Read through the caller's own client, so the policy on `listing_promotions`
+ * decides what comes back rather than this function deciding. A buyer can see
+ * that a live listing is promoted — which is the point, since that is the
+ * disclosure — and can see nothing about a listing they could not already see.
+ */
+async function activePromotions(): Promise<Set<string>> {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('listing_promotions')
+    .select('listing_id')
+    .is('cancelled_at', null)
+    .lte('starts_at', now)
+    .gt('ends_at', now)
+    .limit(PROMOTIONS_LIMIT);
+
+  if (error || !data) return new Set();
+
+  if (data.length === PROMOTIONS_LIMIT) {
+    // Silence here would mean a promoted listing losing its label, which is the
+    // one failure in this file with a regulator attached to it.
+    console.error(
+      `[listings] active promotions hit the ${PROMOTIONS_LIMIT} ceiling; some paid placements may be unlabelled.`,
+    );
+  }
+
+  return new Set((data as Row[]).map((row) => row.listing_id as string));
 }
 
 /** Listings the caller owns or manages, at any status. */

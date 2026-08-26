@@ -127,6 +127,18 @@ const checks = [
   },
   {
     level: OPTIONAL,
+    name: 'MCP server for external AI agents',
+    /*
+     * Optional, not blocking: the marketplace works completely without it. But
+     * the failure is silent from the outside — an agent gets a 503 and its owner
+     * concludes the integration is broken — so it is worth printing rather than
+     * discovering from a support message.
+     */
+    ok: () => isSet('SUPABASE_JWT_SECRET'),
+    fix: 'No SUPABASE_JWT_SECRET, so /api/mcp refuses every agent. Supabase → Settings → API → JWT Settings. Only needed if you are connecting an external AI agent.',
+  },
+  {
+    level: OPTIONAL,
     name: 'AI provider',
     ok: () => isSet('ANTHROPIC_API_KEY') || isSet('OPENAI_API_KEY'),
     fix: 'No ANTHROPIC_API_KEY or OPENAI_API_KEY. Everything still works — matching falls back to its deterministic half and the thesis read is simply absent.',

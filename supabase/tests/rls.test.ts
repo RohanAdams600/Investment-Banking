@@ -170,6 +170,14 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         listing_status_history: ['SELECT'],
         listing_saves: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
 
+        /*
+         * Paid placement. INSERT and UPDATE are granted at the table level and
+         * then narrowed by policy to a platform administrator — a seller with
+         * the privilege still cannot promote themselves. No DELETE: what was
+         * sold and for how much is a record, and cancellation is a column.
+         */
+        listing_promotions: ['INSERT', 'SELECT', 'UPDATE'],
+
         // Matching and outreach. `match_scores` is SELECT only for everyone:
         // scores are written by the matcher with the service role, because
         // scoring reads every buyer's criteria against a listing's confidential
@@ -263,6 +271,14 @@ describe.skipIf(!hasDatabase)('row level security', () => {
 
         // The preferences are entirely the account holder's, so all three.
         notification_preferences: ['INSERT', 'SELECT', 'UPDATE'],
+
+        /*
+         * Credentials for external AI agents. DELETE is granted here and
+         * nowhere else in this file for a reason: a user removing an agent
+         * should be able to leave no digest behind at all, and a soft-deleted
+         * credential is a credential somebody has to reason about later.
+         */
+        mcp_tokens: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
 
         listing_review_queue: ['SELECT'],
 

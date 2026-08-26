@@ -78,6 +78,16 @@ function toTeaser(row: Row, saved: boolean): ListingTeaser {
     publishedAt: row.published_at ?? null,
     createdAt: row.created_at,
     saved,
+    /*
+     * Matches are ranked by fit and nothing else.
+     *
+     * Paid placement moves a listing up `browseListings`; it deliberately does
+     * not touch this ordering, because a buyer who set criteria is being told
+     * "these fit you", and a bought position inside that answer is a different
+     * and much worse claim than a labelled slot at the top of a search page.
+     * False here is a statement about the product, not a missing lookup.
+     */
+    promoted: false,
   };
 }
 
