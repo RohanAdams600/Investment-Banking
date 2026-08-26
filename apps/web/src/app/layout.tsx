@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
+import { IBM_Plex_Mono, Inter, Source_Serif_4 } from 'next/font/google';
 import { brand, pageTitle } from '@ib/core';
 
 import { SiteFooter } from '@/features/marketing/site-footer';
@@ -12,8 +12,24 @@ import './globals.css';
  * (`packages/ui/src/tokens/typography.ts`). Swapping a face is a change in this
  * file only — no component references a font name directly.
  */
-const display = Space_Grotesk({
+/*
+ * The display face carries the product's seriousness, and it was wrong.
+ *
+ * `packages/ui/src/tokens/typography.ts` declares display as a serif — "marketing
+ * hero and section headers. Gravitas." — and the app supplied Space Grotesk, a
+ * geometric sans that reads as a developer-tools startup. The token's own
+ * fallback stack (`ui-serif, Georgia, serif`) had been disagreeing with the
+ * loaded font since the first commit.
+ *
+ * Source Serif 4 was drawn for sustained professional reading and holds up at
+ * both 56px in a hero and 20px in a card title. Deliberately not one of the
+ * high-contrast display serifs that signal "luxury brand" — this is a document,
+ * not a perfume advertisement.
+ */
+const display = Source_Serif_4({
   subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  style: ['normal', 'italic'],
   variable: '--font-display',
   display: 'swap',
 });
