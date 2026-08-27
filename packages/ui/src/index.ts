@@ -22,3 +22,16 @@ export {
   type AIDisclaimerProps,
   type AIDisclaimerVariant,
 } from './components/ai-disclaimer';
+
+/*
+ * The raw palette, for the rare context that has no stylesheet.
+ *
+ * Components must use semantic roles — `bg-surface`, `text-muted` — which
+ * resolve through CSS variables and are correct in both themes. This export is
+ * for the places where that machinery does not exist: `ImageResponse` renders
+ * social cards in an isolated Satori context with no CSS at all, so a token
+ * there resolves to nothing and produces a black rectangle.
+ *
+ * Reaching for this inside a component is a mistake; it hard-codes one theme.
+ */
+export { palette, type Palette, type PaletteFamily } from './tokens/primitives';
