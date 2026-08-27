@@ -91,26 +91,26 @@ export default function HomePage() {
         is deliberately the single inversion on the page — used twice it would
         stop meaning anything.
       */}
-      <section className="bg-ink-900 text-gray-50">
+      <section className="bg-slate-900 text-stone-50">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[1fr_minmax(0,560px)] lg:items-center lg:gap-16 lg:py-20">
           <div className="space-y-4">
-            <p className="text-gold-400 font-mono text-xs uppercase tracking-[0.2em]">
+            <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.2em]">
               How confidentiality works
             </p>
-            <h2 className="max-w-lg text-2xl font-semibold text-gray-50 sm:text-3xl">
+            <h2 className="max-w-lg text-2xl font-semibold text-stone-50 sm:text-3xl">
               Two records, and buyers only ever reach one.
             </h2>
-            <p className="max-w-lg text-sm leading-relaxed text-gray-300">
+            <p className="max-w-lg text-sm leading-relaxed text-stone-300">
               Everything that identifies your business — the name, the address, the exact figures,
               who your customers are — lives in a separate record from the listing. Reaching it
               requires a confidentiality agreement you issued, that has not expired and you have not
               revoked.
             </p>
-            <p className="max-w-lg text-sm leading-relaxed text-gray-300">
+            <p className="max-w-lg text-sm leading-relaxed text-stone-300">
               That is a rule the database enforces on every read, not a permission flag in an
               interface, and it is tested on every build.
             </p>
-            <p className="flex items-center gap-2 pt-2 text-xs text-gray-400">
+            <p className="flex items-center gap-2 pt-2 text-xs text-stone-400">
               <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               Illustrative figures.
             </p>

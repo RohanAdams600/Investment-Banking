@@ -27,12 +27,11 @@ const preset = {
     extend: {
       colors: {
         ...semanticColors,
-        // Primitives stay reachable (`bg-gold-500`) for the rare case that needs
+        // Primitives stay reachable (`bg-copper-500`) for the rare case that needs
         // a specific step — charts, illustrations, brand surfaces. Prefer roles.
-        ink: palette.ink,
-        blue: palette.blue,
-        gold: palette.gold,
-        gray: palette.gray,
+        slate: palette.slate,
+        stone: palette.stone,
+        copper: palette.copper,
       },
       fontFamily: fontFamilies,
       fontSize: fontSizes,

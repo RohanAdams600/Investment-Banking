@@ -47,8 +47,35 @@ describe('color roles', () => {
   });
 
   it('anchors the neutral ramp to the specified endpoints', () => {
-    expect(palette.gray[50]).toBe('#F8F9FB');
-    expect(palette.gray[900]).toBe('#0B1220');
+    expect(palette.stone[50]).toBe('#FAF8F4');
+    expect(palette.stone[900]).toBe('#2E2A24');
+  });
+
+  it('keeps the neutral ramp warm', () => {
+    /*
+     * The single change that does most of the work in this palette.
+     *
+     * A cool grey ground is what every financial product uses and what a
+     * template produces; a warm one reads as printed rather than rendered, and
+     * this product is read for long stretches by people comparing numbers.
+     *
+     * "Warm" is checkable: the red channel must exceed the blue channel at every
+     * step. A future edit that quietly cools the ramp back toward blue-grey
+     * fails here rather than being noticed months later as "it looks generic
+     * again".
+     */
+    for (const [step, hex] of Object.entries(palette.stone)) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      expect(r, `stone.${step} (${hex}) should be warm`).toBeGreaterThan(b);
+    }
+  });
+
+  it('has no blue family at all', () => {
+    // Reaching for a blue is how this palette reverts. The primary action is
+    // ink and the accent is copper; neither needs a hue to justify itself.
+    expect(palette).not.toHaveProperty('blue');
+    expect(palette).not.toHaveProperty('gold');
   });
 });
 

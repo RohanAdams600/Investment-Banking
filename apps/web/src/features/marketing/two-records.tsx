@@ -27,20 +27,20 @@ export function TwoRecords() {
           width="216"
           height="192"
           rx="4"
-          className="fill-ink-800 stroke-ink-600"
+          className="fill-slate-800 stroke-slate-600"
           strokeWidth="1"
         />
-        <text x="26" y="62" className="fill-gold-400 font-mono text-[10px] tracking-[0.16em]">
+        <text x="26" y="62" className="fill-copper-400 font-mono text-[10px] tracking-[0.16em]">
           PUBLIC
         </text>
-        <text x="26" y="92" className="font-display fill-gray-50 text-[15px]">
+        <text x="26" y="92" className="font-display fill-stone-50 text-[15px]">
           Established HVAC
         </text>
-        <text x="26" y="112" className="font-display fill-gray-50 text-[15px]">
+        <text x="26" y="112" className="font-display fill-stone-50 text-[15px]">
           contractor
         </text>
 
-        <line x1="26" y1="128" x2="206" y2="128" className="stroke-ink-600" strokeWidth="1" />
+        <line x1="26" y1="128" x2="206" y2="128" className="stroke-slate-600" strokeWidth="1" />
 
         <Field y={144} label="State" value="New York" />
         <Field y={172} label="Revenue" value="$2M – $5M" />
@@ -54,15 +54,15 @@ export function TwoRecords() {
           y1="130"
           x2="264"
           y2="130"
-          className="stroke-ink-500"
+          className="stroke-slate-500"
           strokeWidth="1"
           strokeDasharray="3 4"
         />
-        <circle cx="280" cy="130" r="15" className="fill-gold-500" />
+        <circle cx="280" cy="130" r="15" className="fill-copper-500" />
         {/* A padlock, small enough to read as an icon rather than an illustration. */}
         <path
           d="M274 129 h12 v10 h-12 z M276.5 129 v-4 a3.5 3.5 0 0 1 7 0 v4"
-          className="stroke-ink-900 fill-none"
+          className="fill-none stroke-slate-900"
           strokeWidth="1.6"
           strokeLinecap="round"
         />
@@ -71,7 +71,7 @@ export function TwoRecords() {
           y1="130"
           x2="328"
           y2="130"
-          className="stroke-ink-500"
+          className="stroke-slate-500"
           strokeWidth="1"
           strokeDasharray="3 4"
         />
@@ -79,7 +79,7 @@ export function TwoRecords() {
           x="280"
           y="168"
           textAnchor="middle"
-          className="fill-gray-300 font-mono text-[9px] tracking-[0.14em]"
+          className="fill-stone-300 font-mono text-[9px] tracking-[0.14em]"
         >
           SIGNED NDA
         </text>
@@ -93,20 +93,20 @@ export function TwoRecords() {
           width="216"
           height="192"
           rx="4"
-          className="fill-ink-900 stroke-gold-600"
+          className="stroke-copper-600 fill-slate-900"
           strokeWidth="1"
         />
-        <text x="354" y="62" className="fill-gold-400 font-mono text-[10px] tracking-[0.16em]">
+        <text x="354" y="62" className="fill-copper-400 font-mono text-[10px] tracking-[0.16em]">
           SEALED
         </text>
-        <text x="354" y="92" className="font-display fill-gray-50 text-[15px]">
+        <text x="354" y="92" className="font-display fill-stone-50 text-[15px]">
           Northfield Mechanical
         </text>
-        <text x="354" y="112" className="fill-gray-400 font-mono text-[11px]">
+        <text x="354" y="112" className="fill-stone-400 font-mono text-[11px]">
           Rochester, NY
         </text>
 
-        <line x1="354" y1="128" x2="534" y2="128" className="stroke-ink-600" strokeWidth="1" />
+        <line x1="354" y1="128" x2="534" y2="128" className="stroke-slate-600" strokeWidth="1" />
 
         <Field x={354} y={144} label="Revenue" value="$3,410,000" />
         <Field x={354} y={172} label="Earnings" value="$742,000" />
@@ -139,13 +139,13 @@ function Field({
 }) {
   return (
     <>
-      <text x={x} y={y} className="fill-gray-400 font-mono text-[10px]">
+      <text x={x} y={y} className="fill-stone-400 font-mono text-[10px]">
         {label}
       </text>
       <text
         x={x}
         y={y + 14}
-        className="fill-gray-50 font-mono text-[12px] [font-variant-numeric:tabular-nums]"
+        className="fill-stone-50 font-mono text-[12px] [font-variant-numeric:tabular-nums]"
       >
         {value}
       </text>
