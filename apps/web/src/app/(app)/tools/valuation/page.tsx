@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { asFraction, asNumber, asString, type Answers, type IndustryKey } from '@ib/core';
 
+import { listJurisdictions } from '@/features/listings/queries';
 import { ValuationForm, type ValuationPrefill } from '@/features/valuation/valuation-form';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -88,6 +89,13 @@ export default async function ValuationPage({
   const fromQuestionnaire = params.from === 'questionnaire';
   const hasPrefill = prefill !== null && prefill.revenue !== undefined;
 
+  /*
+   * For the interest capture under the estimate. Empty when Supabase is not
+   * configured, and the form is then not rendered at all — better than a state
+   * dropdown with nothing in it.
+   */
+  const jurisdictions = isSupabaseConfigured() ? await listJurisdictions().catch(() => []) : [];
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <header className="space-y-2">
@@ -103,7 +111,7 @@ export default async function ValuationPage({
         </p>
       </header>
 
-      <ValuationForm prefill={prefill ?? undefined} />
+      <ValuationForm prefill={prefill ?? undefined} interestJurisdictions={jurisdictions} />
 
       {fromQuestionnaire ? (
         <p className="text-text-muted text-sm">

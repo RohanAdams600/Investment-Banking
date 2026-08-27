@@ -23,6 +23,8 @@ import {
   type ValuationResult,
 } from '@ib/core';
 
+import { InterestForm } from '@/features/interest/interest-form';
+
 import { MethodsPanel } from './methods-panel';
 import { saveValuation } from './actions';
 import { emptySaveState, type SaveValuationState } from './types';
@@ -107,7 +109,19 @@ export interface ValuationPrefill {
   ownerDependence?: 'absentee' | 'moderate' | 'critical';
 }
 
-export function ValuationForm({ prefill }: { prefill?: ValuationPrefill } = {}) {
+export function ValuationForm({
+  prefill,
+  /*
+   * Passed in rather than fetched here: this is a client component and the
+   * jurisdiction list is a database read. Absent means the capture is simply not
+   * rendered, which is the right behaviour when the page could not load them —
+   * a form with an empty state dropdown is worse than no form.
+   */
+  interestJurisdictions,
+}: {
+  prefill?: ValuationPrefill;
+  interestJurisdictions?: { code: string; name: string }[];
+} = {}) {
   const [form, setForm] = useState<FormState>(() => ({
     ...EMPTY,
     // Spread rather than assigned field by field, so a new prefill field works
@@ -416,6 +430,25 @@ export function ValuationForm({ prefill }: { prefill?: ValuationPrefill } = {}) 
               Enter revenue and earnings to see an estimated range.
             </CardContent>
           </Card>
+        ) : null}
+
+        {/*
+          Asked after the number, never before it.
+
+          Gating the estimate behind an email is the obvious move and the wrong
+          one: it turns the most useful free thing on the site into a toll gate,
+          and the people most likely to refuse are the owners who have not
+          decided to sell yet — which is precisely who this is for. They have
+          something worth keeping now, so there is something worth asking for.
+        */}
+        {methods && interestJurisdictions ? (
+          <InterestForm
+            side="selling"
+            jurisdictions={interestJurisdictions}
+            source="valuation-result"
+            heading="Keep this, and hear when buyers arrive."
+            blurb="We will send you this estimate and tell you when buyers looking for something like yours register. Listing is a separate decision you do not have to make now — and nothing about your business is published unless you publish it."
+          />
         ) : null}
       </div>
     </div>

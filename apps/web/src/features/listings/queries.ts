@@ -526,3 +526,24 @@ export async function listJurisdictions(): Promise<JurisdictionOption[]> {
   if (error || !data) return [];
   return data.map((row) => ({ code: (row as Row).code, name: (row as Row).name }));
 }
+
+/**
+ * Whether there is anything on the board yet.
+ *
+ * Derived from the listings themselves rather than from a flag somebody has to
+ * remember to flip: a flag would be wrong on the day the first listing goes live
+ * and wrong again the day the last one is withdrawn. Deliberately a boolean and
+ * not a count — how many listings exist is a fact about the operator's business,
+ * not the visitor's.
+ *
+ * Fails closed. If the question cannot be answered, the answer is "not open",
+ * which shows the interest form. Showing a signup to somebody who could have
+ * browsed is a mild annoyance; showing an empty grid to a seller is the visit
+ * you do not get back.
+ */
+export async function marketIsOpen(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('market_is_open');
+  if (error) return false;
+  return data === true;
+}

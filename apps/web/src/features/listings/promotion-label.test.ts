@@ -86,6 +86,8 @@ describe('paid placement disclosure', () => {
         'A seller editing their own listing. Nobody is being ranked, so there is nothing to disclose.',
       'apps/web/src/features/listings/pricing-panel.tsx':
         'A seller setting their own price. Same reason.',
+      'apps/web/src/app/(app)/listings/[listingId]/opengraph-image.tsx':
+        'A share card. Deliberately unlabelled: the disclosure obligation attaches to a ranked result, and this is a link somebody chose to share rather than a position sold to them. It renders bands only and never touches the confidential half — asserted in og-image.test.ts.',
     };
 
     let files: string[] = [];

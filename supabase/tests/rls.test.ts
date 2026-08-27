@@ -285,6 +285,15 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         // with the service role by the sender, exactly as notifications are.
         email_deliveries: ['SELECT'],
 
+        /*
+         * People who arrived before there was inventory. INSERT is granted to
+         * `anon` as well — the only table in this schema where that is true,
+         * because the whole point is to catch somebody at the moment they are
+         * curious, which is before they will make a password. It is safe
+         * because there is no read path: see market-interest.test.ts.
+         */
+        market_interest: ['INSERT', 'SELECT', 'UPDATE'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:
@@ -414,7 +423,18 @@ describe.skipIf(!hasDatabase)('row level security', () => {
        *
        * A second name appearing here still fails, which is the point.
        */
-      const ANON_EXECUTABLE_BY_DESIGN = ['unsubscribe_by_token'];
+      const ANON_EXECUTABLE_BY_DESIGN = [
+        'unsubscribe_by_token',
+        /*
+         * Answers one boolean: is there anything on the board yet. A visitor
+         * learns the same thing by loading the browse page and seeing rows or
+         * not, so this reveals nothing they could not already see. It is
+         * deliberately a boolean rather than a count — how many listings exist
+         * is a fact about the operator's business, and a count here would
+         * eventually be rendered as a marketing claim.
+         */
+        'market_is_open',
+      ];
 
       const { rows } = await db.query<{ proname: string }>(
         `select p.proname
