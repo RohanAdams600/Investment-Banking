@@ -294,6 +294,17 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          */
         market_interest: ['INSERT', 'SELECT', 'UPDATE'],
 
+        /*
+         * The public, crawlable market. A view rather than a table, and the
+         * reason it is a view: RLS is row-level, so admitting anon to a live
+         * listing row would have admitted them to `seller_id` as well, and
+         * PostgREST would happily let anybody group the market by owner. The
+         * view has neither that column nor `id`.
+         *
+         * `anon` holds the same SELECT and is checked separately below.
+         */
+        market_listings: ['SELECT'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:

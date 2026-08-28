@@ -16,6 +16,12 @@ export default defineConfig({
        * real in the build and does not block a unit test of the logic beside it.
        */
       'server-only': resolve(__dirname, 'supabase/tests/server-only-stub.ts'),
+      /*
+       * The app's own path alias. Needed here because a few app modules are
+       * imported by tests transitively — `sitemap.ts` reaching the public market
+       * queries, for one — and vitest does not read Next's tsconfig paths.
+       */
+      '@/': `${resolve(__dirname, 'apps/web/src')}/`,
     },
   },
   esbuild: {

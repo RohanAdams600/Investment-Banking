@@ -74,26 +74,63 @@ describe('sitemap', () => {
     else process.env.NEXT_PUBLIC_ALLOW_INDEXING = original;
   });
 
-  it('is empty when the site is not indexable', () => {
+  it('is empty when the site is not indexable', async () => {
     delete process.env.NEXT_PUBLIC_ALLOW_INDEXING;
     // So a staging deploy does not hand a crawler a list of URLs to try.
-    expect(sitemap()).toEqual([]);
+    expect(await sitemap()).toEqual([]);
   });
 
-  it('lists only pages that do not need a session', () => {
+  it('never advertises a page that will turn a crawler away', async () => {
+    /*
+     * This test used to assert that `/listings` *should* be here, and that was
+     * the bug: `/listings` is `robots: noindex` and redirects an
+     * unauthenticated caller to sign-in, as do `/sign-up` and `/sign-in`. The
+     * sitemap was inviting a crawler to three pages that then refused it, which
+     * is worse than omitting them — it spends crawl budget and teaches Google
+     * that URLs from this file are not worth following.
+     *
+     * The test hard-coded the wrong answer, which is why the contradiction
+     * survived. It now asserts the property rather than the list.
+     */
     process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
 
-    const paths = sitemap().map((entry) => new URL(entry.url).pathname);
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+
+    for (const behindALogin of ['/listings', '/sign-up', '/sign-in', '/dashboard', '/deals']) {
+      expect(paths, `${behindALogin} is noindex and must not be advertised`).not.toContain(
+        behindALogin,
+      );
+    }
+  });
+
+  it('advertises the public market', async () => {
+    // The only content this business produces, and the whole reason the public
+    // route exists. Without it a crawler can reach exactly one page.
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
+
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
 
     expect(paths).toContain('/');
-    expect(paths).toContain('/listings');
+    expect(paths).toContain('/businesses-for-sale');
     expect(paths).toContain('/legal/terms');
+  });
+
+  it('lists nothing outside the known public surface', async () => {
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
+
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
 
     for (const path of paths) {
-      expect(
-        ['/', '/listings', '/sign-up', '/sign-in', '/legal/terms', '/legal/privacy'],
-        `${path} is in the sitemap and should not be`,
-      ).toContain(path);
+      const allowed =
+        [
+          '/',
+          '/businesses-for-sale',
+          '/tools/valuation',
+          '/legal/terms',
+          '/legal/privacy',
+        ].includes(path) || path.startsWith('/businesses-for-sale/');
+
+      expect(allowed, `${path} is in the sitemap and should not be`).toBe(true);
     }
   });
 });
