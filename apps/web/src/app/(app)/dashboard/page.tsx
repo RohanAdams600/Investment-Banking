@@ -155,6 +155,12 @@ export default async function DashboardPage() {
       hint: 'Two-factor and active sessions',
       show: true,
     },
+    {
+      href: '/settings/agents',
+      label: 'Connected agents',
+      hint: 'Give an AI agent read and draft access',
+      show: true,
+    },
   ];
 
   return (

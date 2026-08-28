@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json,css}\"",
+    "bundle:migrations": "node scripts/bundle-migrations.mjs",
     "preflight": "node --env-file-if-exists=apps/web/.env.local --env-file-if-exists=.env.local scripts/preflight.mjs",
     "preflight:strict": "node --env-file-if-exists=apps/web/.env.local --env-file-if-exists=.env.local scripts/preflight.mjs --strict"
   },
