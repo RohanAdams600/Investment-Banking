@@ -74,14 +74,46 @@ describe('navLinksFor', () => {
     expect(hrefs(actorWith('seller'))).not.toContain('/admin');
   });
 
-  it('stays short even for somebody who is everything', () => {
-    // A top bar is for the places somebody goes repeatedly. If this ever grows
-    // past what fits on a laptop, the answer is the dashboard, not a smaller
-    // font.
+  it('stays short for the people who actually exist', () => {
+    /*
+     * A top bar is for the places somebody goes repeatedly. If it grows past
+     * what fits on a laptop the answer is the dashboard, not a smaller font.
+     *
+     * Capped per real account rather than on the union of every role. The
+     * union is a test fixture — nobody is simultaneously a buyer, a seller, a
+     * broker and an administrator — and capping on it made the bar's budget
+     * hostage to a person who does not exist, so a link genuinely useful to
+     * buyers competed against one useful only to operators.
+     *
+     * Six is what the widest real account reaches today — somebody selling one
+     * business while buying another sees Browse, My listings, Matches, Deals,
+     * Pipeline and Documents. That is the pre-existing worst case, measured
+     * rather than assumed; the old cap of seven was set against the four-role
+     * fixture and so left a slot nobody had counted.
+     *
+     * The cap has already earned itself once. Market pulse was added to the bar,
+     * took a buyer-seller to seven, and was moved beside the browse page
+     * instead — which is where somebody wants market context anyway. Raise this
+     * only for a destination people visit constantly, never for one that is
+     * merely new.
+     */
+    for (const roles of [
+      ['buyer'],
+      ['seller'],
+      ['broker'],
+      ['admin'],
+      ['buyer', 'seller'],
+      ['seller', 'broker'],
+    ] as const) {
+      const links = navLinksFor(actorWith(...roles));
+      expect(links.length, `${roles.join('+')} sees ${links.length} links`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('stays inside the bar even for the everything fixture', () => {
+    // The absolute ceiling, kept as a backstop. Past this the bar wraps on a
+    // laptop and the answer is to move something to the dashboard.
     const links = navLinksFor(actorWith('buyer', 'seller', 'broker', 'admin'));
-    // Seven is the true worst case and needs every role at once. The cap
-    // matters more than its exact value: there are fourteen destinations in
-    // the app and a top bar that listed them all would be read by nobody.
     expect(links.length).toBeLessThanOrEqual(7);
   });
 

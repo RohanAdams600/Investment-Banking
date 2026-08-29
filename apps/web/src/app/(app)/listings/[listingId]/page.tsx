@@ -22,6 +22,8 @@ import {
   VerifiedBadge,
 } from '@ib/ui';
 
+import { ListingAnalytics } from '@/features/analytics/listing-analytics';
+import { listingAnalytics } from '@/features/analytics/queries';
 import { FullProfile } from '@/features/listings/full-profile';
 import { PipelinePanel } from '@/features/pipeline/pipeline-panel';
 import { loadPipelineState } from '@/features/pipeline/queries';
@@ -113,6 +115,13 @@ export default async function ListingPage({
    * and discarding — and it saves a round trip on every buyer's page load.
    */
   const views = controls ? await listingViews(listingId) : null;
+
+  /*
+   * Seller-side only, and only on the tab that draws it — the daily series is
+   * thirty rows plus every NDA on the listing, which is not worth fetching to
+   * render an Overview tab that does not show it.
+   */
+  const analytics = controls && tab === 'activity' ? await listingAnalytics(listingId) : null;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -286,7 +295,15 @@ export default async function ListingPage({
         for the person whose business it is and nobody else.
       */}
       {tab === 'activity' && controls ? (
-        <PipelinePanel listingId={teaser.id} steps={pipelineSteps} />
+        <div className="space-y-6">
+          {/*
+            The numbers first, the pipeline's narrative second. A seller opening
+            this tab wants to know whether anything is happening before they
+            want to know what the matcher thought about it.
+          */}
+          {analytics ? <ListingAnalytics analytics={analytics} /> : null}
+          <PipelinePanel listingId={teaser.id} steps={pipelineSteps} />
+        </div>
       ) : null}
 
       {/*

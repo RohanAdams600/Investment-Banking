@@ -37,3 +37,16 @@ export {
 export { palette, type Palette, type PaletteFamily } from './tokens/primitives';
 
 export { Tabs, type TabDefinition } from './components/tabs';
+
+/*
+ * Charts.
+ *
+ * Server-rendered inline SVG and CSS — no charting library, no client
+ * component. The marks follow one spec across every chart in the product, and
+ * the arithmetic behind the axes lives in `charts/scale.ts` where it is tested
+ * directly rather than inferred from a screenshot.
+ */
+export { ColumnChart, ChartTable, type ChartPoint } from './charts/column-chart';
+export { BarChart } from './charts/bar-chart';
+export { StatTile } from './charts/stat-tile';
+export { axisFor, compact, percentChange, type Axis } from './charts/scale';

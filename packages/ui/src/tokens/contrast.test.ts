@@ -56,6 +56,42 @@ describe.each<Theme>(['light', 'dark'])('contrast in %s', (theme) => {
     expect(contrast(role(name, theme), surface)).toBeGreaterThanOrEqual(threshold);
   });
 
+  it('draws chart marks that clear the non-text threshold on a card', () => {
+    /*
+     * The check that forced `chart-mark` to be a different step per theme.
+     *
+     * A bar is a non-text UI component, so 3:1 under WCAG 1.4.11, and it is
+     * judged against the card it sits on rather than the page. Copper 500
+     * reaches 4.25:1 on white and only 2.78:1 on the dark card; copper 400 is
+     * the reverse. Reusing one value across both themes — the obvious thing to
+     * do, and what `accent` does — would ship an unreadable chart in one of
+     * them, and it would look fine in whichever theme the author had open.
+     */
+    expect(contrast(role('chart-mark', theme), surface)).toBeGreaterThanOrEqual(AA_LARGE);
+  });
+
+  it('keeps gridlines recessive without making them invisible', () => {
+    /*
+     * The opposite failure. Gridlines are not data and must not compete with
+     * it, but a rule nobody can see is a rule that is not doing its job — the
+     * eye needs it to read a value off the axis.
+     *
+     * Deliberately a band rather than a floor: too high is as wrong as too low
+     * here, and only a range says so.
+     */
+    const ratio = contrast(role('chart-grid', theme), surface);
+    expect(ratio).toBeGreaterThan(1.1);
+    expect(ratio).toBeLessThan(2.5);
+  });
+
+  it('keeps the chart mark clearly ahead of its own context tone', () => {
+    // A sparkline draws earlier periods in `chart-mark-soft` and the current one
+    // in `chart-mark`. If those two are close, the emphasis does nothing.
+    const mark = luminance(role('chart-mark', theme));
+    const soft = luminance(role('chart-mark-soft', theme));
+    expect(Math.abs(mark - soft)).toBeGreaterThan(0.05);
+  });
+
   it('keeps the three text levels visibly distinct', () => {
     /*
      * Fixing a contrast failure by darkening everything to near-black passes the

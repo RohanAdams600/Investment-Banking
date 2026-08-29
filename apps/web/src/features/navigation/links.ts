@@ -31,6 +31,12 @@ export interface NavLink {
  * is for the places somebody goes repeatedly; the rest is one click away behind
  * the wordmark. A nav that lists everything is a nav nobody reads.
  *
+ * Market pulse is deliberately absent. It was added here and pushed a
+ * buyer-seller to seven links, which is where the bar stops being scannable —
+ * so it lives beside the market instead, linked from the browse page, which is
+ * where somebody wants market context anyway. The cap did its job: it caught a
+ * link being added because it was new rather than because it was frequent.
+ *
  * Seven rather than six only because Documents was added, and only an account
  * holding buy-side, sell-side, intermediary and administrator roles at once
  * reaches it — a test fixture rather than a person. A seller sees four.

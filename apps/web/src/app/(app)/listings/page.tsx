@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Search, LineChart } from 'lucide-react';
 import { can, truncationNotice } from '@ib/core';
 import { Button, EmptyState } from '@ib/ui';
 
@@ -75,11 +75,25 @@ export default async function ListingsPage({
           </p>
         </div>
 
-        {canList ? (
-          <Button asChild size="sm">
-            <Link href="/listings/new">List a business</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {/*
+            Market context, next to the market. It was briefly in the top bar
+            and pushed a buyer-seller to seven links; here it sits where
+            somebody already looking at listings wants it.
+          */}
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/market-pulse">
+              <LineChart aria-hidden />
+              Market pulse
+            </Link>
           </Button>
-        ) : null}
+
+          {canList ? (
+            <Button asChild size="sm">
+              <Link href="/listings/new">List a business</Link>
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       {/*

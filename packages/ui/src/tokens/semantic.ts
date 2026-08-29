@@ -93,6 +93,38 @@ export const colorRoles = {
     usage: 'Hovered inputs, emphasized separation.',
   },
 
+  // ------------------------------------------------------------------ charts
+  /*
+   * Chart marks are their own roles, not a reuse of `accent`.
+   *
+   * Two reasons, and the second is the one that bites. First, a mark sits on a
+   * card rather than on the page, so it is judged against a different ground
+   * than any text role. Second — and this is why the light and dark values are
+   * *different steps* rather than the same colour — a chart mark has to clear
+   * 3:1 against its own surface in each theme, and no single step does:
+   * copper 500 is 4.25:1 on white and 2.78:1 on the dark card; copper 400 is
+   * 2.98:1 on white and 3.97:1 on the dark card. Flipping one value between
+   * themes would ship an illegible chart in one of them.
+   *
+   * Measured with the same contrast maths as `contrast.test.ts`, which asserts
+   * both of these.
+   */
+  'chart-mark': {
+    light: palette.copper[500],
+    dark: palette.copper[400],
+    usage: 'The data itself — bars, lines, dots. Never used for text.',
+  },
+  'chart-mark-soft': {
+    light: palette.copper[200],
+    dark: palette.copper[800],
+    usage: 'Context behind the current period: a sparkline’s earlier days, an unfilled track.',
+  },
+  'chart-grid': {
+    light: palette.stone[200],
+    dark: palette.slate[700],
+    usage: 'Gridlines and axis rules. Deliberately recessive — this is not data.',
+  },
+
   // ---------------------------------------------------------- primary action
   /*
    * The primary action is ink, not a brand colour.
