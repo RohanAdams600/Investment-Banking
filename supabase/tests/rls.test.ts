@@ -315,6 +315,19 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          */
         listing_view_days: ['SELECT'],
 
+        /*
+         * Buyer funding evidence. No DELETE, deliberately: a rejected buyer who
+         * could delete the row would resubmit until somebody said yes, and the
+         * operator's decision history would vanish with it. Withdrawal is a
+         * status, not a deletion.
+         *
+         * Sellers hold nothing here at all. They read
+         * `buyer_verification_badge()`, which returns a status and a band —
+         * admitting them to the row would admit them to the evidence note in
+         * it, because RLS cannot hide a column.
+         */
+        buyer_verifications: ['INSERT', 'SELECT', 'UPDATE'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:

@@ -5,6 +5,8 @@ import { useFormStatus } from 'react-dom';
 import { NDA_STATUS_LABELS } from '@ib/core';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Select } from '@ib/ui';
 
+import { FundingBadge, FundingDisclaimer } from '@/features/verification/verification-badge';
+
 import { revokeNda, sendNda } from './actions';
 import { emptyListingState, type ListingNdaRequest } from './types';
 
@@ -48,6 +50,16 @@ export function NdaQueue({ requests }: { requests: ListingNdaRequest[] }) {
                         Funding: {request.buyerFundingSource}
                       </p>
                     ) : null}
+                    {/*
+                      The reviewed badge, next to what the buyer said about
+                      themselves. The two are deliberately adjacent: the line
+                      above is the buyer's own claim, this one is what somebody
+                      checked, and a seller deciding whether to disclose should
+                      be able to see which is which.
+                    */}
+                    <div className="pt-2">
+                      <FundingBadge badge={request.verification} detail={false} />
+                    </div>
                     <p className="text-text-muted text-xs">
                       Requested {new Date(request.requestedAt).toLocaleDateString()}
                       {request.expiresAt
@@ -90,6 +102,12 @@ export function NdaQueue({ requests }: { requests: ListingNdaRequest[] }) {
             ))}
           </ul>
         )}
+
+        {requests.length > 0 ? (
+          <div className="border-border-subtle border-t pt-4">
+            <FundingDisclaimer />
+          </div>
+        ) : null}
 
         <p className="text-text-muted text-xs">
           Issuing an NDA does not send an email. The buyer sees it the next time they open your

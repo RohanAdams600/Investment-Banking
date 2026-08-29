@@ -1,4 +1,4 @@
-import type { ListingStatus, NdaStatus } from '@ib/core';
+import type { ListingStatus, NdaStatus, VerificationBadge } from '@ib/core';
 
 /**
  * Shapes for the listings feature. Separate from `actions.ts` because a
@@ -116,6 +116,15 @@ export interface ListingNdaRequest extends ListingNda {
   buyerName: string | null;
   buyerEntity: string | null;
   buyerFundingSource: string | null;
+  /*
+   * A reviewed capacity band, or null when the buyer has not submitted one —
+   * which is not the same as having failed, and the badge component says so.
+   *
+   * Never carries the evidence, the reviewer's note or an exact figure: the
+   * database function this comes from returns five columns and none of those
+   * is among them.
+   */
+  verification: VerificationBadge | null;
 }
 
 export interface ListingStatusEntry {

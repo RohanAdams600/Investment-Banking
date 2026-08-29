@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { href: '/admin', label: 'Overview' },
     { href: '/admin/review', label: 'Listing review', show: can(actor, 'listing:review') },
     { href: '/admin/verification', label: 'Verification', show: can(actor, 'admin:verify_users') },
+    { href: '/admin/funding', label: 'Buyer funding', show: can(actor, 'admin:verify_users') },
     {
       href: '/admin/jurisdictions',
       label: 'Jurisdictions',

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { brand } from '@ib/core';
 
+import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
 import { publicListingIndex } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -48,6 +49,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
+    /*
+     * The sector pages, which are the whole organic strategy. Static content, so
+     * they are worth crawling on a deploy with no listings at all — which is
+     * precisely the deploy where being findable matters most.
+     */
+    ...GUIDED_INDUSTRY_KEYS.map((industry) => ({
+      url: `${brand.url}/businesses-for-sale/industry/${industry}`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.85,
+    })),
     ...listings.map((listing) => ({
       url: `${brand.url}/businesses-for-sale/${listing.slug}`,
       lastModified: listing.publishedAt ? new Date(listing.publishedAt) : now,

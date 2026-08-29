@@ -79,6 +79,30 @@ with checks as (
                       where tablename = 'market_interest' and cmd = 'SELECT'
                         and qual not like '%is_platform_admin%')
 
+  union all
+  select '0037 buyer verification table exists',
+         exists (select 1 from pg_tables
+                  where schemaname = 'public' and tablename = 'buyer_verifications')
+  union all
+  -- The claim the whole feature rests on: a seller has no policy on this table.
+  -- Every policy that admits a reader must mention the buyer themselves or an
+  -- admin, and nothing else.
+  select '0037 nobody but the buyer or an operator reads funding evidence',
+         not exists (select 1 from pg_policies
+                      where tablename = 'buyer_verifications' and cmd = 'SELECT'
+                        and (qual is null
+                          or (qual not like '%is_platform_admin%'
+                              and qual not like '%buyer_id%')))
+  union all
+  select '0037 no client role can delete a verification',
+         not exists (select 1 from information_schema.role_table_grants
+                      where table_schema = 'public' and table_name = 'buyer_verifications'
+                        and privilege_type = 'DELETE'
+                        and grantee in ('authenticated', 'anon'))
+  union all
+  select '0037 the badge function is not executable by anon',
+         not has_function_privilege('anon', 'public.buyer_verification_badge(uuid)', 'execute')
+
   -- Invariants that must survive every migration. These are the ones that
   -- would go unnoticed: nothing breaks, the data is simply readable by
   -- somebody who should not have it.
@@ -101,12 +125,23 @@ with checks as (
                           or not exists (select 1 from unnest(p.proconfig) c
                                           where c like 'search_path=%')))
   union all
-  -- Two by design: the unsubscribe link and the is-the-market-open boolean.
-  -- Anything else is a function an unauthenticated caller can reach.
-  select 'anon executes only the two intended functions',
-         (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  /*
+   * Every function an unauthenticated caller can reach, named.
+   *
+   * This was a count, and the count was two. 0036 added the market search and
+   * the view tally — both deliberate, both anon by design — and the check
+   * started failing while being right about nothing: "expected 2, found 4"
+   * does not say which function appeared, so the only way to act on it was to
+   * go and look. Naming the set means a new entry fails loudly and identifies
+   * itself, and an intended addition is a one-line edit here that a reviewer
+   * can actually weigh.
+   */
+  select 'anon executes only the four intended functions',
+         (select coalesce(array_agg(p.proname::text order by p.proname), '{}'::text[])
+            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public'
-             and has_function_privilege('anon', p.oid, 'EXECUTE')) = 2
+             and has_function_privilege('anon', p.oid, 'EXECUTE'))
+         = array['market_is_open', 'record_listing_view', 'search_market', 'unsubscribe_by_token']
 )
 
 select case when ok then 'PASS' else '*** FAIL ***' end as result, check_name

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
+
 import robots from './robots';
 import sitemap from './sitemap';
 
@@ -155,10 +157,34 @@ describe('sitemap', () => {
     const [rule] = robots().rules as Array<{ disallow?: string[] }>;
     const disallowed = rule?.disallow ?? [];
 
-    for (const path of ['/businesses-for-sale', '/businesses-for-sale/some-slug', '/pricing']) {
+    for (const path of [
+      '/businesses-for-sale',
+      '/businesses-for-sale/some-slug',
+      '/businesses-for-sale/industry/home_services',
+      '/pricing',
+    ]) {
       for (const blocked of disallowed) {
         expect(path.startsWith(blocked), `${blocked} blocks ${path}`).toBe(false);
       }
+    }
+  });
+
+  it('advertises every sector page', async () => {
+    /*
+     * The sector pages are the organic strategy and they are static, so they are
+     * the one part of the sitemap that must be present on a deploy with an empty
+     * database. A regression here is invisible: the site works, and simply is
+     * never found.
+     */
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
+
+    const paths = new Set((await sitemap()).map((entry) => new URL(entry.url).pathname));
+
+    for (const industry of GUIDED_INDUSTRY_KEYS) {
+      expect(
+        paths.has(`/businesses-for-sale/industry/${industry}`),
+        `${industry} has a page but is not in the sitemap`,
+      ).toBe(true);
     }
   });
 

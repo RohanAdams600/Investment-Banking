@@ -124,6 +124,17 @@ export function SiteHeader({ actor, unread }: SiteHeaderProps) {
               >
                 Everything else
               </Link>
+              {/*
+                Above Security deliberately. Verification is the thing a new
+                buyer should find, and burying it under a security submenu is
+                how a trust signal ends up with nobody using it.
+              */}
+              <Link
+                href="/settings/verification"
+                className="hover:bg-surface-base block rounded px-3 py-2 text-sm"
+              >
+                Funding verification
+              </Link>
               <Link
                 href="/settings/security"
                 className="hover:bg-surface-base block rounded px-3 py-2 text-sm"

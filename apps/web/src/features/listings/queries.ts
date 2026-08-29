@@ -10,6 +10,7 @@ import {
 } from '@ib/core';
 
 import { getActor } from '@/lib/auth/actor';
+import { verificationBadges } from '@/features/verification/queries';
 import { createClient } from '@/lib/supabase/server';
 import type {
   BrowseFilters,
@@ -500,6 +501,16 @@ export async function listNdaRequests(listingId: string): Promise<ListingNdaRequ
     }
   }
 
+  /*
+   * Funding badges, through the definer function rather than the table.
+   *
+   * `buyer_verifications` is closed to sellers entirely — RLS is row-level, so
+   * a policy that admitted them to the row would hand them the buyer's evidence
+   * note with it. The function returns a status and a band and checks, itself,
+   * that this seller has a listing the buyer approached.
+   */
+  const badges = buyerIds.length > 0 ? await verificationBadges(buyerIds) : new Map();
+
   return data.map((row) => {
     const r = row as Row;
     const entity = entities.get(r.buyer_id as string);
@@ -509,6 +520,7 @@ export async function listNdaRequests(listingId: string): Promise<ListingNdaRequ
       buyerName: names.get(r.buyer_id as string) ?? null,
       buyerEntity: entity?.entityName ?? null,
       buyerFundingSource: entity?.fundingSource ?? null,
+      verification: badges.get(r.buyer_id as string) ?? null,
     };
   });
 }

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { INDUSTRY_PROFILES, brand, formatBand, pageTitle, type IndustryKey } from '@ib/core';
 import { Button, Card, CardContent } from '@ib/ui';
 
+import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
 import { publicListings } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -84,8 +85,35 @@ export default async function PublicMarketPage({
         </form>
       </header>
 
+      {/*
+        The sector index.
+
+        Placed above the results rather than in a footer because it is the hub
+        half of a hub-and-spoke: these ten links are how a crawler reaches the
+        sector pages, and how a visitor who arrived on a general search narrows
+        to the one thing they came for. Rendered before the listings so it is
+        present and useful on a deploy that has none.
+      */}
+      <nav aria-label="Browse by sector" className="mt-10">
+        <h2 className="text-text-muted mb-3 font-mono text-xs uppercase tracking-[0.16em]">
+          Browse by sector
+        </h2>
+        <ul className="flex flex-wrap gap-2">
+          {GUIDED_INDUSTRY_KEYS.map((industry) => (
+            <li key={industry}>
+              <Link
+                href={`/businesses-for-sale/industry/${industry}`}
+                className="border-border-default hover:border-accent hover:text-accent inline-block rounded-md border px-3 py-1.5 text-sm transition-colors"
+              >
+                {INDUSTRY_PROFILES[industry].label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       {listings.length === 0 ? (
-        <Card className="mt-10">
+        <Card className="mt-12">
           <CardContent className="space-y-3 py-10">
             <h2 className="font-display text-xl font-semibold">
               The first listings are not up yet.
@@ -100,7 +128,7 @@ export default async function PublicMarketPage({
           </CardContent>
         </Card>
       ) : (
-        <ul className="divide-border-subtle mt-10 divide-y">
+        <ul className="divide-border-subtle mt-12 divide-y">
           {listings.map((listing) => {
             const industry = INDUSTRY_PROFILES[listing.industry as IndustryKey];
             return (
