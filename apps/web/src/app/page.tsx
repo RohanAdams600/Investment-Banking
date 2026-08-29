@@ -4,7 +4,7 @@ import { ArrowRight, Lock, ShieldCheck } from 'lucide-react';
 import { brand, isBrandFullyConfigured, pageTitle, unconfiguredBrandFields } from '@ib/core';
 import { Badge, Button, Card, CardContent } from '@ib/ui';
 
-import { TwoRecords } from '@/features/marketing/two-records';
+import { TwoRecordsLive } from '@/features/marketing/two-records-live';
 import {
   ADVISOR_FEATURES,
   ADVISOR_STEPS,
@@ -112,11 +112,11 @@ export default function HomePage() {
             </p>
             <p className="flex items-center gap-2 pt-2 text-xs text-stone-400">
               <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Illustrative figures.
+              Illustrative figures — no real business is shown.
             </p>
           </div>
 
-          <TwoRecords />
+          <TwoRecordsLive />
         </div>
       </section>
 
