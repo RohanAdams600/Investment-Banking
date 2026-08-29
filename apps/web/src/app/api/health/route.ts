@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isBrandFullyConfigured, unconfiguredBrandFields } from '@ib/core';
 
 import { isAiConfigured } from '@/lib/ai/router';
+import { isSharedRateLimiterConfigured } from '@/lib/rate-limit';
 import { isCspEnforced } from '@/lib/security/csp';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -36,6 +37,13 @@ export async function GET() {
     brandConfigured: isBrandFullyConfigured,
     aiConfigured: isAiConfigured(),
     cspEnforced: isCspEnforced(),
+    /*
+     * Whether the limits in lib/rate-limit.ts bind anything. Without a shared
+     * store they are an in-process counter that resets on every cold start, and
+     * the application gives no other sign of it — so it is reported here, where
+     * a deploy check can read it, as well as failing a strict preflight.
+     */
+    rateLimitsEnforced: isSharedRateLimiterConfigured(),
     indexingAllowed: process.env.NEXT_PUBLIC_ALLOW_INDEXING === 'true',
   };
 

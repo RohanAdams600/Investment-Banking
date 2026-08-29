@@ -3,6 +3,8 @@
 import { z } from 'zod';
 import { INDUSTRY_PROFILES } from '@ib/core';
 
+import { checkAnonymousRateLimit } from '@/lib/rate-limit';
+import { clientAddress } from '@/lib/security/client-address';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -13,6 +15,17 @@ import { isSupabaseConfigured } from '@/lib/supabase/env';
  * though most callers are anonymous. The insert policy on `market_interest` is
  * what permits this, and routing around it with the service role would mean the
  * one anonymous write in the product had no database-level check on it at all.
+ *
+ * ## Rate limited on client address
+ *
+ * The only unauthenticated write in the product, so there is no account to key
+ * on. Unbounded, it is a form that fills a mailing list with addresses that did
+ * not consent — and those addresses then get emailed, which turns somebody
+ * else's spam problem into this platform's sender reputation.
+ *
+ * Address-keyed limiting is a blunt instrument and shares its usual flaw: a
+ * shared NAT throttles everyone behind it. Five per hour is set high enough
+ * that an office is unaffected and low enough that a script is not.
  */
 
 export interface InterestState {
@@ -58,6 +71,18 @@ export async function registerInterest(
 
   if (!isSupabaseConfigured()) {
     return { ok: false, error: 'Not configured to accept this yet. Try again shortly.' };
+  }
+
+  /*
+   * After validation, before the database. Checking first would let a flood of
+   * malformed submissions consume a real visitor's budget.
+   */
+  const budget = await checkAnonymousRateLimit('interestSubmission', await clientAddress());
+  if (!budget.allowed) {
+    return {
+      ok: false,
+      error: 'That has been submitted several times already. Try again a little later.',
+    };
   }
 
   const input = parsed.data;

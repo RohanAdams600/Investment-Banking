@@ -114,6 +114,30 @@ const checks = [
     fix: 'Deploy report-only first, walk every page, read the violations, then set CSP_ENFORCE=true.',
   },
   {
+    level: LAUNCH,
+    name: 'Rate limits are actually enforced',
+    /*
+     * The check that stops this application lying to itself.
+     *
+     * Without a shared store, `lib/rate-limit.ts` falls back to an in-process
+     * counter. On any platform that runs each request in its own isolate — this
+     * one included — that counter starts at zero every time, so every limit in
+     * the product is a comment. Nothing failed, nothing logged, and the code
+     * read as though the endpoints were protected.
+     *
+     * Launch-blocking rather than optional, because the endpoints it covers are
+     * the ones an attacker reaches first: NDA requests across the whole market,
+     * message flooding in a deal room, and the MCP endpoint, which accepts a
+     * credential from outside the browser.
+     */
+    ok: () =>
+      Boolean(
+        (process.env.UPSTASH_REDIS_REST_URL ?? '').trim() &&
+          (process.env.UPSTASH_REDIS_REST_TOKEN ?? '').trim(),
+      ),
+    fix: 'No UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN, so rate limiting falls back to an in-process counter that resets on every cold start — which means it is not limiting anything. Create a free Upstash Redis database and set both.',
+  },
+  {
     level: OPTIONAL,
     name: 'Scheduled reminders',
     ok: () => isSet('CRON_SECRET'),

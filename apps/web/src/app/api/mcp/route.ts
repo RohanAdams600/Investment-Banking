@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 
 import { brand } from '@ib/core';
 
-import { authenticate, bearerFrom, isMcpConfigured, type McpSession } from '@/lib/mcp/auth';
+import { authenticate, bearerFrom, isMcpConfigured, sha256, type McpSession } from '@/lib/mcp/auth';
 import { findTool, toolsFor } from '@/lib/mcp/tools';
+import { checkAnonymousRateLimit } from '@/lib/rate-limit';
 
 /**
  * The MCP endpoint.
@@ -24,6 +25,20 @@ import { findTool, toolsFor } from '@/lib/mcp/tools';
  * ## What it cannot do
  *
  * Send anything to anybody. There is no tool for it. See `lib/mcp/tools.ts`.
+ *
+ * ## Rate limited before it is authenticated
+ *
+ * Every other write path in this application routes through `enforceRateLimit`;
+ * this one had no limit at all, and it is the only endpoint that accepts a
+ * credential from outside a browser. A leaked token — or an agent stuck in a
+ * retry loop — could run it flat out, and each request costs a database round
+ * trip and a signature before any tool executes.
+ *
+ * The limit is keyed on the digest of the presented bearer, which is available
+ * without asking the database anything. So an invalid-token flood is bounded
+ * too, and the key reveals nothing: it is the same digest already stored, never
+ * the token, which would put a live credential into the limiter's storage and
+ * its logs.
  */
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +81,75 @@ function unauthorized() {
   );
 }
 
+/**
+ * Over budget.
+ *
+ * `Retry-After` in seconds, because a well-behaved agent reads it and backs
+ * off, which is the outcome worth more than the refusal itself.
+ */
+function tooManyRequests(resetAt: number) {
+  const seconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: INVALID_REQUEST, message: 'Too many requests. Slow down and retry.' },
+    },
+    { status: 429, headers: { 'retry-after': String(seconds) } },
+  );
+}
+
+class PayloadTooLarge extends Error {}
+
+/**
+ * The largest request body this endpoint will read.
+ *
+ * `draft_outreach` carries the biggest legitimate payload at 4000 characters of
+ * body plus a subject, so 64 KiB is roughly an order of magnitude of headroom.
+ * Without a cap, `request.json()` buffers whatever is sent — a single request
+ * declaring nothing and streaming forever is a denial of service that costs the
+ * sender almost nothing.
+ */
+const MAX_BODY_BYTES = 64 * 1024;
+
+async function readBoundedJson(request: Request): Promise<unknown> {
+  const declared = request.headers.get('content-length');
+  if (declared && Number(declared) > MAX_BODY_BYTES) throw new PayloadTooLarge();
+
+  /*
+   * The header is a claim, not a fact — it can be absent under chunked
+   * encoding, or simply be a lie. So the stream is counted as it arrives and
+   * abandoned the moment it goes over.
+   */
+  const body = request.body;
+  if (!body) return JSON.parse(await request.text());
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) throw new PayloadTooLarge();
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const joined = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return JSON.parse(new TextDecoder().decode(joined));
+}
+
 export async function POST(request: Request): Promise<Response> {
   if (!isMcpConfigured()) {
     return NextResponse.json(
@@ -85,14 +169,25 @@ export async function POST(request: Request): Promise<Response> {
   const token = bearerFrom(request);
   if (!token) return unauthorized();
 
+  /*
+   * Before the database is touched. `authenticate` runs a query and mints a
+   * signature, so limiting after it would still let a flood pay for both.
+   */
+  const budget = await checkAnonymousRateLimit('mcpRequest', sha256(token));
+  if (!budget.allowed) return tooManyRequests(budget.resetAt);
+
   const session = await authenticate(token);
   if (!session) return unauthorized();
 
   let body: RpcRequest;
   try {
-    body = (await request.json()) as RpcRequest;
-  } catch {
-    return rpcError(null, PARSE_ERROR, 'Request body is not valid JSON.');
+    body = (await readBoundedJson(request)) as RpcRequest;
+  } catch (error) {
+    const message =
+      error instanceof PayloadTooLarge
+        ? 'Request body is too large.'
+        : 'Request body is not valid JSON.';
+    return rpcError(null, PARSE_ERROR, message);
   }
 
   if (body?.jsonrpc !== '2.0' || typeof body.method !== 'string') {

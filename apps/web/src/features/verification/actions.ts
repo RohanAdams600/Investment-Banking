@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { VERIFICATION_VALID_DAYS } from '@ib/core';
 import { z } from 'zod';
 
+import { checkRateLimit } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -91,6 +92,16 @@ export async function submitVerification(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: 'Sign in to submit verification.', ok: false };
+
+  /*
+   * A person submits this once and corrects it perhaps twice. A client looping
+   * on it is either broken or probing the trigger for which columns it will
+   * accept, and neither is worth serving at speed.
+   */
+  const budget = await checkRateLimit('verificationSubmission', user.id);
+  if (!budget.allowed) {
+    return { error: 'That has been submitted too many times. Try again later.', ok: false };
+  }
 
   const { error } = await supabase.from('buyer_verifications').upsert(
     {
