@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { brand, type Actor } from '@ib/core';
 import { Badge } from '@ib/ui';
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, Search } from 'lucide-react';
 
 import { signOut } from '@/features/auth/actions';
 
@@ -74,7 +74,42 @@ export function SiteHeader({ actor, unread }: SiteHeaderProps) {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1">
+        {/*
+          Search, from anywhere.
+
+          A GET form pointed at the browse page, which already parses `q`. That
+          makes it a link with a text field in it: no JavaScript, no client
+          component, no bundle, and the result is a shareable URL like every
+          other filtered view. Hidden below `md` because the mobile bar cannot
+          hold it — the same field is the first thing on the browse page, and
+          the menu below links there.
+        */}
+        <form
+          method="get"
+          action="/listings"
+          role="search"
+          className="ml-auto hidden max-w-xs flex-1 items-center md:flex"
+        >
+          <label htmlFor="site-search" className="sr-only">
+            Search businesses for sale
+          </label>
+          <div className="relative w-full">
+            <Search
+              className="text-text-muted pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2"
+              aria-hidden
+            />
+            <input
+              id="site-search"
+              name="q"
+              type="search"
+              maxLength={100}
+              placeholder="Search the market"
+              className="border-border-default bg-surface focus-visible:ring-ring w-full rounded-md border py-1.5 pl-8 pr-3 text-sm outline-none focus-visible:ring-2"
+            />
+          </div>
+        </form>
+
+        <div className="ml-auto flex items-center gap-1 md:ml-2">
           <Link
             href="/notifications"
             aria-label={unreadLabel(unread)}
@@ -134,6 +169,18 @@ export function SiteHeader({ actor, unread }: SiteHeaderProps) {
                 className="hover:bg-surface-base block rounded px-3 py-2 text-sm"
               >
                 Funding verification
+              </Link>
+              {/*
+                The MCP server and its keys. Reachable only by typing the URL
+                until now, which is a fair description of a feature that does
+                not exist: an integration nobody can find is an integration
+                nobody connects.
+              */}
+              <Link
+                href="/settings/agents"
+                className="hover:bg-surface-base block rounded px-3 py-2 text-sm"
+              >
+                AI agents &amp; API keys
               </Link>
               <Link
                 href="/settings/security"

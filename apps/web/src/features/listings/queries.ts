@@ -45,7 +45,7 @@ import type {
 type Row = Record<string, any>;
 
 const TEASER_COLUMNS = `
-  id, status, headline, summary, background, industry, jurisdiction_code,
+  id, slug, status, headline, summary, background, industry, jurisdiction_code,
   revenue_band_low_cents, revenue_band_high_cents,
   earnings_band_low_cents, earnings_band_high_cents,
   asking_price_band_low_cents, asking_price_band_high_cents,
@@ -60,6 +60,7 @@ function toTeaser(row: Row, saved = false, promoted = false): ListingTeaser {
 
   return {
     id: row.id,
+    slug: row.slug ?? null,
     status: row.status as ListingStatus,
     headline: row.headline,
     summary: row.summary ?? null,
@@ -129,6 +130,38 @@ export async function browseListings(filters: BrowseFilters = {}): Promise<Cappe
   // One more than we intend to show. The extra row is the entire mechanism: it
   // is how the page knows the difference between "there were exactly 100" and
   // "there were more and you are not being told".
+  /*
+   * Keyword search, when there is one.
+   *
+   * `search_market` ranks in SQL and returns slugs; ranking cannot be expressed
+   * through PostgREST, and results in physical order read as random. It searches
+   * `search_document`, which is generated over the teaser columns only — the
+   * confidential half of a listing is not in the index and so cannot be found by
+   * guessing at it, which is the property that makes it safe to expose the same
+   * search to a signed-in buyer and to an anonymous visitor.
+   *
+   * It returns live listings only, so a keyword search does not surface the
+   * under-LOI rows that the unfiltered browse still shows. That is the right
+   * trade for now: a buyer searching for something specific wants what they can
+   * still act on.
+   */
+  let searchOrder: Map<string, number> | null = null;
+  const term = filters.q?.trim();
+
+  if (term) {
+    const { data: ranked, error: rankError } = await supabase.rpc('search_market', {
+      term,
+      max_rows: overFetch(BROWSE_PAGE_SIZE),
+    });
+
+    if (rankError || !ranked) return capped<ListingTeaser>([], BROWSE_PAGE_SIZE);
+
+    const slugs = (ranked as Row[]).map((row) => row.slug as string);
+    if (slugs.length === 0) return capped<ListingTeaser>([], BROWSE_PAGE_SIZE);
+
+    searchOrder = new Map(slugs.map((slug, index) => [slug, index]));
+  }
+
   let query = supabase
     .from('listings')
     .select(TEASER_COLUMNS)
@@ -136,6 +169,7 @@ export async function browseListings(filters: BrowseFilters = {}): Promise<Cappe
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(overFetch(BROWSE_PAGE_SIZE));
 
+  if (searchOrder) query = query.in('slug', [...searchOrder.keys()]);
   if (filters.industry) query = query.eq('industry', filters.industry);
   if (filters.jurisdiction) query = query.eq('jurisdiction_code', filters.jurisdiction);
   if (filters.minEarningsCents !== undefined) {
@@ -163,8 +197,17 @@ export async function browseListings(filters: BrowseFilters = {}): Promise<Cappe
   const rows = page.rows
     .map((row) => toTeaser(row, saved.has(row.id), promoted.has(row.id)))
     .sort((a, b) => {
-      if (a.promoted === b.promoted) return 0;
-      return a.promoted ? -1 : 1;
+      if (a.promoted !== b.promoted) return a.promoted ? -1 : 1;
+      /*
+       * Relevance, when a search produced one. `in` returns rows in whatever
+       * order it likes and the ranking is the entire value of having searched.
+       *
+       * Below the promotion sort, not above it: a paid placement stays at the
+       * top, which is what was sold, and is labelled as paid wherever it
+       * appears.
+       */
+      if (!searchOrder) return 0;
+      return (searchOrder.get(a.slug ?? '') ?? 0) - (searchOrder.get(b.slug ?? '') ?? 0);
     });
 
   return { ...page, rows };

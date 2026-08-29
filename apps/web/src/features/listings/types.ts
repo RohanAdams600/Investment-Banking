@@ -24,6 +24,15 @@ export const emptyListingState: ListingActionState = { error: null, message: nul
  */
 export interface ListingTeaser {
   id: string;
+  /**
+   * The public, stable identifier — the same one `/businesses-for-sale/[slug]`
+   * uses. Present on the teaser because it is public by construction: it is
+   * generated from the headline, which is already the anonymised half.
+   *
+   * Null on a listing published before slugs existed, and on a draft, so every
+   * reader has to handle its absence rather than assume it.
+   */
+  slug: string | null;
   status: ListingStatus;
   headline: string;
   summary: string | null;
@@ -147,6 +156,8 @@ export interface ListingDetailView {
 }
 
 export interface BrowseFilters {
+  /** Free-text keywords, ranked in Postgres. See `browseListings`. */
+  q?: string;
   industry?: string;
   jurisdiction?: string;
   minEarningsCents?: number;

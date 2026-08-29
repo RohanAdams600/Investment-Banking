@@ -138,3 +138,37 @@ describe('unreadLabel', () => {
     expect(unreadLabel(0)).toBe('Notifications');
   });
 });
+
+/**
+ * The search box in the header.
+ *
+ * Asserted against the rendered markup rather than a helper, because there is
+ * no helper — it is a plain GET form, deliberately, and the thing that can
+ * break is the contract between its field name and the page that parses it.
+ * Rename either half and search silently starts returning everything.
+ */
+describe('the header search form', () => {
+  it('posts the field name the browse page reads', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('./site-header.tsx', import.meta.url), 'utf8'),
+    );
+
+    // A GET form: the query string is the state, so the URL stays shareable.
+    expect(source).toMatch(/method="get"[\s\S]{0,80}action="\/listings"/);
+    expect(source).toContain('name="q"');
+    // role="search" is what makes it findable by a screen reader's landmark
+    // list, which is how somebody who cannot see the magnifier reaches it.
+    expect(source).toContain('role="search"');
+  });
+
+  it('offers the agent keys page, which had no link at all', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('./site-header.tsx', import.meta.url), 'utf8'),
+    );
+
+    // An integration nobody can find is an integration nobody connects. This
+    // page existed for three commits reachable only by typing its URL.
+    expect(source).toContain('/settings/agents');
+    expect(source).toContain('/settings/verification');
+  });
+});

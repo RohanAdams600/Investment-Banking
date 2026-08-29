@@ -34,7 +34,7 @@ import type {
 type Row = Record<string, any>;
 
 const TEASER_COLUMNS = `
-  id, status, headline, summary, background, industry, jurisdiction_code,
+  id, slug, status, headline, summary, background, industry, jurisdiction_code,
   revenue_band_low_cents, revenue_band_high_cents,
   earnings_band_low_cents, earnings_band_high_cents,
   asking_price_band_low_cents, asking_price_band_high_cents,
@@ -49,6 +49,7 @@ function toTeaser(row: Row, saved: boolean): ListingTeaser {
 
   return {
     id: row.id,
+    slug: row.slug ?? null,
     status: row.status,
     headline: row.headline,
     summary: row.summary ?? null,

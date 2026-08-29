@@ -47,6 +47,9 @@ export default async function ListingsPage({
   };
 
   const filters: BrowseFilters = {
+    // Capped here rather than trusted from the query string. The database
+    // clamps its own row count; this bounds what reaches the parser.
+    q: single('q')?.slice(0, 100),
     industry: single('industry'),
     jurisdiction: single('jurisdiction'),
     minEarningsCents: toCents(single('minEarnings')),
