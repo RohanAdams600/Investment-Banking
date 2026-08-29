@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { INDUSTRY_PROFILES, brand, formatBand, pageTitle, type IndustryKey } from '@ib/core';
-import { Card, CardContent } from '@ib/ui';
+import { Button, Card, CardContent } from '@ib/ui';
 
 import { publicListings } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -38,8 +38,15 @@ export const revalidate = 3600;
  * only. Sharing a query between the two would put one policy change between a
  * public page and something it should not serve.
  */
-export default async function PublicMarketPage() {
-  const listings = isSupabaseConfigured() ? await publicListings() : [];
+export default async function PublicMarketPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const q = typeof params.q === 'string' ? params.q.slice(0, 100) : '';
+
+  const listings = isSupabaseConfigured() ? await publicListings({ q }) : [];
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
@@ -52,6 +59,29 @@ export default async function PublicMarketPage() {
           buyer the seller has issued a confidentiality agreement to.
         </p>
         <div className="bg-accent h-0.5 w-16" aria-hidden />
+
+        {/*
+          A plain GET form, so a search is a shareable URL and the back button
+          works. It also means the page stays a server component and a crawler
+          following ?q= gets real results rather than an empty shell.
+        */}
+        <form method="get" className="flex max-w-lg gap-2 pt-2">
+          <label htmlFor="q" className="sr-only">
+            Search businesses for sale
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            maxLength={100}
+            placeholder="HVAC, landscaping, distribution…"
+            className="border-border-default bg-surface focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+          />
+          <Button type="submit" variant="secondary">
+            Search
+          </Button>
+        </form>
       </header>
 
       {listings.length === 0 ? (

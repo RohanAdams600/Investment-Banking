@@ -17,7 +17,7 @@ import { FullProfile } from '@/features/listings/full-profile';
 import { PipelinePanel } from '@/features/pipeline/pipeline-panel';
 import { loadPipelineState } from '@/features/pipeline/queries';
 import { NdaPanel } from '@/features/listings/nda-panel';
-import { loadListing } from '@/features/listings/queries';
+import { listingViews, loadListing } from '@/features/listings/queries';
 import { SaveButton } from '@/features/listings/save-button';
 import { loadRepresentative } from '@/features/matching/queries';
 import { getActor } from '@/lib/auth/actor';
@@ -58,6 +58,13 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
   // all keeps the buyer's page from carrying a shape it has no use for.
   const pipelineSteps = controls ? await loadPipelineState(listingId) : [];
 
+  /*
+   * Only fetched for the person who controls the listing. The policy would
+   * return zeroes to anybody else anyway, but not asking is clearer than asking
+   * and discarding — and it saves a round trip on every buyer's page load.
+   */
+  const views = controls ? await listingViews(listingId) : null;
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
       <p className="text-text-muted text-sm">
@@ -83,6 +90,35 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
             {!controls ? <SaveButton listingId={teaser.id} saved={teaser.saved} /> : null}
           </div>
         </div>
+
+        {controls && views ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Who has looked</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <dl className="flex gap-10">
+                <div>
+                  <dt className="text-text-muted text-2xs font-mono uppercase tracking-[0.12em]">
+                    Last 30 days
+                  </dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums">{views.last30Days}</dd>
+                </div>
+                <div>
+                  <dt className="text-text-muted text-2xs font-mono uppercase tracking-[0.12em]">
+                    Last 7 days
+                  </dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums">{views.last7Days}</dd>
+                </div>
+              </dl>
+              <p className="text-text-muted text-sm leading-relaxed">
+                Page views, not people — the same visitor returning counts twice. Nothing is
+                recorded about who looked, deliberately: browsing a confidential marketplace should
+                not leave a trail. Buyers never see this number.
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {controls ? (
           <Button asChild size="sm" variant="secondary">

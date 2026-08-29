@@ -305,6 +305,16 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          */
         market_listings: ['SELECT'],
 
+        /*
+         * A listing's daily page-view tally. SELECT only, and the policy narrows
+         * it to whoever controls the listing — the seller asks "how many people
+         * looked", and a buyer who could read it would negotiate with it.
+         *
+         * No INSERT or UPDATE for anybody: the definer function is the only way
+         * a row moves, otherwise a seller inflates their own numbers.
+         */
+        listing_view_days: ['SELECT'],
+
         listing_review_queue: ['SELECT'],
 
         // Also a view, and the reason it exists is the grant above it:
@@ -445,6 +455,22 @@ describe.skipIf(!hasDatabase)('row level security', () => {
          * eventually be rendered as a marketing claim.
          */
         'market_is_open',
+        /*
+         * Ranked full-text search over live listings, returning public slugs.
+         * It searches the same teaser columns the public market already
+         * displays and cannot reach the confidential half — asserted directly
+         * in search-and-views.test.ts, because a searchable legal_name would
+         * let anybody confirm which company is for sale by watching which
+         * queries return a row.
+         */
+        'search_market',
+        /*
+         * Increments a listing's view tally. Most viewers of a public listing
+         * page are anonymous, which is the whole reason it is reachable here.
+         * It writes nothing about who called it — the table has three columns
+         * and none of them is a person.
+         */
+        'record_listing_view',
       ];
 
       const { rows } = await db.query<{ proname: string }>(

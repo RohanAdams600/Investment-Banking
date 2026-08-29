@@ -13,7 +13,7 @@ import {
 } from '@ib/core';
 import { Button, Card, CardContent } from '@ib/ui';
 
-import { publicListing, publicListingIndex } from '@/features/market/queries';
+import { publicListing, publicListingIndex, recordView } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 export const revalidate = 3600;
@@ -70,6 +70,15 @@ export default async function PublicListingPage({ params }: { params: Promise<{ 
   const listing = isSupabaseConfigured() ? await publicListing(slug) : null;
 
   if (!listing) notFound();
+
+  /*
+   * Not awaited, and not allowed to fail the page.
+   *
+   * A tally is worth having and worth nothing compared to the page rendering.
+   * `void` rather than `await` so a slow write does not sit between a visitor
+   * and the listing they clicked on from a search result.
+   */
+  void recordView(listing.slug);
 
   const industry = INDUSTRY_PROFILES[listing.industry as IndustryKey];
 

@@ -547,3 +547,34 @@ export async function marketIsOpen(): Promise<boolean> {
   if (error) return false;
   return data === true;
 }
+
+/**
+ * How many people have looked at a listing.
+ *
+ * The question every seller asks in their first week, and the number no buyer
+ * may see — how much attention a business is getting is a fact about the
+ * seller's market position, and a buyer who could read it would be negotiating
+ * with it.
+ *
+ * Enforced by the policy rather than here: `listing_view_summary` is SECURITY
+ * INVOKER over a table only the controller may select, so a buyer calling it
+ * gets zeroes. Zeroes rather than a refusal, which is the same answer they would
+ * get for a listing nobody has looked at, and therefore tells them nothing.
+ */
+export async function listingViews(
+  listingId: string,
+): Promise<{ last30Days: number; last7Days: number } | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc('listing_view_summary', {
+    target_listing_id: listingId,
+  });
+
+  if (error || !data) return null;
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    { last_30_days: number; last_7_days: number } | undefined;
+  if (!row) return null;
+
+  return { last30Days: Number(row.last_30_days), last7Days: Number(row.last_7_days) };
+}

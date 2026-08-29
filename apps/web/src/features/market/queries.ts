@@ -74,8 +74,38 @@ function toPublic(row: Row): PublicListing {
   };
 }
 
-export async function publicListings(filter?: { industry?: string }): Promise<PublicListing[]> {
+export async function publicListings(filter?: {
+  industry?: string;
+  q?: string;
+}): Promise<PublicListing[]> {
   const supabase = await createClient();
+
+  /*
+   * A search term changes the shape of the query entirely: ranking cannot be
+   * expressed through PostgREST, so `search_market` does it in SQL and returns
+   * ordered slugs, which are then hydrated. Two round trips rather than one,
+   * and the alternative is results in physical order, which reads as random.
+   */
+  if (filter?.q?.trim()) {
+    const { data: ranked, error: rankError } = await supabase.rpc('search_market', {
+      term: filter.q.trim(),
+      max_rows: PUBLIC_PAGE,
+    });
+    if (rankError || !ranked) return [];
+
+    const slugs = (ranked as Row[]).map((row) => row.slug as string);
+    if (slugs.length === 0) return [];
+
+    const { data, error } = await supabase.from('market_listings').select('*').in('slug', slugs);
+    if (error || !data) return [];
+
+    // Re-imposed, because `in` returns rows in whatever order it likes and the
+    // ranking is the entire value of having searched.
+    const order = new Map(slugs.map((slug, index) => [slug, index]));
+    return (data as Row[])
+      .map(toPublic)
+      .sort((a, b) => (order.get(a.slug) ?? 0) - (order.get(b.slug) ?? 0));
+  }
 
   let query = supabase
     .from('market_listings')
@@ -119,4 +149,25 @@ export async function publicListingIndex(): Promise<
     slug: row.slug as string,
     publishedAt: (row.published_at as string | null) ?? null,
   }));
+}
+
+/**
+ * Notes that somebody looked.
+ *
+ * Records no viewer identity of any kind — the table has three columns and none
+ * of them is a person. A page-view tally rather than unique visitors, which is
+ * weaker and is the right trade: browsing a marketplace for confidential deals
+ * should not create a record of who looked, and a hashed IP is still personal
+ * data in several places this will operate.
+ *
+ * Swallows everything. A seller's view count is not worth a visitor seeing an
+ * error page.
+ */
+export async function recordView(slug: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    await supabase.rpc('record_listing_view', { target_slug: slug });
+  } catch {
+    // Deliberately silent.
+  }
 }
