@@ -115,6 +115,53 @@ describe('sitemap', () => {
     expect(paths).toContain('/legal/terms');
   });
 
+  it('never advertises anything robots.txt blocks', async () => {
+    /*
+     * The bug this catches has now happened twice: the sitemap listed
+     * `/listings` while robots disallowed it, and then listed
+     * `/tools/valuation` while a blanket `/tools/` rule blocked it. Both times
+     * the two files were edited separately and neither knew about the other.
+     *
+     * A sitemap that advertises blocked URLs is worse than one that omits them.
+     * It spends crawl budget on refusals and teaches Google that entries from
+     * this file are not worth following — so the next real page is crawled less
+     * eagerly because of the last fake one.
+     */
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
+
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+    const [rule] = robots().rules as Array<{ disallow?: string[] }>;
+    const disallowed = rule?.disallow ?? [];
+
+    for (const path of paths) {
+      for (const blocked of disallowed) {
+        const collides = blocked.endsWith('/')
+          ? path.startsWith(blocked)
+          : path === blocked || path.startsWith(`${blocked}/`);
+
+        expect(
+          collides,
+          `sitemap advertises ${path}, which robots.txt blocks via "${blocked}"`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('keeps the public market crawlable', () => {
+    // The inverse, and the reason the blanket rules were narrowed. If a future
+    // disallow entry swallows the public listings, every one of them leaves the
+    // index and this is the test that says so.
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
+    const [rule] = robots().rules as Array<{ disallow?: string[] }>;
+    const disallowed = rule?.disallow ?? [];
+
+    for (const path of ['/businesses-for-sale', '/businesses-for-sale/some-slug', '/pricing']) {
+      for (const blocked of disallowed) {
+        expect(path.startsWith(blocked), `${blocked} blocks ${path}`).toBe(false);
+      }
+    }
+  });
+
   it('lists nothing outside the known public surface', async () => {
     process.env.NEXT_PUBLIC_ALLOW_INDEXING = 'true';
 
@@ -125,6 +172,7 @@ describe('sitemap', () => {
         [
           '/',
           '/businesses-for-sale',
+          '/pricing',
           '/tools/valuation',
           '/legal/terms',
           '/legal/privacy',

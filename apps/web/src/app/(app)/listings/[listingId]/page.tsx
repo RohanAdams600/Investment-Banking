@@ -11,7 +11,16 @@ import {
   formatBand,
   type IndustryKey,
 } from '@ib/core';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, VerifiedBadge } from '@ib/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  VerifiedBadge,
+} from '@ib/ui';
 
 import { FullProfile } from '@/features/listings/full-profile';
 import { PipelinePanel } from '@/features/pipeline/pipeline-panel';
@@ -30,7 +39,24 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function ListingPage({ params }: { params: Promise<{ listingId: string }> }) {
+/*
+ * The tabs, and what decides which exist.
+ *
+ * Documents and Activity are seller-side: the vault and the pipeline both quote
+ * the confidential figures back, which is right for the person whose business it
+ * is and wrong for anybody else. A buyer sees Overview and Financials, and
+ * Financials is empty until their NDA is executed — the page renders what
+ * Postgres returned rather than deciding for itself.
+ */
+type TabKey = 'overview' | 'financials' | 'activity';
+
+export default async function ListingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ listingId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   if (!isSupabaseConfigured()) redirect('/dashboard');
 
   const actor = await getActor();
@@ -47,6 +73,29 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
 
   const { teaser, profile, nda, controls } = view;
   const industry = INDUSTRY_PROFILES[teaser.industry as IndustryKey];
+
+  const query = await searchParams;
+  const requested = typeof query.tab === 'string' ? query.tab : 'overview';
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'financials', label: 'Financials' },
+    /*
+     * No Documents tab, deliberately. The vault is per-deal, not per-listing —
+     * it lives at /deals/[dealId]/documents because a document is released to a
+     * specific counterparty under a specific agreement, not published against a
+     * listing. A tab here would have nothing to render, and an empty tab is
+     * worse than an absent one: it promises a place to put things.
+     */
+    ...(controls
+      ? ([{ key: 'activity', label: 'Activity' }] as { key: TabKey; label: string }[])
+      : []),
+  ];
+
+  // An unknown or unauthorised tab falls back rather than 404ing. A stale link
+  // to a tab that no longer applies to you should show the listing, not an
+  // error — and it must not reveal that the tab exists for somebody else.
+  const tab: TabKey = tabs.some((t) => t.key === requested) ? (requested as TabKey) : 'overview';
 
   // Who is selling. The business is anonymous; the person representing it is
   // not — a buyer needs somebody to call, and a deal offered by nobody in
@@ -127,70 +176,82 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
         ) : null}
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {teaser.summary ? (
-            <p className="text-text-secondary whitespace-pre-wrap text-sm">{teaser.summary}</p>
-          ) : null}
+      <Tabs
+        tabs={tabs}
+        active={tab}
+        basePath={`/listings/${teaser.id}`}
+        as={Link}
+        className="mt-2"
+      />
 
-          {teaser.background ? (
-            <div className="border-border-subtle space-y-1 border-l-2 pl-4">
-              <h3 className="text-text-muted text-xs font-medium uppercase tracking-wide">
-                How the business got here
-              </h3>
-              <p className="text-text-secondary whitespace-pre-wrap text-sm">{teaser.background}</p>
-            </div>
-          ) : null}
-
-          <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-            <Row label="Revenue" value={formatBand(teaser.revenueBand)} numeric />
-            <Row label="Earnings" value={formatBand(teaser.earningsBand)} numeric />
-            <Row label="Asking price" value={formatBand(teaser.askingBand)} numeric />
-            <Row label="Structure" value={DEAL_STRUCTURE_LABELS[teaser.dealStructure]} />
-            <Row
-              label="Employees"
-              value={teaser.employeeCount === null ? 'Not stated' : String(teaser.employeeCount)}
-              numeric
-            />
-            <Row
-              label="Years trading"
-              value={
-                teaser.yearsInBusiness === null ? 'Not stated' : String(teaser.yearsInBusiness)
-              }
-              numeric
-            />
-            <Row
-              label="Growth"
-              value={teaser.growthTrend ? GROWTH_TREND_LABELS[teaser.growthTrend] : 'Not stated'}
-            />
-            <Row
-              label="Owner involvement"
-              value={
-                teaser.ownerDependence
-                  ? OWNER_DEPENDENCE_LABELS[teaser.ownerDependence]
-                  : 'Not stated'
-              }
-            />
-            <Row
-              label="Real estate"
-              value={teaser.realEstateIncluded ? 'Included' : 'Not included'}
-            />
-            {teaser.reasonForSale ? (
-              <Row label="Reason for sale" value={teaser.reasonForSale} />
+      {tab === 'overview' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {teaser.summary ? (
+              <p className="text-text-secondary whitespace-pre-wrap text-sm">{teaser.summary}</p>
             ) : null}
-          </dl>
 
-          <p className="text-text-muted text-xs">
-            Figures are ranges as published by the seller, not exact amounts, and {brand.name} has
-            not verified them.
-          </p>
-        </CardContent>
-      </Card>
+            {teaser.background ? (
+              <div className="border-border-subtle space-y-1 border-l-2 pl-4">
+                <h3 className="text-text-muted text-xs font-medium uppercase tracking-wide">
+                  How the business got here
+                </h3>
+                <p className="text-text-secondary whitespace-pre-wrap text-sm">
+                  {teaser.background}
+                </p>
+              </div>
+            ) : null}
 
-      {representative && !controls ? (
+            <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+              <Row label="Revenue" value={formatBand(teaser.revenueBand)} numeric />
+              <Row label="Earnings" value={formatBand(teaser.earningsBand)} numeric />
+              <Row label="Asking price" value={formatBand(teaser.askingBand)} numeric />
+              <Row label="Structure" value={DEAL_STRUCTURE_LABELS[teaser.dealStructure]} />
+              <Row
+                label="Employees"
+                value={teaser.employeeCount === null ? 'Not stated' : String(teaser.employeeCount)}
+                numeric
+              />
+              <Row
+                label="Years trading"
+                value={
+                  teaser.yearsInBusiness === null ? 'Not stated' : String(teaser.yearsInBusiness)
+                }
+                numeric
+              />
+              <Row
+                label="Growth"
+                value={teaser.growthTrend ? GROWTH_TREND_LABELS[teaser.growthTrend] : 'Not stated'}
+              />
+              <Row
+                label="Owner involvement"
+                value={
+                  teaser.ownerDependence
+                    ? OWNER_DEPENDENCE_LABELS[teaser.ownerDependence]
+                    : 'Not stated'
+                }
+              />
+              <Row
+                label="Real estate"
+                value={teaser.realEstateIncluded ? 'Included' : 'Not included'}
+              />
+              {teaser.reasonForSale ? (
+                <Row label="Reason for sale" value={teaser.reasonForSale} />
+              ) : null}
+            </dl>
+
+            <p className="text-text-muted text-xs">
+              Figures are ranges as published by the seller, not exact amounts, and {brand.name} has
+              not verified them.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {tab === 'overview' && representative && !controls ? (
         <Card>
           <CardHeader>
             <CardTitle>Represented by</CardTitle>
@@ -216,7 +277,7 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
         which it does only for the seller's side or a buyer with an executed,
         in-force NDA. This page does not decide that; it renders what came back.
       */}
-      {controls ? null : <NdaPanel listingId={teaser.id} nda={nda} />}
+      {tab === 'overview' && !controls ? <NdaPanel listingId={teaser.id} nda={nda} /> : null}
 
       {/*
         The pipeline's own account of this listing: what is wrong with it, what
@@ -224,9 +285,34 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
         only — the findings quote the confidential figures back, which is fine
         for the person whose business it is and nobody else.
       */}
-      {controls ? <PipelinePanel listingId={teaser.id} steps={pipelineSteps} /> : null}
+      {tab === 'activity' && controls ? (
+        <PipelinePanel listingId={teaser.id} steps={pipelineSteps} />
+      ) : null}
 
-      {profile ? <FullProfile profile={profile} /> : null}
+      {/*
+        The gate. `profile` is non-null only because Postgres returned a row,
+        which it does only for the seller's side or a buyer holding an executed,
+        in-force NDA. The tab decides where it appears; it does not decide
+        whether the caller may see it.
+      */}
+      {tab === 'financials' ? (
+        profile ? (
+          <FullProfile profile={profile} />
+        ) : (
+          <Card>
+            <CardContent className="space-y-2 py-10">
+              <h2 className="font-display text-lg font-semibold">
+                Behind the confidentiality gate
+              </h2>
+              <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
+                The exact financials, the company name and the customer detail open once the seller
+                has issued you a confidentiality agreement and you have signed it. Request access
+                from the Overview tab.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      ) : null}
     </main>
   );
 }

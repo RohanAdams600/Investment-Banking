@@ -208,6 +208,9 @@ export default function HomePage() {
             <Link href="/tools/valuation" className="hover:text-text-primary">
               Valuation
             </Link>
+            <Link href="/pricing" className="hover:text-text-primary">
+              Pricing
+            </Link>
             <Link href="/sign-in" className="hover:text-text-primary">
               Sign in
             </Link>

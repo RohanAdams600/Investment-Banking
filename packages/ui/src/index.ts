@@ -35,3 +35,5 @@ export {
  * Reaching for this inside a component is a mistake; it hard-codes one theme.
  */
 export { palette, type Palette, type PaletteFamily } from './tokens/primitives';
+
+export { Tabs, type TabDefinition } from './components/tabs';

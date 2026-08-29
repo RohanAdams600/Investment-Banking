@@ -39,11 +39,23 @@ export default function robots(): MetadataRoute.Robots {
     '/onboarding',
     '/questionnaire/',
     '/settings/',
-    '/tools/',
     '/watchlist',
-    // Individual listings carry a teaser that is public in spirit, but a stable
-    // indexed URL per business is a trail back to a seller who was promised
-    // anonymity. The browse page is the front door; the detail pages are not.
+    /*
+     * The tools, one at a time rather than a blanket `/tools/`.
+     *
+     * `/tools/valuation` is the single most valuable public page this site has —
+     * "what is my business worth" is a search owners already make — and a
+     * blanket rule blocked it while the sitemap advertised it. The other two
+     * need a session and hold somebody's own draft work.
+     */
+    '/tools/legal-documents',
+    '/tools/buyer-criteria',
+    /*
+     * The application's listing pages, which need a session and carry the
+     * seller's own view of their listing. The *public* market is a different
+     * route — `/businesses-for-sale/` — reading a view with no seller id on it,
+     * and it is deliberately absent from this list.
+     */
     '/listings/',
   ];
 
