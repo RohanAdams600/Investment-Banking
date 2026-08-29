@@ -103,6 +103,30 @@ with checks as (
   select '0037 the badge function is not executable by anon',
          not has_function_privilege('anon', 'public.buyer_verification_badge(uuid)', 'execute')
 
+  union all
+  /*
+   * 0038. Both views that act as their own access check must be barrier views.
+   *
+   * Without it the planner pushes a caller's predicate underneath the view's
+   * security qual and evaluates it against rows the view is discarding — the
+   * rows never appear in the result and leak through the side effects instead.
+   * Reproduced against a real database before this check was written.
+   */
+  select '0038 boundary views are barrier views',
+         not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                      where n.nspname = 'public' and c.relkind = 'v'
+                        and c.relname in ('listing_status_timeline', 'market_listings')
+                        and not coalesce(c.reloptions, '{}') @> array['security_barrier=true'])
+  union all
+  -- The other half, and the reason the linter's suggested fix is wrong here:
+  -- as invoker views these two return nothing. The timeline shows rows the
+  -- caller's own policy withholds, and anon holds no grant on `listings` at all.
+  select '0038 boundary views are not invoker views',
+         not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                      where n.nspname = 'public' and c.relkind = 'v'
+                        and c.relname in ('listing_status_timeline', 'market_listings')
+                        and coalesce(c.reloptions, '{}') @> array['security_invoker=true'])
+
   -- Invariants that must survive every migration. These are the ones that
   -- would go unnoticed: nothing breaks, the data is simply readable by
   -- somebody who should not have it.
