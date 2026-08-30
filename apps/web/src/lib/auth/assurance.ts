@@ -3,12 +3,22 @@ import 'server-only';
 import { cache } from 'react';
 
 import { createClient } from '../supabase/server';
-import { stepUpOutcome, type StepUpAction, type StepUpOutcome } from './step-up-policy';
+import {
+  enrolPrompt,
+  stepUpDecision,
+  stepUpOutcome,
+  type StepUpAction,
+  type StepUpOutcome,
+} from './step-up-policy';
 
 export {
   STEP_UP_ACTIONS,
+  enrolPrompt,
+  isConfidentialAction,
+  stepUpDecision,
   stepUpPrompt,
   type StepUpAction,
+  type StepUpDecision,
   type StepUpOutcome,
 } from './step-up-policy';
 
@@ -107,14 +117,37 @@ export class StepUpRequiredError extends Error {
   /** False means the user has no second factor to step up with — they must enrol. */
   readonly canStepUp: boolean;
 
-  constructor(action: string, canStepUp: boolean) {
+  constructor(action: string, canStepUp: boolean, message?: string) {
     super(
-      canStepUp
-        ? 'Confirm with your authenticator app to continue.'
-        : 'Set up two-factor authentication to continue.',
+      message ??
+        (canStepUp
+          ? 'Confirm with your authenticator app to continue.'
+          : 'Set up two-factor authentication to continue.'),
     );
     this.name = 'StepUpRequiredError';
     this.action = action;
     this.canStepUp = canStepUp;
   }
+}
+
+/**
+ * The guard for anything that reaches somebody else's confidential
+ * information.
+ *
+ * Differs from `stepUpIfPossible` in exactly one case, and it is the case that
+ * matters: an account with no second factor is refused and sent to enrol,
+ * rather than proceeding with the gap recorded. That is the operator policy
+ * described in `step-up-policy.ts` — a seller releases their financials on the
+ * understanding that only the person they approved can read them, and "approved
+ * person, or anyone holding their session cookie" is not that.
+ *
+ * Throws rather than returning, because every call site here fails open if the
+ * result is ignored.
+ */
+export async function requireConfidentialAssurance(action: StepUpAction): Promise<void> {
+  const assurance = await getAssuranceState();
+  const decision = stepUpDecision(action, { current: assurance.current, next: assurance.next });
+
+  if (decision === 'challenge') throw new StepUpRequiredError(action, true);
+  if (decision === 'enrol') throw new StepUpRequiredError(action, false, enrolPrompt(action));
 }

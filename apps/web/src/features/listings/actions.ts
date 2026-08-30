@@ -5,6 +5,11 @@ import { redirect } from 'next/navigation';
 import type { z } from 'zod';
 import { canTransition, type ListingStatus } from '@ib/core';
 
+import {
+  requireConfidentialAssurance,
+  StepUpRequiredError,
+  STEP_UP_ACTIONS,
+} from '@/lib/auth/assurance';
 import { recordAuditEvent } from '@/lib/audit';
 import { notify } from '@/lib/notify/notify';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -469,6 +474,22 @@ export async function sendNda(
 
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? 'Check the values entered.');
+  }
+
+  /*
+   * The moment a seller releases their own confidential information.
+   *
+   * Guarded at the confidential tier: an account with no second factor is sent
+   * to enrol rather than allowed through, because a stolen session that can
+   * issue an NDA can release the seller's financials to whoever stole it. The
+   * seller is the victim of that, and they are the one person who cannot detect
+   * it.
+   */
+  try {
+    await requireConfidentialAssurance(STEP_UP_ACTIONS.ndaIssue);
+  } catch (error) {
+    if (error instanceof StepUpRequiredError) return fail(error.message);
+    throw error;
   }
 
   const supabase = await createClient();

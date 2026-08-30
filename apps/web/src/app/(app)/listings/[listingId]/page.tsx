@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { notFound, redirect } from 'next/navigation';
 import {
   DEAL_STRUCTURE_LABELS,
@@ -32,6 +33,11 @@ import { listingViews, loadListing } from '@/features/listings/queries';
 import { SaveButton } from '@/features/listings/save-button';
 import { loadRepresentative } from '@/features/matching/queries';
 import { getActor } from '@/lib/auth/actor';
+import {
+  requireConfidentialAssurance,
+  StepUpRequiredError,
+  STEP_UP_ACTIONS,
+} from '@/lib/auth/assurance';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 export const metadata: Metadata = {
@@ -122,6 +128,28 @@ export default async function ListingPage({
    * render an Overview tab that does not show it.
    */
   const analytics = controls && tab === 'activity' ? await listingAnalytics(listingId) : null;
+
+  /*
+   * A second factor before somebody else's confidential half.
+   *
+   * Only for a buyer. A seller looking at their own financials is not reaching
+   * anyone else's data, and making them re-authenticate to read their own
+   * business would be friction with nothing behind it.
+   *
+   * The database has already decided whether `profile` exists at all — this
+   * does not widen or narrow that. It decides whether a session that is
+   * entitled to the row is trusted enough to render it, which is a different
+   * question and the one a stolen cookie fails.
+   */
+  let confidentialChallenge: { message: string; canStepUp: boolean } | null = null;
+  if (profile && !controls) {
+    try {
+      await requireConfidentialAssurance(STEP_UP_ACTIONS.confidentialProfile);
+    } catch (error) {
+      if (!(error instanceof StepUpRequiredError)) throw error;
+      confidentialChallenge = { message: error.message, canStepUp: error.canStepUp };
+    }
+  }
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
@@ -313,7 +341,26 @@ export default async function ListingPage({
         whether the caller may see it.
       */}
       {tab === 'financials' ? (
-        profile ? (
+        profile && confidentialChallenge ? (
+          <Card>
+            <CardContent className="space-y-3 py-10">
+              <h2 className="font-display text-lg font-semibold">
+                {confidentialChallenge.canStepUp
+                  ? 'Confirm it is you'
+                  : 'Two-factor authentication required'}
+              </h2>
+              <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
+                {confidentialChallenge.message}
+              </p>
+              <Button asChild>
+                <Link href="/settings/security">
+                  {confidentialChallenge.canStepUp ? 'Confirm' : 'Set it up'}
+                  <ArrowRight aria-hidden />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : profile ? (
           <FullProfile profile={profile} />
         ) : (
           <Card>

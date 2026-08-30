@@ -19,9 +19,7 @@ import { getActor } from '@/lib/auth/actor';
 import {
   STEP_UP_ACTIONS,
   StepUpRequiredError,
-  stepUpIfPossible,
-  stepUpPrompt,
-  type StepUpOutcome,
+  requireConfidentialAssurance,
 } from '@/lib/auth/assurance';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
@@ -390,22 +388,18 @@ export async function requestDocumentUrl(
    * threat is a stolen session, not a stolen password, and a password check
    * happened hours ago.
    *
-   * Enforced for every account that has a second factor. For an account with
-   * none there is nothing to step up to, so the download proceeds and the gap
-   * is recorded — which is what makes "how many confidential downloads happened
-   * without a second factor" answerable, and that number is the argument for
-   * requiring MFA on the roles that touch a data room.
+   * Now enforced at the confidential tier. This used to let an account with no
+   * second factor through and record the gap, reasoning that blocking would put
+   * a wall in front of somebody closing a deal — and noting that the gap count
+   * was the argument for requiring MFA on the roles that touch a data room.
+   * That argument has been accepted: an account with nothing to step up to is
+   * sent to enrol rather than handed the file.
    */
-  let assurance: StepUpOutcome;
   try {
-    assurance = await stepUpIfPossible(STEP_UP_ACTIONS.documentDownload);
+    await requireConfidentialAssurance(STEP_UP_ACTIONS.documentDownload);
   } catch (thrown) {
     if (thrown instanceof StepUpRequiredError) {
-      return {
-        url: null,
-        error: stepUpPrompt(STEP_UP_ACTIONS.documentDownload),
-        needsStepUp: true,
-      };
+      return { url: null, error: thrown.message, needsStepUp: true };
     }
     throw thrown;
   }
@@ -434,17 +428,14 @@ export async function requestDocumentUrl(
   // times in an afternoon.
   await notifyDocumentOwner(documentId, actor.userId);
 
-  if (assurance === 'unprotected') {
-    // Recorded rather than hidden. A run of these is the operator's evidence
-    // that MFA should be required for the roles that touch a data room — which
-    // is their policy call, and this is the number it gets made on.
-    await recordAuditEvent({
-      action: 'document.downloaded_without_second_factor',
-      entityType: 'deal_document',
-      entityId: documentId,
-    });
-  }
-
+  /*
+   * There used to be an audit branch here for a download that happened without
+   * a second factor. It is gone because it can no longer happen: the guard
+   * above refuses that session rather than serving it. The event existed to
+   * count how often it occurred, as evidence for whether to require MFA on
+   * these roles — and that decision has been made, so the counter has done its
+   * job and a branch that can never run is worse than no branch.
+   */
   return { url, error: null };
 }
 
