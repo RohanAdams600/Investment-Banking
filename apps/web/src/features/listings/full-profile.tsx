@@ -1,6 +1,7 @@
 import { brand, formatMoney } from '@ib/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@ib/ui';
 
+import { PerformanceCharts } from './performance-charts';
 import type { ListingFullProfile } from './types';
 
 /**
@@ -55,6 +56,13 @@ export function FullProfile({ profile }: { profile: ListingFullProfile }) {
           </dl>
         </CardContent>
       </Card>
+
+      {/*
+        The picture before the table. A buyer looks for the shape of the
+        business first and reconciles the exact figures second, and the table
+        below is where the exact figures live.
+      */}
+      <PerformanceCharts financials={profile.financials} />
 
       {profile.financials.length > 0 ? (
         <Card>

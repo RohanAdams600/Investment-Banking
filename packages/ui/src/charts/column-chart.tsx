@@ -47,6 +47,7 @@ export function ColumnChart({
   title,
   description,
   unit = 'views',
+  format = compact,
   className,
 }: {
   points: ChartPoint[];
@@ -54,6 +55,14 @@ export function ColumnChart({
   /** Sits under the title. The place to say what the number does not include. */
   description?: string;
   unit?: string;
+  /**
+   * How a value is written on the axis, the peak label and the table.
+   *
+   * Defaults to plain compaction because most charts here count things. Money
+   * needs its own formatter — an axis reading "3.4" under a chart of dollars is
+   * a chart that has quietly dropped its units.
+   */
+  format?: (value: number) => string;
   className?: string;
 }) {
   const max = points.reduce((highest, point) => Math.max(highest, point.value), 0);
@@ -111,7 +120,7 @@ export function ColumnChart({
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           width="100%"
           role="img"
-          aria-label={`${title}. ${compact(total)} ${unit} in total across ${points.length} periods. The figures are in the table below.`}
+          aria-label={`${title}. ${format(total)} ${unit} in total across ${points.length} periods. The figures are in the table below.`}
           className="overflow-visible"
         >
           {/* Gridlines: hairline, solid, recessive. Not data. */}
@@ -131,7 +140,7 @@ export function ColumnChart({
                 textAnchor="end"
                 className="fill-text-muted text-[9px] tabular-nums"
               >
-                {compact(tick)}
+                {format(tick)}
               </text>
             </g>
           ))}
@@ -149,7 +158,7 @@ export function ColumnChart({
                     className="fill-chart-mark"
                   >
                     {/* The hover layer, and the screen-reader text, as one thing. */}
-                    <title>{`${point.caption ?? point.label}: ${compact(point.value)} ${unit}`}</title>
+                    <title>{`${point.caption ?? point.label}: ${format(point.value)} ${unit}`}</title>
                   </path>
                 ) : null}
 
@@ -160,7 +169,7 @@ export function ColumnChart({
                     textAnchor="middle"
                     className="fill-text-secondary text-[9px] font-medium tabular-nums"
                   >
-                    {compact(point.value)}
+                    {format(point.value)}
                   </text>
                 ) : null}
 
@@ -190,7 +199,7 @@ export function ColumnChart({
         </svg>
       )}
 
-      <ChartTable points={points} unit={unit} />
+      <ChartTable points={points} unit={unit} format={format} />
     </figure>
   );
 }
@@ -221,7 +230,15 @@ function roundedTop(x: number, y: number, width: number, height: number, radius:
  * every chart rather than offered as an option — a chart whose values are only
  * available by hovering excludes keyboard and touch users from the data.
  */
-export function ChartTable({ points, unit }: { points: ChartPoint[]; unit: string }) {
+export function ChartTable({
+  points,
+  unit,
+  format = compact,
+}: {
+  points: ChartPoint[];
+  unit: string;
+  format?: (value: number) => string;
+}) {
   return (
     <details className="group">
       <summary className="text-text-muted hover:text-text-secondary cursor-pointer text-xs">
@@ -243,7 +260,7 @@ export function ChartTable({ points, unit }: { points: ChartPoint[]; unit: strin
             {points.map((point, index) => (
               <tr key={`${point.label}-${index}`}>
                 <td className="text-text-secondary py-1">{point.caption ?? point.label}</td>
-                <td className="py-1 text-right tabular-nums">{compact(point.value)}</td>
+                <td className="py-1 text-right tabular-nums">{format(point.value)}</td>
               </tr>
             ))}
           </tbody>

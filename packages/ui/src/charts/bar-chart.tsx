@@ -22,12 +22,14 @@ export function BarChart({
   title,
   description,
   unit = 'listings',
+  format = compact,
   className,
 }: {
   points: ChartPoint[];
   title: string;
   description?: string;
   unit?: string;
+  format?: (value: number) => string;
   className?: string;
 }) {
   const ranked = [...points].sort((a, b) => b.value - a.value);
@@ -72,14 +74,14 @@ export function BarChart({
               </span>
 
               <span className="text-text-primary w-10 text-right text-xs tabular-nums">
-                {compact(point.value)}
+                {format(point.value)}
               </span>
             </li>
           ))}
         </ul>
       )}
 
-      <ChartTable points={ranked} unit={unit} />
+      <ChartTable points={ranked} unit={unit} format={format} />
     </figure>
   );
 }
