@@ -228,6 +228,15 @@ export const RATE_LIMITS = {
   interestSubmission: { limit: 5, windowMs: 3_600_000 },
   /** Submitting funding evidence for review. A person does this rarely. */
   verificationSubmission: { limit: 10, windowMs: 3_600_000 },
+  /**
+   * Opening one document in the viewer.
+   *
+   * Keyed per document as well as per user, so reading one file repeatedly
+   * while working through it does not consume the budget for the rest of the
+   * room. A client looping this is either broken or harvesting a data room page
+   * by page, which is the pattern the vault exists to make expensive.
+   */
+  documentView: { limit: 60, windowMs: 3_600_000 },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;
