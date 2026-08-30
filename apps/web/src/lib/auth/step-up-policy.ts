@@ -58,6 +58,11 @@ export const STEP_UP_ACTIONS = {
   ndaIssue: 'nda.issue',
   /** Entering a deal room, where the documents and the negotiation live. */
   dealRoom: 'deal_room.enter',
+  /**
+   * The operator panel. Every listing's confidential half is reachable from
+   * here, so it is the single most valuable session on the platform.
+   */
+  adminPanel: 'admin.panel',
   commissionSettings: 'commission.settings',
   mfaRemoval: 'mfa.remove',
 } as const;
@@ -89,6 +94,7 @@ const CONFIDENTIAL_ACTIONS = new Set<string>([
   STEP_UP_ACTIONS.confidentialProfile,
   STEP_UP_ACTIONS.ndaIssue,
   STEP_UP_ACTIONS.dealRoom,
+  STEP_UP_ACTIONS.adminPanel,
 ]);
 
 export function isConfidentialAction(action: StepUpAction): boolean {
@@ -129,6 +135,8 @@ export function stepUpPrompt(action: StepUpAction): string {
       return 'Confirm with your authenticator app before releasing your confidential information.';
     case 'deal_room.enter':
       return 'Confirm with your authenticator app before entering a deal room.';
+    case 'admin.panel':
+      return 'Confirm with your authenticator app before opening the operator panel.';
     case 'commission.settings':
       return 'Confirm with your authenticator app before changing what your firm charges.';
     case 'mfa.remove':
@@ -154,6 +162,8 @@ export function enrolPrompt(action: StepUpAction): string {
       return 'Set up two-factor authentication to enter a deal room. Deal rooms hold financials and documents belonging to somebody else.';
     case 'document.download':
       return 'Set up two-factor authentication to open confidential documents.';
+    case 'admin.panel':
+      return 'Set up two-factor authentication before using the operator panel. It can reach the confidential half of every listing on the platform, which makes it the one account worth stealing.';
     default:
       return 'Set up two-factor authentication to continue.';
   }

@@ -80,6 +80,7 @@ describe('stepUpDecision — the confidential tier', () => {
     STEP_UP_ACTIONS.confidentialProfile,
     STEP_UP_ACTIONS.ndaIssue,
     STEP_UP_ACTIONS.dealRoom,
+    STEP_UP_ACTIONS.adminPanel,
   ] as const;
 
   it('sends an account with no second factor to enrol, for anything confidential', () => {

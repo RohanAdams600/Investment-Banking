@@ -97,7 +97,7 @@ These cannot be done from the codebase and are not done.
 | **MFA on the Supabase org and on GitHub** | Provider consoles | The database holds every seller's confidential financials. |
 | **Restrict the service-role key** | Supabase → API | Rotate it if it has ever been pasted anywhere shared. |
 | **Point-in-time recovery / backups** | Supabase → Database | Confirm the retention window and *test a restore*. |
-| **Log drain and alerting** | Supabase → Logs, host | Nobody is watching auth failures or 5xx rates today. |
+| **Log drain and alerting** | Supabase → Logs, host | Nobody is watching auth failures or 5xx rates today. Tell me email or Slack and I will build the detection. |
 | **Dependency scanning** | GitHub → Dependabot / `pnpm audit` in CI | Not currently enforced on the branch. |
 | **WAF / bot protection** | Host (Vercel) | The public market is crawlable by design and therefore scrapeable. |
 | **Secret scanning + push protection** | GitHub → Settings | |
@@ -106,7 +106,16 @@ These cannot be done from the codebase and are not done.
 | **A real trademark clearance** | Counsel | `docs/brand/naming.md` is a knock-out screen, not a clearance. |
 | **State brokerage licensing** | Counsel | Decides what you may charge a success fee for. See `docs/launch/company.md`. |
 
-## 6. Reporting a vulnerability
+## 6. When something goes wrong
+
+`docs/security/incident-runbook.md` — what to do in the first fifteen minutes,
+the queries that answer "what was reached", and who to call. Its contacts table
+is empty; fill it in before you need it.
+
+`/.well-known/security.txt` publishes the reporting address and a safe harbour,
+so a researcher emails you rather than posting.
+
+## 7. Reporting a vulnerability
 
 Email the address in `BRAND_SUPPORT_EMAIL` (currently a development
 placeholder — set it before launch). Please do not open a public issue.

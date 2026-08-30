@@ -4,6 +4,11 @@ import { redirect } from 'next/navigation';
 import { can } from '@ib/core';
 
 import { getActor } from '@/lib/auth/actor';
+import {
+  requireConfidentialAssurance,
+  StepUpRequiredError,
+  STEP_UP_ACTIONS,
+} from '@/lib/auth/assurance';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 /**
@@ -24,6 +29,39 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // page re-checks its own, because "can see the panel" and "can verify a
   // person" are not the same permission and should not become the same check.
   if (!can(actor, 'admin:view_platform_analytics')) redirect('/dashboard');
+
+  /*
+   * A second factor, unconditionally, for the operator panel.
+   *
+   * This is the one account on the platform worth stealing: from here every
+   * listing's confidential half is reachable, every buyer's funding evidence,
+   * and the ability to moderate listings onto the market. An operator with a
+   * password and no second factor is a single phished credential away from
+   * every seller's financials at once.
+   *
+   * At the confidential tier, so an operator who has never enrolled is sent to
+   * do it rather than let through. That is friction for exactly one person -
+   * whoever runs the platform - and it is the person best placed to accept it.
+   */
+  try {
+    await requireConfidentialAssurance(STEP_UP_ACTIONS.adminPanel);
+  } catch (error) {
+    if (!(error instanceof StepUpRequiredError)) throw error;
+
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <div className="border-border-subtle space-y-4 rounded-md border p-8">
+          <h1 className="font-display text-xl font-semibold">
+            {error.canStepUp ? 'Confirm it is you' : 'Two-factor authentication required'}
+          </h1>
+          <p className="text-text-secondary text-sm leading-relaxed">{error.message}</p>
+          <Link href="/settings/security" className="text-accent text-sm underline underline-offset-4">
+            {error.canStepUp ? 'Confirm' : 'Set it up'}
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const tabs = [
     { href: '/admin', label: 'Overview' },
