@@ -127,6 +127,26 @@ with checks as (
                         and c.relname in ('listing_status_timeline', 'market_listings')
                         and coalesce(c.reloptions, '{}') @> array['security_invoker=true'])
 
+  union all
+  /*
+   * 0039. A seller must be able to create a listing.
+   *
+   * The read policy is applied as a WITH CHECK when an INSERT carries
+   * RETURNING, which is what `.insert().select()` compiles to. If the owner arm
+   * goes back to looking the row up in `listings`, that lookup runs against a
+   * snapshot from before the row existed, and every attempt to list a business
+   * is refused.
+   */
+  select '0039 listing read policy decides ownership from the row',
+         exists (select 1 from pg_policies
+                  where tablename = 'listings' and policyname = 'listings_select_discoverable'
+                    and qual like '%seller_id%')
+  union all
+  select '0039 listing read policy does not self-lookup for ownership',
+         not exists (select 1 from pg_policies
+                      where tablename = 'listings' and policyname = 'listings_select_discoverable'
+                        and qual like '%controls_listing%')
+
   -- Invariants that must survive every migration. These are the ones that
   -- would go unnoticed: nothing breaks, the data is simply readable by
   -- somebody who should not have it.
