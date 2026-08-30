@@ -70,6 +70,32 @@ describe.each<Theme>(['light', 'dark'])('contrast in %s', (theme) => {
     expect(contrast(role('chart-mark', theme), surface)).toBeGreaterThanOrEqual(AA_LARGE);
   });
 
+  it('separates the two chart series enough for a full-colour reader', () => {
+    /*
+     * The check that forced the second series to be ink rather than a second
+     * warm hue. Copper against stone measured ΔE 11.7 in light and 14.5 in
+     * dark, against a floor of 15 — two lines a sighted reader cannot reliably
+     * tell apart, which no legend or dashed stroke excuses.
+     *
+     * Approximated here by WCAG luminance distance rather than OKLab ΔE,
+     * because this file already carries luminance and a second colour space for
+     * one assertion is a maintenance cost.
+     *
+     * The threshold is a proxy and is calibrated rather than guessed: the pair
+     * measures ΔE 34.7 in light and 30.1 in dark against the validator's floor
+     * of 15, and 0.18 / 0.59 by this measure. 0.15 sits below both with room,
+     * so it catches a step change that would collapse the pair without failing
+     * on the values that were actually verified.
+     */
+    const mark = luminance(role('chart-mark', theme));
+    const context = luminance(role('chart-context', theme));
+    expect(Math.abs(mark - context)).toBeGreaterThan(0.15);
+  });
+
+  it('draws the supporting series legibly on a card too', () => {
+    expect(contrast(role('chart-context', theme), surface)).toBeGreaterThanOrEqual(AA_LARGE);
+  });
+
   it('keeps gridlines recessive without making them invisible', () => {
     /*
      * The opposite failure. Gridlines are not data and must not compete with

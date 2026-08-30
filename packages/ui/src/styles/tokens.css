@@ -27,6 +27,7 @@
   --color-border-strong: 201 191 174;
   --color-chart-mark: 166 110 72;
   --color-chart-mark-soft: 231 203 180;
+  --color-chart-context: 31 36 33;
   --color-chart-grid: 239 234 225;
   --color-primary: 36 45 43;
   --color-primary-hover: 31 36 33;
@@ -96,6 +97,7 @@
     --color-border-strong: 135 123 104;
     --color-chart-mark: 192 138 99;
     --color-chart-mark-soft: 84 54 36;
+    --color-chart-context: 247 244 239;
     --color-chart-grid: 46 58 56;
     --color-primary: 247 244 239;
     --color-primary-hover: 255 255 255;
@@ -135,6 +137,7 @@
   --color-border-strong: 135 123 104;
   --color-chart-mark: 192 138 99;
   --color-chart-mark-soft: 84 54 36;
+  --color-chart-context: 247 244 239;
   --color-chart-grid: 46 58 56;
   --color-primary: 247 244 239;
   --color-primary-hover: 255 255 255;

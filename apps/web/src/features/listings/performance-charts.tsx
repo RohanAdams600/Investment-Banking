@@ -1,5 +1,14 @@
 import { formatMoneyCompact } from '@ib/core';
-import { Card, CardContent, ColumnChart, StatTile, percentChange, type ChartPoint } from '@ib/ui';
+import {
+  Card,
+  CardContent,
+  ColumnChart,
+  LineChart,
+  StatTile,
+  percentChange,
+  type ChartPoint,
+  type ChartSeries,
+} from '@ib/ui';
 
 import type { ListingFinancialYear } from './types';
 
@@ -63,6 +72,50 @@ export function PerformanceCharts({ financials }: { financials: ListingFinancial
     ];
   });
 
+  /*
+   * Indexed to the first reported year.
+   *
+   * Guarded on a positive base: a business whose first reported year was a loss
+   * cannot be indexed — dividing by a negative base flips the direction of
+   * every subsequent point, so a recovery would draw as a collapse. Those
+   * series are dropped rather than drawn wrong, and the column charts below
+   * still show them.
+   */
+  const indexed = years;
+  const baseRevenue = years[0]?.revenueCents ?? 0;
+  const baseEarnings = basis === 'ebitda' ? years[0]?.ebitdaCents : years[0]?.sdeCents;
+
+  const indexSeries = (
+    name: string,
+    role: 'mark' | 'context',
+    base: number | null | undefined,
+    pick: (year: (typeof years)[number]) => number | null,
+  ): ChartSeries[] => {
+    if (!base || base <= 0) return [];
+    const points = years.flatMap((year) => {
+      const value = pick(year);
+      if (value === null) return [];
+      return [
+        {
+          label: String(year.fiscalYear),
+          caption: `Fiscal year ${year.fiscalYear}`,
+          value: (value / base) * 100,
+        },
+      ];
+    });
+    return points.length > 1 ? [{ name, role, points }] : [];
+  };
+
+  const indexedSeries: ChartSeries[] = [
+    ...indexSeries('Revenue', 'context', baseRevenue, (year) => year.revenueCents),
+    ...indexSeries(
+      basis === 'ebitda' ? 'EBITDA' : 'SDE',
+      'mark',
+      baseEarnings,
+      (year) => (basis === 'ebitda' ? year.ebitdaCents : year.sdeCents),
+    ),
+  ];
+
   const latest = years[years.length - 1];
   const previous = years.length > 1 ? years[years.length - 2] : null;
 
@@ -113,12 +166,32 @@ export function PerformanceCharts({ financials }: { financials: ListingFinancial
           />
         </div>
 
-        <ColumnChart
-          points={revenue}
-          title="Revenue by year"
-          unit="revenue"
-          format={formatMoneyCompact}
-        />
+        {/*
+          Indexed growth, which is the only honest way to put two different
+          scales in one frame. Both series start at 100 in the first reported
+          year, so the chart answers "which is growing faster" — a question the
+          two column charts below cannot answer, because a reader cannot
+          compare slopes across two different axes by eye.
+         */}
+        {indexed.length > 1 && indexedSeries.length > 1 ? (
+          <LineChart
+            series={indexedSeries}
+            title="Growth, indexed"
+            description={`Both lines start at 100 in FY${years[0]?.fiscalYear}. A line above 100 has grown since then; the gap between them is earnings growing faster or slower than revenue.`}
+            baseline={100}
+            format={(value) => String(Math.round(value))}
+            unit="index"
+          />
+        ) : null}
+
+        <div className={indexed.length > 1 ? 'border-border-subtle border-t pt-6' : undefined}>
+          <ColumnChart
+            points={revenue}
+            title="Revenue by year"
+            unit="revenue"
+            format={formatMoneyCompact}
+          />
+        </div>
 
         {earnings.length > 0 ? (
           <div className="border-border-subtle border-t pt-6">

@@ -48,5 +48,6 @@ export { Tabs, type TabDefinition } from './components/tabs';
  */
 export { ColumnChart, ChartTable, type ChartPoint } from './charts/column-chart';
 export { BarChart } from './charts/bar-chart';
+export { LineChart, type ChartSeries } from './charts/line-chart';
 export { StatTile } from './charts/stat-tile';
 export { axisFor, compact, percentChange, type Axis } from './charts/scale';

@@ -119,6 +119,28 @@ export const colorRoles = {
     dark: palette.copper[800],
     usage: 'Context behind the current period: a sparkline’s earlier days, an unfilled track.',
   },
+  /*
+   * The second line on a chart, and why it is ink rather than a second hue.
+   *
+   * This palette is deliberately warm and near-achromatic — there is no blue in
+   * it at all — so two colours drawn from it collapse under the normal-vision
+   * separation check: copper against stone measures ΔE 11.7 in light and 14.5
+   * in dark, against a floor of 15. Full-colour readers cannot reliably tell
+   * those two lines apart, and secondary encoding does not excuse that one.
+   *
+   * So charts with two series use emphasis rather than category: the series
+   * that matters takes `chart-mark`, and its context takes near-black ink in
+   * light and near-white in dark. That pair measures ΔE 34.7 and 30.1. Reading
+   * as neutral is the point, not a defect.
+   *
+   * Different steps per theme for the same reason `chart-mark` is: each has to
+   * clear 3:1 against its own surface, and no single value does both.
+   */
+  'chart-context': {
+    light: palette.slate[900],
+    dark: palette.stone[100],
+    usage: 'The supporting series on a two-line chart. Deliberately neutral against the accent.',
+  },
   'chart-grid': {
     light: palette.stone[200],
     dark: palette.slate[700],
