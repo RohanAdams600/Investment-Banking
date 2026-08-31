@@ -20,6 +20,7 @@ export * from './documents';
 export * from './crm';
 export * from './agents';
 export * from './notifications';
+export * from './onboarding/next-actions';
 export * from './verification';
 export {
   formatMoney,

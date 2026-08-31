@@ -7,6 +7,8 @@ import { CircleUser } from 'lucide-react';
 
 import { signOut } from '@/features/auth/actions';
 import { unreadCount } from '@/features/notifications/queries';
+import { accountState } from '@/features/onboarding/queries';
+import { NextSteps } from '@/features/onboarding/next-steps';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
@@ -68,6 +70,15 @@ export default async function DashboardPage() {
   // RPC is missing and the query errors. That is the behaviour we want: a
   // dashboard that renders without a feature beats one that 500s with it.
   const unread = await unreadCount();
+
+  /*
+   * What this person should do next, computed from their own rows.
+   *
+   * Rendered above everything else on the page: the dashboard's fourteen cards
+   * are useful once somebody knows the product, and useless on the day they
+   * sign up, which is the day most people decide whether to come back.
+   */
+  const state = await accountState([...actor.platformRoles]);
 
   const links: DashboardLink[] = [
     {
@@ -177,6 +188,14 @@ export default async function DashboardPage() {
           </Button>
         </form>
       </div>
+
+      {/*
+        Above the grid of destinations, and rendering nothing once setup is
+        finished. The fourteen cards below are useful to somebody who already
+        knows the product and useless on the day they sign up — which is the day
+        most people decide whether to come back.
+      */}
+      <NextSteps state={state} />
 
       <Card>
         <CardHeader>
