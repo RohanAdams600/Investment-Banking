@@ -51,14 +51,55 @@ export const SITE_DESCRIPTION =
   'A marketplace for buying and selling privately held companies. Owners list, buyers search by industry, state, earnings and price, and investment bankers, M&A advisors and business brokers run their deals here — with every listing anonymous until the seller issues a confidentiality agreement.';
 
 export const HERO = {
-  headline: 'A marketplace for buying and selling businesses.',
+  headline: 'Buy a business. Sell a business.',
   subhead:
-    'Owners list. Buyers search by industry, state, earnings and asking price, or set their criteria once and let the matching bring listings to them. Investment bankers, M&A advisors and business brokers run their clients’ deals here too. Every listing is anonymous until the seller issues a confidentiality agreement — so a company can be on the market without the market knowing.',
-  primaryCta: 'Browse businesses for sale',
-  primaryHref: '/listings',
-  secondaryCta: 'What is my business worth?',
-  secondaryHref: '/tools/valuation',
+    'A marketplace for privately held companies. Every listing is anonymous until the seller issues a confidentiality agreement — so a company can be on the market without the market knowing.',
 } as const;
+
+/**
+ * The two doors.
+ *
+ * Almost everybody arriving here is doing one of two things, and they know
+ * which before the page loads. Asking them to read a paragraph and then choose
+ * from a row of buttons wastes the one moment they are certain of anything.
+ *
+ * The valuation tool used to hold the second call to action, and that was the
+ * wrong shape: it is a useful way in for an owner who is only thinking about
+ * selling, and it is not what this business is. A marketplace whose front door
+ * offers a calculator reads as a calculator with a marketplace attached.
+ * It now sits below, offered to the people it is actually for.
+ *
+ * `facets` are the real filter values from the product, not decoration. They
+ * do the job a screenshot would: showing what the market is made of, in the
+ * vernacular somebody looking for a business already uses.
+ */
+export interface Door {
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+  facets: string[];
+}
+
+export const DOORS: Door[] = [
+  {
+    eyebrow: 'If you are buying',
+    title: 'Find a business worth owning',
+    body: 'Search by industry, state, earnings and asking price — or set your criteria once and let matching listings come to you. Ask a seller for the full picture when one fits.',
+    cta: 'Browse businesses for sale',
+    href: '/listings',
+    facets: ['Home services', 'Manufacturing', 'Distribution', 'Healthcare', 'Construction'],
+  },
+  {
+    eyebrow: 'If you are selling',
+    title: 'Sell without telling the market',
+    body: 'List anonymously: industry, state and size ranges only. Your name, address and exact figures stay sealed until you personally issue a confidentiality agreement to a buyer you have chosen.',
+    cta: 'List your business',
+    href: '/sign-up',
+    facets: ['Anonymous listing', 'You issue the NDA', 'Revocable access', 'Buyers verified'],
+  },
+];
 
 /**
  * What the platform does, stated as mechanism.

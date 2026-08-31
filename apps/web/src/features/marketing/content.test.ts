@@ -10,6 +10,7 @@ import {
   SELLER_FEATURES,
   SELLER_STEPS,
   SITE_DESCRIPTION,
+  DOORS,
 } from './content';
 
 /**
@@ -29,8 +30,7 @@ const ALL_TEXT = [
   SITE_DESCRIPTION,
   HERO.headline,
   HERO.subhead,
-  HERO.primaryCta,
-  HERO.secondaryCta,
+  ...DOORS.flatMap((door) => [door.eyebrow, door.title, door.body, door.cta, ...door.facets]),
   ...[...SELLER_FEATURES, ...BUYER_FEATURES, ...ADVISOR_FEATURES, ...LIMITS].flatMap((f) => [
     f.title,
     f.body,
@@ -98,12 +98,27 @@ describe('marketing copy', () => {
     // introduced by its valuation tool, which is the free thing at the front
     // door rather than the thing being sold, and a visitor who reads the
     // headline should not come away thinking they found a calculator.
-    expect(HERO.headline.toLowerCase()).toMatch(/marketplace/);
     expect(HERO.headline.toLowerCase()).toMatch(/buy/);
     expect(HERO.headline.toLowerCase()).toMatch(/sell/);
 
-    // And the first button goes to the market, not the calculator.
-    expect(HERO.primaryHref).toBe('/listings');
+    /*
+     * "Marketplace" moved from the headline to the subhead when the hero became
+     * two doors. The headline now says the two things a visitor came to do,
+     * which serves the same purpose more directly — so the assertion follows
+     * the positioning rather than pinning it to one string.
+     */
+    expect(`${HERO.headline} ${HERO.subhead}`.toLowerCase()).toMatch(/marketplace/);
+
+    /*
+     * And neither door leads to the calculator. This is the rule that matters:
+     * a marketplace whose front door offers a valuation reads as a valuation
+     * tool with a marketplace attached, which is what the front page used to
+     * do.
+     */
+    expect(DOORS.map((door) => door.href)).toContain('/listings');
+    for (const door of DOORS) {
+      expect(door.href).not.toContain('valuation');
+    }
   });
 
   it('names the professionals it is built for', () => {

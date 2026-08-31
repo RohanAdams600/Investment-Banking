@@ -6,6 +6,7 @@ import { Button, Card, CardContent } from '@ib/ui';
 import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
 import { publicListings } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { SiteHeader } from '@/features/marketing/site-header';
 
 export const metadata: Metadata = {
   title: pageTitle('Businesses for sale'),
@@ -50,42 +51,44 @@ export default async function PublicMarketPage({
   const listings = isSupabaseConfigured() ? await publicListings({ q }) : [];
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <header className="space-y-4">
-        <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">The market</p>
-        <h1 className="max-w-2xl text-4xl font-semibold tracking-tight">Businesses for sale</h1>
-        <p className="text-text-secondary max-w-2xl leading-relaxed">
-          Every listing below is anonymous. Industry, state and size ranges are public; the company
-          name, the address and the exact figures live in a separate record that opens only to a
-          buyer the seller has issued a confidentiality agreement to.
-        </p>
-        <div className="bg-accent h-0.5 w-16" aria-hidden />
+    <>
+      <SiteHeader />
+      <main className="mx-auto max-w-4xl px-6 py-16">
+        <header className="space-y-4">
+          <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">The market</p>
+          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight">Businesses for sale</h1>
+          <p className="text-text-secondary max-w-2xl leading-relaxed">
+            Every listing below is anonymous. Industry, state and size ranges are public; the
+            company name, the address and the exact figures live in a separate record that opens
+            only to a buyer the seller has issued a confidentiality agreement to.
+          </p>
+          <div className="bg-accent h-0.5 w-16" aria-hidden />
 
-        {/*
+          {/*
           A plain GET form, so a search is a shareable URL and the back button
           works. It also means the page stays a server component and a crawler
           following ?q= gets real results rather than an empty shell.
         */}
-        <form method="get" className="flex max-w-lg gap-2 pt-2">
-          <label htmlFor="q" className="sr-only">
-            Search businesses for sale
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="search"
-            defaultValue={q}
-            maxLength={100}
-            placeholder="HVAC, landscaping, distribution…"
-            className="border-border-default bg-surface focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
-          />
-          <Button type="submit" variant="secondary">
-            Search
-          </Button>
-        </form>
-      </header>
+          <form method="get" className="flex max-w-lg gap-2 pt-2">
+            <label htmlFor="q" className="sr-only">
+              Search businesses for sale
+            </label>
+            <input
+              id="q"
+              name="q"
+              type="search"
+              defaultValue={q}
+              maxLength={100}
+              placeholder="HVAC, landscaping, distribution…"
+              className="border-border-default bg-surface focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+            />
+            <Button type="submit" variant="secondary">
+              Search
+            </Button>
+          </form>
+        </header>
 
-      {/*
+        {/*
         The sector index.
 
         Placed above the results rather than in a footer because it is the hub
@@ -94,69 +97,70 @@ export default async function PublicMarketPage({
         to the one thing they came for. Rendered before the listings so it is
         present and useful on a deploy that has none.
       */}
-      <nav aria-label="Browse by sector" className="mt-10">
-        <h2 className="text-text-muted mb-3 font-mono text-xs uppercase tracking-[0.16em]">
-          Browse by sector
-        </h2>
-        <ul className="flex flex-wrap gap-2">
-          {GUIDED_INDUSTRY_KEYS.map((industry) => (
-            <li key={industry}>
-              <Link
-                href={`/businesses-for-sale/industry/${industry}`}
-                className="border-border-default hover:border-accent hover:text-accent inline-block rounded-md border px-3 py-1.5 text-sm transition-colors"
-              >
-                {INDUSTRY_PROFILES[industry].label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {listings.length === 0 ? (
-        <Card className="mt-12">
-          <CardContent className="space-y-3 py-10">
-            <h2 className="font-display text-xl font-semibold">
-              The first listings are not up yet.
-            </h2>
-            <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
-              {brand.name} is opening shortly.{' '}
-              <Link href="/listings" className="underline">
-                Tell us what you are looking for
-              </Link>{' '}
-              and you will hear the day something fits.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="divide-border-subtle mt-12 divide-y">
-          {listings.map((listing) => {
-            const industry = INDUSTRY_PROFILES[listing.industry as IndustryKey];
-            return (
-              <li key={listing.slug} className="py-6">
-                <Link href={`/businesses-for-sale/${listing.slug}`} className="group block">
-                  <h2 className="font-display group-hover:text-accent text-xl font-semibold transition-colors">
-                    {listing.headline}
-                  </h2>
-                  <p className="text-text-muted mt-1 font-mono text-xs uppercase tracking-[0.12em]">
-                    {[industry?.label, listing.jurisdictionName].filter(Boolean).join(' · ')}
-                  </p>
-                  {listing.summary ? (
-                    <p className="text-text-secondary mt-3 line-clamp-2 text-sm leading-relaxed">
-                      {listing.summary}
-                    </p>
-                  ) : null}
-                  <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-                    <Figure label="Revenue" value={formatBand(listing.revenueBand)} />
-                    <Figure label="Earnings" value={formatBand(listing.earningsBand)} />
-                    <Figure label="Asking" value={formatBand(listing.askingBand)} />
-                  </dl>
+        <nav aria-label="Browse by sector" className="mt-10">
+          <h2 className="text-text-muted mb-3 font-mono text-xs uppercase tracking-[0.16em]">
+            Browse by sector
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {GUIDED_INDUSTRY_KEYS.map((industry) => (
+              <li key={industry}>
+                <Link
+                  href={`/businesses-for-sale/industry/${industry}`}
+                  className="border-border-default hover:border-accent hover:text-accent inline-block rounded-md border px-3 py-1.5 text-sm transition-colors"
+                >
+                  {INDUSTRY_PROFILES[industry].label}
                 </Link>
               </li>
-            );
-          })}
-        </ul>
-      )}
-    </main>
+            ))}
+          </ul>
+        </nav>
+
+        {listings.length === 0 ? (
+          <Card className="mt-12">
+            <CardContent className="space-y-3 py-10">
+              <h2 className="font-display text-xl font-semibold">
+                The first listings are not up yet.
+              </h2>
+              <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
+                {brand.name} is opening shortly.{' '}
+                <Link href="/listings" className="underline">
+                  Tell us what you are looking for
+                </Link>{' '}
+                and you will hear the day something fits.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="divide-border-subtle mt-12 divide-y">
+            {listings.map((listing) => {
+              const industry = INDUSTRY_PROFILES[listing.industry as IndustryKey];
+              return (
+                <li key={listing.slug} className="py-6">
+                  <Link href={`/businesses-for-sale/${listing.slug}`} className="group block">
+                    <h2 className="font-display group-hover:text-accent text-xl font-semibold transition-colors">
+                      {listing.headline}
+                    </h2>
+                    <p className="text-text-muted mt-1 font-mono text-xs uppercase tracking-[0.12em]">
+                      {[industry?.label, listing.jurisdictionName].filter(Boolean).join(' · ')}
+                    </p>
+                    {listing.summary ? (
+                      <p className="text-text-secondary mt-3 line-clamp-2 text-sm leading-relaxed">
+                        {listing.summary}
+                      </p>
+                    ) : null}
+                    <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                      <Figure label="Revenue" value={formatBand(listing.revenueBand)} />
+                      <Figure label="Earnings" value={formatBand(listing.earningsBand)} />
+                      <Figure label="Asking" value={formatBand(listing.askingBand)} />
+                    </dl>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </main>
+    </>
   );
 }
 

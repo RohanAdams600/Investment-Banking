@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { brand, pageTitle } from '@ib/core';
 import { Button, Card, CardContent } from '@ib/ui';
+import { SiteHeader } from '@/features/marketing/site-header';
 
 export const metadata: Metadata = {
   title: pageTitle('Pricing'),
@@ -90,94 +91,100 @@ const TIERS: Tier[] = [
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
-      <header className="max-w-2xl space-y-4">
-        <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">Pricing</p>
-        <h1 className="text-4xl font-semibold tracking-tight">
-          Free while we are finding the first listings.
-        </h1>
-        <div className="bg-accent h-0.5 w-16" aria-hidden />
-        <p className="text-text-secondary leading-relaxed">
-          These are the prices {brand.name} will charge once there is a market worth charging for.
-          Until then every tier is free for founding members, nothing here takes a card, and you are
-          not agreeing to anything by reading this page.
-        </p>
-      </header>
+    <>
+      <SiteHeader />
+      <main className="mx-auto max-w-5xl px-6 py-16">
+        <header className="max-w-2xl space-y-4">
+          <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">Pricing</p>
+          <h1 className="text-4xl font-semibold tracking-tight">
+            Free while we are finding the first listings.
+          </h1>
+          <div className="bg-accent h-0.5 w-16" aria-hidden />
+          <p className="text-text-secondary leading-relaxed">
+            These are the prices {brand.name} will charge once there is a market worth charging for.
+            Until then every tier is free for founding members, nothing here takes a card, and you
+            are not agreeing to anything by reading this page.
+          </p>
+        </header>
 
-      <div className="mt-12 grid gap-6 lg:grid-cols-3">
-        {TIERS.map((tier) => (
-          <Card key={tier.name} className={tier.emphasis ? 'border-accent' : undefined}>
-            <CardContent className="flex h-full flex-col gap-5 py-8">
-              <div className="space-y-1">
-                <h2 className="font-display text-xl font-semibold">{tier.name}</h2>
-                <p className="text-text-muted text-sm">{tier.who}</p>
-              </div>
+        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {TIERS.map((tier) => (
+            <Card key={tier.name} className={tier.emphasis ? 'border-accent' : undefined}>
+              <CardContent className="flex h-full flex-col gap-5 py-8">
+                <div className="space-y-1">
+                  <h2 className="font-display text-xl font-semibold">{tier.name}</h2>
+                  <p className="text-text-muted text-sm">{tier.who}</p>
+                </div>
 
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums">{tier.price}</span>
-                <span className="text-text-muted text-sm">{tier.cadence}</span>
-              </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-semibold tabular-nums">{tier.price}</span>
+                  <span className="text-text-muted text-sm">{tier.cadence}</span>
+                </div>
 
-              <p className="text-accent text-2xs font-mono uppercase tracking-[0.14em]">
-                Free through launch
-              </p>
+                <p className="text-accent text-2xs font-mono uppercase tracking-[0.14em]">
+                  Free through launch
+                </p>
 
-              <ul className="flex-1 space-y-2.5">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex gap-2.5 text-sm leading-relaxed">
-                    <Check className="text-accent mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span className="text-text-secondary">{feature}</span>
-                  </li>
-                ))}
-              </ul>
+                <ul className="flex-1 space-y-2.5">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex gap-2.5 text-sm leading-relaxed">
+                      <Check className="text-accent mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <span className="text-text-secondary">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
 
-              <Button asChild variant={tier.emphasis ? 'primary' : 'secondary'}>
-                <Link href={tier.cta.href}>{tier.cta.label}</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <Button asChild variant={tier.emphasis ? 'primary' : 'secondary'}>
+                  <Link href={tier.cta.href}>{tier.cta.label}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/*
+        {/*
         Said here rather than in a footer, because the two questions a broker
         asks after "what does it cost" are "do you take a cut of my fee" and "do
         you touch the money" — and the answers are unusual enough to be worth
         stating where the prices are.
       */}
-      <section className="border-border-subtle mt-16 border-t pt-10">
-        <h2 className="font-display text-2xl font-semibold">What is not in the price</h2>
-        <dl className="mt-6 grid gap-8 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <dt className="font-display text-base font-semibold">No commission on your deals</dt>
-            <dd className="text-text-secondary text-sm leading-relaxed">
-              {brand.name} does not take a percentage of anything you close. The commission records
-              here are for your own bookkeeping, and the fee is between you and your client.
-            </dd>
-          </div>
-          <div className="space-y-1.5">
-            <dt className="font-display text-base font-semibold">No money moves through us</dt>
-            <dd className="text-text-secondary text-sm leading-relaxed">
-              There is no escrow and no payment rail. Funds move the way they always have, between
-              the parties and their advisors.
-            </dd>
-          </div>
-          <div className="space-y-1.5">
-            <dt className="font-display text-base font-semibold">Promoted placement is labelled</dt>
-            <dd className="text-text-secondary text-sm leading-relaxed">
-              A paid position at the top of search says so, in words, on the listing. Buyers are
-              entitled to know which results were bought.
-            </dd>
-          </div>
-          <div className="space-y-1.5">
-            <dt className="font-display text-base font-semibold">Not a broker, not an advisor</dt>
-            <dd className="text-text-secondary text-sm leading-relaxed">
-              {brand.name} is software. It does not represent either side and does not earn a fee
-              for recommending anything.
-            </dd>
-          </div>
-        </dl>
-      </section>
-    </main>
+        <section className="border-border-subtle mt-16 border-t pt-10">
+          <h2 className="font-display text-2xl font-semibold">What is not in the price</h2>
+          <dl className="mt-6 grid gap-8 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <dt className="font-display text-base font-semibold">No commission on your deals</dt>
+              <dd className="text-text-secondary text-sm leading-relaxed">
+                {brand.name} does not take a percentage of anything you close. The commission
+                records here are for your own bookkeeping, and the fee is between you and your
+                client.
+              </dd>
+            </div>
+            <div className="space-y-1.5">
+              <dt className="font-display text-base font-semibold">No money moves through us</dt>
+              <dd className="text-text-secondary text-sm leading-relaxed">
+                There is no escrow and no payment rail. Funds move the way they always have, between
+                the parties and their advisors.
+              </dd>
+            </div>
+            <div className="space-y-1.5">
+              <dt className="font-display text-base font-semibold">
+                Promoted placement is labelled
+              </dt>
+              <dd className="text-text-secondary text-sm leading-relaxed">
+                A paid position at the top of search says so, in words, on the listing. Buyers are
+                entitled to know which results were bought.
+              </dd>
+            </div>
+            <div className="space-y-1.5">
+              <dt className="font-display text-base font-semibold">Not a broker, not an advisor</dt>
+              <dd className="text-text-secondary text-sm leading-relaxed">
+                {brand.name} is software. It does not represent either side and does not earn a fee
+                for recommending anything.
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </main>
+    </>
   );
 }

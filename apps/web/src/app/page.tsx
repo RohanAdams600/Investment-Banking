@@ -2,11 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Lock, ShieldCheck } from 'lucide-react';
 import { brand, isBrandFullyConfigured, pageTitle, unconfiguredBrandFields } from '@ib/core';
-import { Badge, Button, Card, CardContent } from '@ib/ui';
+import { Badge, Button, cn } from '@ib/ui';
 
+import { HeroBackdrop } from '@/features/marketing/hero-backdrop';
+import { SiteHeader } from '@/features/marketing/site-header';
 import { TwoRecordsLive } from '@/features/marketing/two-records-live';
 import {
   ADVISOR_FEATURES,
+  DOORS,
   ADVISOR_STEPS,
   BUYER_FEATURES,
   BUYER_STEPS,
@@ -39,47 +42,119 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <main>
-      {/* Hero */}
-      <section className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:pt-28">
-        {isBrandFullyConfigured ? null : (
-          <Badge variant="warning" className="mb-6">
-            Placeholder brand config: {unconfiguredBrandFields.join(', ')}
-          </Badge>
-        )}
+      {/*
+        The hero, and the two doors.
 
-        {/* The mark, at the size it was drawn to work at. */}
-        <div className="mb-8 flex items-center gap-3">
-          <Mark />
-          <span className="text-text-muted font-mono text-xs uppercase tracking-[0.2em]">
-            {brand.name}
-          </span>
+        Dark, and continuous with the confidentiality band below it, so the top
+        of the page is one obsidian slab rather than a light hero with a dark
+        stripe under it. That is the institutional register this market
+        expects — and it makes the switch to light, at the point the page starts
+        explaining itself, do real work.
+
+        The two doors are the whole idea. Almost everybody arriving is either
+        buying or selling and knows which before the page loads; making them
+        read a paragraph and then pick from a row of buttons wastes the one
+        moment they are certain of anything.
+      */}
+      <section className="relative isolate overflow-hidden bg-slate-900 text-stone-50">
+        <HeroBackdrop />
+
+        <div className="relative">
+          <SiteHeader tone="dark" />
         </div>
 
-        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-          {HERO.headline}
-        </h1>
+        <div className="relative mx-auto max-w-6xl px-6 pb-4">
+          {isBrandFullyConfigured ? null : (
+            <Badge variant="warning" className="mt-6">
+              Placeholder brand config: {unconfiguredBrandFields.join(', ')}
+            </Badge>
+          )}
 
-        <div className="bg-accent mt-6 h-0.5 w-16" aria-hidden />
+          <div className="max-w-3xl pb-2 pt-14 sm:pt-20">
+            <h1 className="font-display text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.025em] text-stone-50 sm:text-[4.25rem]">
+              {HERO.headline}
+            </h1>
 
-        <p className="text-text-secondary mt-6 max-w-2xl text-lg leading-relaxed">{HERO.subhead}</p>
+            {/*
+              A short copper rule between the two, rather than a gap. It gives
+              the headline something to sit on and repeats the mark's capstone
+              colour — one line doing the job a decorative divider would do,
+              without becoming decoration.
+            */}
+            <span className="bg-copper-400 mt-8 block h-px w-16" aria-hidden />
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild size="lg">
-            <Link href={HERO.primaryHref}>
-              {HERO.primaryCta}
-              <ArrowRight aria-hidden />
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-300">{HERO.subhead}</p>
+          </div>
+        </div>
+
+        {/*
+          Two panels, divided by a hairline rather than floated as cards. A pair
+          of rounded boxes with an accent rail is the shape every generated
+          landing page reaches for; a full-bleed split reads as a threshold,
+          which is what this is.
+        */}
+        <div className="relative mx-auto mt-10 max-w-6xl px-6 pb-16 sm:mt-14 sm:pb-20">
+          <div className="grid gap-px overflow-hidden rounded-sm bg-stone-50/10 sm:grid-cols-2">
+            {DOORS.map((door) => (
+              <Link
+                key={door.href}
+                href={door.href}
+                className="focus-visible:ring-copper-400 group relative flex flex-col gap-4 bg-slate-900 p-8 outline-none transition-colors hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-inset sm:p-10"
+              >
+                {/* Rises on hover. The only motion in the hero. */}
+                <span
+                  className="bg-copper-400 absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                  aria-hidden
+                />
+
+                <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.2em]">
+                  {door.eyebrow}
+                </p>
+
+                <h2 className="font-display text-2xl font-semibold leading-tight text-stone-50 sm:text-3xl">
+                  {door.title}
+                </h2>
+
+                <p className="max-w-sm text-sm leading-relaxed text-stone-300">{door.body}</p>
+
+                {/*
+                  Real filter values and real guarantees, not decoration. They
+                  do the job a screenshot would: showing what the market is made
+                  of, in the words somebody searching already uses.
+                */}
+                <ul className="mt-1 flex flex-wrap gap-x-2 gap-y-1.5">
+                  {door.facets.map((facet) => (
+                    <li
+                      key={facet}
+                      className="rounded-full border border-stone-50/15 px-2.5 py-1 font-mono text-[11px] text-stone-400"
+                    >
+                      {facet}
+                    </li>
+                  ))}
+                </ul>
+
+                <span className="text-copper-400 mt-auto flex items-center gap-2 pt-4 text-sm font-medium">
+                  {door.cta}
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  />
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <p className="mt-6 text-sm text-stone-400">
+            Browsing takes a free account — sellers are entitled to know who is looking.{' '}
+            <Link
+              href="/tools/valuation"
+              className="text-stone-300 underline decoration-stone-600 underline-offset-4 transition-colors hover:text-stone-50"
+            >
+              Not ready to list? Work out what your business is worth
             </Link>
-          </Button>
-          <Button asChild size="lg" variant="secondary">
-            <Link href={HERO.secondaryHref}>{HERO.secondaryCta}</Link>
-          </Button>
+            .
+          </p>
         </div>
-
-        <p className="text-text-muted mt-4 max-w-2xl text-sm">
-          Browsing the market takes a free account — sellers are entitled to know who is looking.
-          The valuation takes about five minutes, needs no account, and does not require you to list
-          anything.
-        </p>
       </section>
 
       {/*
@@ -91,7 +166,7 @@ export default function HomePage() {
         is deliberately the single inversion on the page — used twice it would
         stop meaning anything.
       */}
-      <section className="bg-slate-900 text-stone-50">
+      <section className="border-t border-stone-50/10 bg-slate-900 text-stone-50">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[1fr_minmax(0,560px)] lg:items-center lg:gap-16 lg:py-20">
           <div className="space-y-4">
             <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.2em]">
@@ -123,10 +198,10 @@ export default function HomePage() {
       {/* Sellers */}
       <Side
         eyebrow="If you are selling"
-        heading="Find out what it is worth before anyone knows it is for sale."
+        heading="Put it on the market without putting the word out."
         features={SELLER_FEATURES}
         steps={SELLER_STEPS}
-        cta={{ href: '/sign-up', label: 'Start with a valuation' }}
+        cta={{ href: '/sign-up', label: 'List your business' }}
       />
 
       {/* Buyers */}
@@ -149,78 +224,94 @@ export default function HomePage() {
       />
 
       {/* What this is not */}
-      <section className="border-border-subtle border-t">
-        <div className="mx-auto max-w-4xl px-6 py-16">
-          <div className="flex gap-4">
-            <ShieldCheck className="text-text-muted mt-1 h-5 w-5 shrink-0" aria-hidden />
-            <div className="w-full space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">What {brand.name} is not</h2>
-                <p className="text-text-secondary max-w-2xl text-sm">
-                  Worth saying before you rely on any of it, rather than in a footer.
-                </p>
-              </div>
+      <section className="border-border-subtle bg-surface-sunken/40 border-t">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16">
+          <div>
+            <ShieldCheck className="text-accent h-5 w-5" aria-hidden />
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-[2rem] sm:leading-[1.15]">
+              What {brand.name} is not
+            </h2>
+            <p className="text-text-secondary mt-4 text-sm leading-relaxed">
+              Worth saying before you rely on any of it, rather than in a footer.
+            </p>
+          </div>
 
-              <dl className="grid gap-6 sm:grid-cols-2">
-                {LIMITS.map((limit) => (
-                  <div key={limit.title} className="space-y-1">
-                    <dt className="text-sm font-medium">{limit.title}</dt>
-                    <dd className="text-text-secondary text-sm leading-relaxed">{limit.body}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+          <dl className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
+            {LIMITS.map((limit) => (
+              <div key={limit.title} className="space-y-1.5">
+                <dt className="font-display text-base font-semibold">{limit.title}</dt>
+                <dd className="text-text-secondary text-sm leading-relaxed">{limit.body}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/*
+        The close, back on the dark ground.
+
+        The page opens and ends on the same slab, which frames everything
+        between them as the explanation. A card floated inside a section was the
+        weaker version: a box asking to be clicked, indistinguishable from the
+        boxes above it.
+      */}
+      <section className="bg-slate-900 text-stone-50">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-8 px-6 py-16">
+          <div className="max-w-xl space-y-3">
+            <h2 className="font-display text-2xl font-semibold text-stone-50 sm:text-3xl">
+              See what is on the market
+            </h2>
+            <p className="text-sm leading-relaxed text-stone-300">
+              Free to join. A seller hears from you when you request access, not before — and
+              nothing you can see before then identifies anybody&rsquo;s business.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="focus-visible:ring-copper-400 bg-stone-50 text-slate-900 hover:bg-stone-200"
+            >
+              <Link href="/listings">
+                Browse businesses for sale
+                <ArrowRight aria-hidden />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="border-stone-50/25 bg-transparent text-stone-50 hover:bg-stone-50/10 hover:text-stone-50"
+            >
+              <Link href="/sign-up">List your business</Link>
+            </Button>
           </div>
         </div>
       </section>
-
-      {/* Close */}
-      <section className="border-border-subtle border-t">
-        <div className="mx-auto max-w-4xl px-6 py-16">
-          <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-8">
-              <div className="space-y-1">
-                <h2 className="text-xl font-semibold">See what is on the market</h2>
-                <p className="text-text-muted text-sm">
-                  Free to join. A seller hears from you when you request access, not before.
-                </p>
-              </div>
-              <Button asChild size="lg">
-                <Link href="/listings">
-                  Browse listings
-                  <ArrowRight aria-hidden />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <footer className="border-border-subtle border-t">
-        <div className="text-text-muted mx-auto flex max-w-4xl flex-wrap justify-between gap-4 px-6 py-8 text-xs">
-          <p>
-            {brand.name} — {brand.tagline}
-          </p>
-          <nav className="flex gap-4">
-            <Link href="/listings" className="hover:text-text-primary">
-              Businesses for sale
-            </Link>
-            <Link href="/tools/valuation" className="hover:text-text-primary">
-              Valuation
-            </Link>
-            <Link href="/pricing" className="hover:text-text-primary">
-              Pricing
-            </Link>
-            <Link href="/sign-in" className="hover:text-text-primary">
-              Sign in
-            </Link>
-          </nav>
-        </div>
-      </footer>
     </main>
   );
 }
 
+/**
+ * One side of the market: sellers, buyers, or the advisors between them.
+ *
+ * ## Why an editorial two-column and not a centred stack
+ *
+ * The heading sticks to the left rail while the features scroll past it on the
+ * right. That is how a printed feature spread is set, and it does two things a
+ * centred column cannot: the reader always knows which side of the market they
+ * are reading about, and the section keeps the page's spine — the same
+ * `max-w-6xl` measure as the hero — instead of pinching to a narrower column
+ * halfway down the page, which is the tell that a page was assembled section by
+ * section rather than laid out.
+ *
+ * ## Cells divided by hairlines, not floating in space
+ *
+ * The features are a grid whose gaps are one-pixel rules. A set of free-floating
+ * title-and-paragraph pairs reads as a list of bullet points with the bullets
+ * removed; ruled cells read as a table of contents, which is what this is.
+ */
 function Side({
   eyebrow,
   heading,
@@ -237,69 +328,72 @@ function Side({
   muted?: boolean;
 }) {
   return (
-    <section className={muted ? 'bg-surface-sunken/40' : undefined}>
-      <div className="mx-auto max-w-4xl space-y-10 px-6 py-16">
-        <div className="space-y-3">
+    <section className={cn('border-border-subtle border-t', muted && 'bg-surface-sunken/40')}>
+      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16">
+        {/* The rail. Sticky on large screens only — on a phone it is a heading. */}
+        <div className="lg:sticky lg:top-8 lg:self-start">
           <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">{eyebrow}</p>
-          <h2 className="max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-[2rem] sm:leading-[1.15]">
+            {heading}
+          </h2>
+          <span className="bg-accent mt-6 block h-px w-12" aria-hidden />
+
+          <Button asChild className="mt-8 hidden lg:inline-flex">
+            <Link href={cta.href}>
+              {cta.label}
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
         </div>
 
-        <dl className="grid gap-6 sm:grid-cols-2">
-          {features.map((feature) => (
-            <div key={feature.title} className="space-y-1.5">
-              <dt className="font-display text-base font-semibold">{feature.title}</dt>
-              <dd className="text-text-secondary text-sm leading-relaxed">{feature.body}</dd>
-            </div>
-          ))}
-        </dl>
-
-        <div className="border-border-subtle border-t pt-8">
-          <h3 className="text-text-muted mb-5 font-mono text-xs uppercase tracking-[0.16em]">
-            How it goes
-          </h3>
-          <ol className="grid gap-6 sm:grid-cols-2">
-            {steps.map((step) => (
-              <li key={step.number} className="border-accent flex gap-4 border-l-2 pl-4">
-                <span
-                  className="text-accent shrink-0 font-mono text-xs font-semibold tabular-nums"
-                  aria-hidden
-                >
-                  {String(step.number).padStart(2, '0')}
-                </span>
-                <div className="space-y-1">
-                  <p className="font-display text-base font-semibold">{step.title}</p>
-                  <p className="text-text-secondary text-sm leading-relaxed">{step.body}</p>
-                </div>
-              </li>
+        <div className="space-y-12">
+          <dl className="border-border-subtle grid gap-px overflow-hidden border sm:grid-cols-2">
+            {features.map((feature) => (
+              <div key={feature.title} className="bg-surface -m-px space-y-1.5 border p-6">
+                <dt className="font-display text-base font-semibold">{feature.title}</dt>
+                <dd className="text-text-secondary text-sm leading-relaxed">{feature.body}</dd>
+              </div>
             ))}
-          </ol>
-        </div>
+          </dl>
 
-        <Button asChild>
-          <Link href={cta.href}>
-            {cta.label}
-            <ArrowRight aria-hidden />
-          </Link>
-        </Button>
+          <div>
+            <h3 className="text-text-muted mb-6 font-mono text-xs uppercase tracking-[0.16em]">
+              How it goes
+            </h3>
+
+            {/*
+              A single vertical rule with the steps hung off it, rather than a
+              border per card. Four separate left-bordered boxes is a stack of
+              four things; one continuous line is a sequence, which is what a
+              numbered process is.
+            */}
+            <ol className="border-border-default relative space-y-7 border-l pl-6">
+              {steps.map((step) => (
+                <li key={step.number} className="relative">
+                  <span
+                    className="bg-accent absolute -left-[1.625rem] top-2 h-1.5 w-1.5 rounded-full ring-4 ring-[rgb(var(--color-canvas))]"
+                    aria-hidden
+                  />
+                  <p className="text-text-muted font-mono text-[11px] tabular-nums" aria-hidden>
+                    {String(step.number).padStart(2, '0')}
+                  </p>
+                  <p className="font-display mt-1 text-base font-semibold">{step.title}</p>
+                  <p className="text-text-secondary mt-1 max-w-xl text-sm leading-relaxed">
+                    {step.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <Button asChild className="lg:hidden">
+            <Link href={cta.href}>
+              {cta.label}
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </div>
     </section>
-  );
-}
-
-/**
- * The wordmark's companion, inline rather than an <img>.
- *
- * Squared forms in courses under a gold capstone — an ashlar course, which is
- * what the company is named for. Inline so it takes the theme's colours and
- * stays sharp; it is nine shapes, not an illustration worth a network request.
- */
-function Mark() {
-  return (
-    <svg width="26" height="30" viewBox="0 0 26 30" role="img" aria-label="" aria-hidden>
-      <rect x="2" y="21" width="22" height="6" rx="1" className="fill-primary" />
-      <rect x="5" y="13.5" width="16" height="6" rx="1" className="fill-primary" />
-      <rect x="8" y="7" width="10" height="5" rx="1" className="fill-primary" />
-      <path d="M13 0 L18 5 H8 Z" className="fill-accent" />
-    </svg>
   );
 }

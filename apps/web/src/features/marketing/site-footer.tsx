@@ -24,13 +24,54 @@ export function SiteFooter() {
 
   return (
     <footer className="border-border-subtle mt-16 border-t">
-      <div className="text-text-muted mx-auto max-w-5xl space-y-4 px-6 py-8 text-xs">
+      <div className="text-text-muted mx-auto max-w-6xl space-y-4 px-6 py-10 text-xs">
         {!isBrandFullyConfigured ? (
           <p className="border-warning/40 bg-warning-subtle text-warning rounded border p-3">
             Not configured for launch: {unconfiguredBrandFields.join(', ')} still use development
             defaults. Set <code>BRAND_SUPPORT_EMAIL</code> and <code>BRAND_MAILING_ADDRESS</code>.
           </p>
         ) : null}
+
+        {/*
+          The product links, repeated at the bottom. The header carries the same
+          five, and a visitor who has read to the end of a page should not have
+          to scroll back up to act on it.
+        */}
+        <nav
+          className="text-text-secondary flex flex-wrap gap-x-4 gap-y-2 text-sm"
+          aria-label="Site"
+        >
+          <Link
+            href="/listings"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            Businesses for sale
+          </Link>
+          <Link
+            href="/sign-up"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            List your business
+          </Link>
+          <Link
+            href="/pricing"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/tools/valuation"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            Valuation
+          </Link>
+          <Link
+            href="/sign-in"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            Sign in
+          </Link>
+        </nav>
 
         <nav className="flex flex-wrap gap-x-4 gap-y-2" aria-label="Legal">
           <Link
