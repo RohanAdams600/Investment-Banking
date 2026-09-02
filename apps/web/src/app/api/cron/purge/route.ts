@@ -75,5 +75,25 @@ export async function POST(request: Request): Promise<Response> {
   // nothing to do" are distinguishable in a log a month from now.
   console.log('[cron/purge] complete', JSON.stringify(result ?? {}));
 
-  return NextResponse.json({ ok: true, ...(result ?? {}) }, { headers: { 'cache-control': 'no-store' } });
+  return NextResponse.json(
+    { ok: true, ...(result ?? {}) },
+    { headers: { 'cache-control': 'no-store' } },
+  );
+}
+
+/*
+ * Vercel Cron issues a GET.
+ *
+ * A GET that mutates is the wrong shape by every convention, and the
+ * convention exists to stop a crawler or a link prefetch from triggering an
+ * action nobody asked for. Neither can happen here: the route refuses without a
+ * bearer secret that only the scheduler holds, and refuses outright when that
+ * secret is unset. The alternative — keeping POST-only — is a job that silently
+ * never runs on the platform this deploys to, which is the failure this
+ * exists to avoid.
+ *
+ * POST stays for a scheduler that can send one, and for running it by hand.
+ */
+export async function GET(request: Request): Promise<Response> {
+  return POST(request);
 }

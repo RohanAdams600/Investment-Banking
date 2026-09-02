@@ -4,6 +4,14 @@
     {
       "path": "/api/cron/due-tasks",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/saved-search-alerts",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/purge",
+      "schedule": "0 3 * * *"
     }
   ]
 }

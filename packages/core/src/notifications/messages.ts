@@ -33,6 +33,7 @@ export const NOTIFICATION_KINDS = [
   'document_released',
   'message_received',
   'task_due',
+  'saved_search_match',
 ] as const;
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
@@ -55,6 +56,13 @@ export const NOTIFICATION_CATEGORY: Record<NotificationKind, NotificationCategor
   document_released: 'deal_activity',
   task_due: 'deal_activity',
   new_match: 'new_matches',
+  /*
+   * Same switch as `new_match`, deliberately. A buyer who turned off "new
+   * matches" emails has said they do not want the platform telling them about
+   * listings; that a different mechanism produced this one is an implementation
+   * detail they never agreed to be re-subscribed by.
+   */
+  saved_search_match: 'new_matches',
   listing_approved: 'listing_status',
   listing_returned: 'listing_status',
   message_received: 'messages',
@@ -172,6 +180,23 @@ export function notificationCopy(
         title: count === 1 ? 'A task is due' : `${count} tasks are due`,
         body: 'From your pipeline.',
       };
+
+    case 'saved_search_match':
+      return {
+        title:
+          count === 1 ? 'A business matching your search' : `${count} businesses match your search`,
+        /*
+         * Not the headline, and not the sector.
+         *
+         * Every other body here withholds detail because the detail is
+         * confidential. This one withholds it for a different reason: the
+         * subject line of an email sitting in a preview pane is not a place to
+         * put "HVAC contractor in Ohio" when the recipient may be reading it in
+         * an open-plan office, and the same buyer may hold six searches whose
+         * names they chose precisely so nobody else could read them.
+         */
+        body: 'Open your saved searches to see what came up.',
+      };
   }
 }
 
@@ -196,6 +221,9 @@ export function notificationHref(kind: NotificationKind, entityId?: string | nul
 
     case 'new_match':
       return '/matches';
+
+    case 'saved_search_match':
+      return '/saved-searches';
 
     case 'document_opened':
     case 'document_released':

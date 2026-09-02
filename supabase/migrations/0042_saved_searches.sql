@@ -58,6 +58,16 @@
 -- is a timing signal the seller did not agree to publish. A day's batching
 -- costs a buyer nothing and removes it.
 
+/*
+ * The enum value first, and outside the transaction below.
+ *
+ * `alter type ... add value` is permitted inside a transaction from Postgres 12,
+ * but the new value cannot then be *used* until that transaction commits. Adding
+ * it up here keeps that constraint from becoming a trap for whoever next edits
+ * this file and wonders why their insert cannot see the label they just added.
+ */
+alter type app.notification_kind add value if not exists 'saved_search_match';
+
 begin;
 
 -- ===========================================================================
