@@ -74,10 +74,30 @@ function toPublic(row: Row): PublicListing {
   };
 }
 
-export async function publicListings(filter?: {
+/**
+ * The slice of a PostgREST builder these filters need.
+ *
+ * Structural rather than imported: `PostgrestFilterBuilder` carries five type
+ * parameters that differ between the two call sites, and naming them here would
+ * couple this file to a client version for no benefit. All that matters is that
+ * the three methods return the same builder back.
+ */
+interface FilterBuilder {
+  eq(column: string, value: unknown): this;
+  gte(column: string, value: unknown): this;
+  lte(column: string, value: unknown): this;
+}
+
+export interface PublicFilter {
   industry?: string;
+  jurisdiction?: string;
   q?: string;
-}): Promise<PublicListing[]> {
+  /** Both in cents, both compared against the teaser's published bands. */
+  minEarningsCents?: number;
+  maxAskingCents?: number;
+}
+
+export async function publicListings(filter?: PublicFilter): Promise<PublicListing[]> {
   const supabase = await createClient();
 
   /*
@@ -86,6 +106,45 @@ export async function publicListings(filter?: {
    * ordered slugs, which are then hydrated. Two round trips rather than one,
    * and the alternative is results in physical order, which reads as random.
    */
+  /*
+   * The structured filters, applied to whichever branch runs below.
+   *
+   * Band comparisons rather than point comparisons, and the same permissive
+   * direction the saved-search function uses: "earning at least $500k" asks
+   * whether the top of the published band reaches $500k, not whether the bottom
+   * does. A buyer would rather see a listing whose band straddles their floor
+   * and judge it themselves than never learn it existed — and the two surfaces
+   * must agree, because a saved search built from these filters that then
+   * matched a different set would be a bug nobody could explain.
+   */
+  /**
+   * Applies the structured filters to whichever query shape is running below.
+   *
+   * Band comparisons rather than point comparisons, and the same permissive
+   * direction the saved-search function uses: "earning at least $500k" asks
+   * whether the top of the published band reaches $500k, not whether the bottom
+   * does. A buyer would rather see a listing whose band straddles their floor
+   * and judge it themselves than never learn it existed — and the two surfaces
+   * have to agree, because a saved search built from these filters that then
+   * matched a different set would be a bug nobody could explain.
+   *
+   * Generic over the builder so both branches share one definition. PostgREST's
+   * filter methods return the same builder type, which is what makes the
+   * constraint below expressible without casting.
+   */
+  function narrow<T extends FilterBuilder>(query: T): T {
+    let q = query;
+    if (filter?.industry) q = q.eq('industry', filter.industry);
+    if (filter?.jurisdiction) q = q.eq('jurisdiction_code', filter.jurisdiction);
+    if (filter?.minEarningsCents !== undefined) {
+      q = q.gte('earnings_band_high_cents', filter.minEarningsCents);
+    }
+    if (filter?.maxAskingCents !== undefined) {
+      q = q.lte('asking_price_band_low_cents', filter.maxAskingCents);
+    }
+    return q;
+  }
+
   if (filter?.q?.trim()) {
     const { data: ranked, error: rankError } = await supabase.rpc('search_market', {
       term: filter.q.trim(),
@@ -96,7 +155,17 @@ export async function publicListings(filter?: {
     const slugs = (ranked as Row[]).map((row) => row.slug as string);
     if (slugs.length === 0) return [];
 
-    const { data, error } = await supabase.from('market_listings').select('*').in('slug', slugs);
+    /*
+     * The structured filters are applied to the hydration rather than to the
+     * ranking. `search_market` ranks by text relevance over the whole live
+     * market; narrowing here means a filtered search returns fewer than
+     * `PUBLIC_PAGE` results rather than reaching further down the ranking for
+     * more — which is the honest behaviour, because the alternative shows a
+     * buyer worse text matches for having named a state.
+     */
+    const { data, error } = await narrow(
+      supabase.from('market_listings').select('*').in('slug', slugs),
+    );
     if (error || !data) return [];
 
     // Re-imposed, because `in` returns rows in whatever order it likes and the
@@ -107,15 +176,14 @@ export async function publicListings(filter?: {
       .sort((a, b) => (order.get(a.slug) ?? 0) - (order.get(b.slug) ?? 0));
   }
 
-  let query = supabase
-    .from('market_listings')
-    .select('*')
-    .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(PUBLIC_PAGE);
+  const { data, error } = await narrow(
+    supabase
+      .from('market_listings')
+      .select('*')
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .limit(PUBLIC_PAGE),
+  );
 
-  if (filter?.industry) query = query.eq('industry', filter.industry);
-
-  const { data, error } = await query;
   if (error || !data) return [];
   return (data as Row[]).map(toPublic);
 }

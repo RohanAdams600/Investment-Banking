@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { INDUSTRY_PROFILES, brand, formatBand, pageTitle, type IndustryKey } from '@ib/core';
-import { Button, Card, CardContent } from '@ib/ui';
 
 import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
+import { PublicFilters } from '@/features/market/public-filters';
 import { publicListings } from '@/features/market/queries';
+import { InterestForm } from '@/features/interest/interest-form';
+import { listJurisdictions } from '@/features/listings/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { SiteHeader } from '@/features/marketing/site-header';
 
@@ -46,9 +48,51 @@ export default async function PublicMarketPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const q = typeof params.q === 'string' ? params.q.slice(0, 100) : '';
+  const single = (key: string): string | undefined => {
+    const value = params[key];
+    return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  };
 
-  const listings = isSupabaseConfigured() ? await publicListings({ q }) : [];
+  /*
+   * Dollars in the URL, cents in the query.
+   *
+   * `Math.round` rather than a bare `* 100`: 19999.99 * 100 is
+   * 1999998.9999999998 in IEEE754, and a comparison against an integer column
+   * then quietly excludes the listing the buyer was looking for. A value that
+   * is not a number at all is dropped rather than treated as zero — `?maxAsking=abc`
+   * meaning "asking under nothing" would return an empty market and look like a
+   * platform with no listings.
+   */
+  const cents = (value: string | undefined): number | undefined => {
+    if (value === undefined) return undefined;
+    const parsed = Number.parseFloat(value.replace(/[$,\s]/g, ''));
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : undefined;
+  };
+
+  const raw = {
+    q: single('q')?.slice(0, 100),
+    industry: single('industry'),
+    jurisdiction: single('jurisdiction'),
+    minEarnings: single('minEarnings'),
+    maxAsking: single('maxAsking'),
+  };
+
+  const configured = isSupabaseConfigured();
+
+  const [listings, jurisdictions] = configured
+    ? await Promise.all([
+        publicListings({
+          q: raw.q,
+          industry: raw.industry,
+          jurisdiction: raw.jurisdiction,
+          minEarningsCents: cents(raw.minEarnings),
+          maxAskingCents: cents(raw.maxAsking),
+        }),
+        listJurisdictions(),
+      ])
+    : [[], []];
+
+  const isFiltered = Object.values(raw).some(Boolean);
 
   return (
     <>
@@ -63,30 +107,11 @@ export default async function PublicMarketPage({
             only to a buyer the seller has issued a confidentiality agreement to.
           </p>
           <div className="bg-accent h-0.5 w-16" aria-hidden />
-
-          {/*
-          A plain GET form, so a search is a shareable URL and the back button
-          works. It also means the page stays a server component and a crawler
-          following ?q= gets real results rather than an empty shell.
-        */}
-          <form method="get" className="flex max-w-lg gap-2 pt-2">
-            <label htmlFor="q" className="sr-only">
-              Search businesses for sale
-            </label>
-            <input
-              id="q"
-              name="q"
-              type="search"
-              defaultValue={q}
-              maxLength={100}
-              placeholder="HVAC, landscaping, distribution…"
-              className="border-border-default bg-surface focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
-            />
-            <Button type="submit" variant="secondary">
-              Search
-            </Button>
-          </form>
         </header>
+
+        <div className="mt-8">
+          <PublicFilters jurisdictions={jurisdictions} current={raw} />
+        </div>
 
         {/*
         The sector index.
@@ -116,20 +141,62 @@ export default async function PublicMarketPage({
         </nav>
 
         {listings.length === 0 ? (
-          <Card className="mt-12">
-            <CardContent className="space-y-3 py-10">
-              <h2 className="font-display text-xl font-semibold">
-                The first listings are not up yet.
-              </h2>
-              <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
-                {brand.name} is opening shortly.{' '}
-                <Link href="/listings" className="underline">
-                  Tell us what you are looking for
-                </Link>{' '}
-                and you will hear the day something fits.
-              </p>
-            </CardContent>
-          </Card>
+          /*
+            Two different empty states, because they are two different
+            situations and one message for both is wrong in whichever case it
+            was not written for.
+
+            A filtered search returning nothing means the buyer narrowed too
+            far — the fix is to widen, and telling them the market has not
+            opened when they can see it has is confusing. An unfiltered page
+            returning nothing means the market really is empty, and the only
+            useful thing to offer is a way to be told when it is not.
+          */
+          /* No Card wrapper: `InterestForm` renders its own, and nesting them
+             draws two borders around one thing. */
+          <div className="mt-8 space-y-3">
+            {/*
+                The address capture, here rather than behind a sign-up.
+
+                This is the difference that matters on this page: the
+                competition requires an account before it will remember what
+                somebody is looking for, and most people arriving from a search
+                result will not make one on the first visit. An email and a
+                sector is enough to be useful to both sides, and it costs the
+                visitor a form rather than a relationship.
+
+                The heading is passed in rather than written above the form,
+                because the two cases are genuinely different and one message
+                for both is wrong in whichever case it was not written for. A
+                filtered search returning nothing means the buyer narrowed too
+                far; an unfiltered page returning nothing means the market
+                really is empty.
+              */}
+            <InterestForm
+              side="buying"
+              jurisdictions={jurisdictions}
+              source={isFiltered ? 'public-market-no-matches' : 'public-market-empty'}
+              heading={
+                isFiltered ? 'Nothing matches those filters.' : 'The first listings are not up yet.'
+              }
+              blurb={
+                isFiltered
+                  ? 'Try widening them — or leave your details and you will hear the day something like this comes to market.'
+                  : `${brand.name} is opening shortly. Leave your details and you will hear the day something fits — not before, and not otherwise.`
+              }
+            />
+
+            <p className="text-text-muted text-xs">
+              Already have an account?{' '}
+              <Link
+                href="/saved-searches"
+                className="hover:text-text-secondary underline underline-offset-4"
+              >
+                Save this search
+              </Link>{' '}
+              and get alerted with filters instead.
+            </p>
+          </div>
         ) : (
           <ul className="divide-border-subtle mt-12 divide-y">
             {listings.map((listing) => {
