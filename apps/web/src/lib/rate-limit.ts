@@ -191,6 +191,12 @@ export const RATE_LIMITS = {
   /** Bringing a business to market. Nobody legitimately does this in bulk. */
   createListing: { limit: 10, windowMs: 3_600_000 },
   /**
+   * Saving a search. Loose, because saving several in one sitting is exactly
+   * what a serious buyer does on their first visit — but bounded, because each
+   * one is a standing subscription to an email the platform sends.
+   */
+  saveSearch: { limit: 30, windowMs: 3_600_000 },
+  /**
    * Requesting access to a full profile. Tight on purpose: a scripted client
    * requesting an NDA on every listing on the platform is the reconnaissance
    * step of exactly the harvesting attack the teaser split exists to prevent.

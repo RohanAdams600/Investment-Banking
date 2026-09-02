@@ -139,6 +139,17 @@ describe.skipIf(!hasDatabase)('row level security', () => {
         jurisdictions: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         legal_templates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         profiles: ['INSERT', 'SELECT', 'UPDATE'],
+        /*
+         * DELETE is granted here where most tables are denied it.
+         *
+         * The reason the rest of this schema withholds DELETE is that the record
+         * of a business coming to market, and the agreements around it, is not
+         * disposable. A saved search is the opposite: it is a person's own
+         * standing request to be emailed, and somebody who wants to stop being
+         * emailed is entitled to remove the thing that does it rather than
+         * having it retained for the platform's convenience.
+         */
+        saved_searches: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         user_roles: ['DELETE', 'INSERT', 'SELECT'],
 
         // Messaging. Note what is missing: no INSERT on deals or conversations

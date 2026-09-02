@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Search, LineChart } from 'lucide-react';
+import { BellRing, Search, LineChart } from 'lucide-react';
 import { can, truncationNotice } from '@ib/core';
 import { Button, EmptyState } from '@ib/ui';
 
@@ -12,6 +12,7 @@ import { browseListings, listJurisdictions, marketIsOpen } from '@/features/list
 import type { BrowseFilters } from '@/features/listings/types';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { SaveSearchForm } from '@/features/search/save-search-form';
 
 export const metadata: Metadata = {
   title: 'Businesses for sale',
@@ -88,6 +89,19 @@ export default async function ListingsPage({
             </Link>
           </Button>
 
+          {/*
+            Saved searches, for the same reason and by the same precedent. The
+            top bar caps at six links and a buyer-seller already sits at that;
+            this belongs beside the market anyway, because the only place
+            somebody manages what they are waiting for is where they searched.
+          */}
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/saved-searches">
+              <BellRing aria-hidden />
+              Saved searches
+            </Link>
+          </Button>
+
           {canList ? (
             <Button asChild size="sm">
               <Link href="/listings/new">List a business</Link>
@@ -117,6 +131,32 @@ export default async function ListingsPage({
       ) : (
         <>
           <Filters jurisdictions={jurisdictions} current={filters} />
+
+          {/*
+            The alert control, beside the filters that would be saved.
+
+            The moment somebody wants to be told about future listings is the
+            moment a search returns two results instead of twenty — not later,
+            on a settings page they would have to go looking for. So it sits
+            with the filters that produced the list, and what gets saved is
+            exactly what is on screen.
+          */}
+          <SaveSearchForm
+            filters={{
+              q: filters.q,
+              industry: filters.industry,
+              jurisdiction: filters.jurisdiction,
+              minEarnings: single('minEarnings'),
+              maxAsking: single('maxAsking'),
+            }}
+            isEmpty={
+              !filters.q &&
+              !filters.industry &&
+              !filters.jurisdiction &&
+              filters.minEarningsCents === undefined &&
+              filters.maxAskingCents === undefined
+            }
+          />
 
           {page.rows.length === 0 ? (
             <EmptyState

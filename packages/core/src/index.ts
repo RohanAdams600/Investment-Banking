@@ -29,3 +29,4 @@ export {
   type Cents,
   type FormatMoneyOptions,
 } from './format/money';
+export * from './search/saved-search';
