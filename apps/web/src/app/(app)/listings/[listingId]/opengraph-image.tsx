@@ -25,11 +25,11 @@ export const alt = 'A business for sale';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-const INK = '#1F2421';
-const PAPER = '#F7F4EF';
-const COPPER = '#8C5A3C';
-const MUTED = '#6A5F50';
-const RULE = '#E0D9CD';
+const INK = '#0D0916';
+const PAPER = '#F5F3F9';
+const ACCENT = '#7130BE';
+const MUTED = '#575064';
+const RULE = '#D8D4E3';
 
 export default async function ListingOpengraphImage({
   params,
@@ -67,7 +67,7 @@ export default async function ListingOpengraphImage({
           <rect x="2" y="21" width="22" height="6" rx="1" fill={INK} />
           <rect x="5" y="13.5" width="16" height="6" rx="1" fill={INK} />
           <rect x="8" y="7" width="10" height="5" rx="1" fill={INK} />
-          <path d="M13 0 L18 5 H8 Z" fill={COPPER} />
+          <path d="M13 0 L18 5 H8 Z" fill={ACCENT} />
         </svg>
         <div
           style={{

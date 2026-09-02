@@ -57,6 +57,21 @@ export const HERO = {
 } as const;
 
 /**
+ * The sector index, on the front page.
+ *
+ * The competition puts a grid of business types on its sell page, and it is the
+ * right instinct badly aimed: a seller does not need to be told what kinds of
+ * business exist. A buyer does — it is the first question they have, and on our
+ * front page there was previously no answer to it at all and no way to start
+ * looking without signing up.
+ *
+ * These are the sectors that have a written guide behind them, so each link
+ * lands on a page worth landing on rather than an empty filtered list. The keys
+ * come from the guides themselves, which is what stops this drifting out of
+ * sync with the pages it points at.
+ */
+
+/**
  * The two doors.
  *
  * Almost everybody arriving here is doing one of two things, and they know
@@ -88,7 +103,7 @@ export const DOORS: Door[] = [
     title: 'Find a business worth owning',
     body: 'Search by industry, state, earnings and asking price — or set your criteria once and let matching listings come to you. Ask a seller for the full picture when one fits.',
     cta: 'Browse businesses for sale',
-    href: '/listings',
+    href: '/businesses-for-sale',
     facets: ['Home services', 'Manufacturing', 'Distribution', 'Healthcare', 'Construction'],
   },
   {
@@ -241,6 +256,59 @@ export const ADVISOR_STEPS: Step[] = [
     number: 4,
     title: 'Run it to a close',
     body: 'Deal room, document vault, pipeline and the commission record, with an audit trail behind all of it.',
+  },
+];
+
+/**
+ * The questions people actually ask before signing up.
+ *
+ * ## Why these are on the front page and not in a help centre
+ *
+ * The competition puts its answers behind a "Tools & Advice" tab and a
+ * downloadable toolkit, which works for the people who go looking and does
+ * nothing for the ones deciding in the next thirty seconds whether this is
+ * safe. Every question below was going to be asked anyway; answering it before
+ * it is asked is the cheapest trust there is, and it costs a visitor nothing to
+ * skip.
+ *
+ * ## The rule these follow
+ *
+ * Each answer says what the software does, not what we hope you conclude. Where
+ * the honest answer is unflattering — that a listing can be pieced together from
+ * a detailed enough teaser, that we cannot stop a buyer forwarding a document
+ * once they have it — it says that too. A marketplace handling somebody's life's
+ * work does not get to be vague about its own limits, and a visitor who catches
+ * one evasion stops believing the rest.
+ */
+export interface Question {
+  q: string;
+  a: string;
+}
+
+export const FAQS: Question[] = [
+  {
+    q: 'Will anyone know my business is for sale?',
+    a: 'Not from the listing. It shows your industry, your state and size ranges — never the name, the address or an exact figure. Those live in a separate record that a buyer reaches only after you have personally issued them a confidentiality agreement. The honest limit: if you write a teaser detailed enough that somebody local recognises the business, no database rule can un-write it, so the listing form warns you about the fields where that happens.',
+  },
+  {
+    q: 'What does it cost to list?',
+    a: 'Nothing to list, nothing to browse, and no card is taken to start. Owners selling their own business stay free through the first few listings. The paid tiers are for intermediaries running deals for clients — brokers and firms — because that is who gets a pipeline, a document vault and commission records out of it. We do not take a percentage of your sale.',
+  },
+  {
+    q: 'Do I need a broker to use this?',
+    a: 'No. An owner can run the whole thing themselves: build the listing, review who is asking, issue the agreement, and talk in a deal room. If you already have a broker, they can run it here on your behalf without you handing over your login, and their engagement stays between you and them.',
+  },
+  {
+    q: 'Who are the buyers, and how do I know they are real?',
+    a: 'Buyers hold a profile that says who they are and how they would fund a purchase, and they can add evidence of that funding for review. When they ask for access you see a verification badge and a capacity band — never their bank statements, which are not ours to pass on. You are still the one deciding; the badge tells you whether somebody has shown their working.',
+  },
+  {
+    q: 'What happens after I release the details?',
+    a: 'Access is per-buyer and revocable: withdraw it and the confidential record closes again, though the record of who held it stays. Documents in the vault are watermarked with the viewer’s name and the minute they opened them, and you see the log. What that achieves is attribution rather than prevention — a leaked page can be traced to an account, and nothing anywhere can stop somebody photographing a screen.',
+  },
+  {
+    q: 'I am only curious what it is worth. Can I start there?',
+    a: 'Yes, and without listing anything. The valuation runs several methods side by side with every assumption shown and editable, and it stays yours — nothing is published, and no buyer is contacted, until you build a listing and take it live yourself.',
   },
 ];
 

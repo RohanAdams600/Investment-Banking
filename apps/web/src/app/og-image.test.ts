@@ -67,7 +67,7 @@ describe('both cards', () => {
     expect(hexes.length).toBeGreaterThan(0);
 
     const known = new Set(
-      [palette.slate, palette.stone, palette.copper].flatMap((family) =>
+      [palette.obsidian, palette.mist, palette.violet].flatMap((family) =>
         Object.values(family).map((hex) => hex.toUpperCase()),
       ),
     );

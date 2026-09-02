@@ -11,6 +11,7 @@ import {
   SELLER_STEPS,
   SITE_DESCRIPTION,
   DOORS,
+  FAQS,
 } from './content';
 
 /**
@@ -31,6 +32,7 @@ const ALL_TEXT = [
   HERO.headline,
   HERO.subhead,
   ...DOORS.flatMap((door) => [door.eyebrow, door.title, door.body, door.cta, ...door.facets]),
+  ...FAQS.flatMap((item) => [item.q, item.a]),
   ...[...SELLER_FEATURES, ...BUYER_FEATURES, ...ADVISOR_FEATURES, ...LIMITS].flatMap((f) => [
     f.title,
     f.body,
@@ -115,7 +117,18 @@ describe('marketing copy', () => {
      * tool with a marketplace attached, which is what the front page used to
      * do.
      */
-    expect(DOORS.map((door) => door.href)).toContain('/listings');
+    /*
+     * The public route, not the authenticated one. `/listings` is behind the
+     * app's auth boundary, so pointing the front page's primary call to action
+     * at it put a sign-up wall between a visitor and the one thing they came to
+     * do. The competition lets people browse before they register; a
+     * marketplace that does not is asking for a commitment before it has shown
+     * anybody anything.
+     */
+    expect(DOORS.map((door) => door.href)).toContain('/businesses-for-sale');
+    for (const door of DOORS) {
+      expect(door.href, `${door.cta} must not be behind the auth wall`).not.toBe('/listings');
+    }
     for (const door of DOORS) {
       expect(door.href).not.toContain('valuation');
     }
@@ -167,5 +180,40 @@ describe('marketing copy', () => {
     // exactly where that would slip in.
     const advisors = ADVISOR_FEATURES.map((f) => `${f.title} ${f.body}`).join(' ');
     expect(advisors).not.toMatch(/licen[cs]ed|registered broker|finra|series \d/i);
+  });
+
+  it('answers the price question without making anyone hunt for it', () => {
+    // "How much does this cost" is the question a page loses people on, and the
+    // competition answers it three sections down behind a membership
+    // comparison. It has to be answerable from the front page.
+    const answers = FAQS.map((f) => `${f.q} ${f.a}`)
+      .join(' ')
+      .toLowerCase();
+    expect(answers).toMatch(/cost|free|price/);
+  });
+
+  it('gives the unflattering answers rather than only the reassuring ones', () => {
+    /*
+     * The whole value of this section is that it is believable, and it stops
+     * being believable the moment every answer is good news. Two limits have to
+     * survive any future rewrite: that a detailed enough teaser can identify a
+     * business, and that a watermark attributes a leak rather than preventing
+     * one. Both are true, both are things a seller would otherwise discover
+     * later, and both are the reason the rest of the page gets believed.
+     */
+    const answers = FAQS.map((f) => f.a)
+      .join(' ')
+      .toLowerCase();
+    expect(answers).toMatch(/recognis|identif/);
+    expect(answers).toMatch(/attribution|traced/);
+  });
+
+  it('asks every question the way somebody would actually ask it', () => {
+    for (const item of FAQS) {
+      expect(item.q.endsWith('?'), `"${item.q}"`).toBe(true);
+      // A one-line answer to a question about somebody's life's work reads as
+      // a brush-off, which is worse than not answering.
+      expect(item.a.split(' ').length, item.q).toBeGreaterThan(25);
+    }
   });
 });

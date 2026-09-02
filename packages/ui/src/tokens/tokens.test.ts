@@ -47,35 +47,57 @@ describe('color roles', () => {
   });
 
   it('anchors the neutral ramp to the specified endpoints', () => {
-    expect(palette.stone[50]).toBe('#FAF8F4');
-    expect(palette.stone[900]).toBe('#2E2A24');
+    expect(palette.mist[50]).toBe('#FBFAFD');
+    expect(palette.mist[900]).toBe('#292434');
   });
 
-  it('keeps the neutral ramp warm', () => {
+  it('gives every neutral a violet cast rather than leaving it grey', () => {
     /*
      * The single change that does most of the work in this palette.
      *
-     * A cool grey ground is what every financial product uses and what a
-     * template produces; a warm one reads as printed rather than rendered, and
-     * this product is read for long stretches by people comparing numbers.
+     * Obsidian is volcanic glass: black with a violet sheen, not a neutral
+     * black. If the grounds and the accent do not share that cast, the violet
+     * reads as a colour that was dropped on top of a grey product rather than
+     * one the product is made of — which is what a theme swap looks like, and
+     * what this is not.
      *
-     * "Warm" is checkable: the red channel must exceed the blue channel at every
-     * step. A future edit that quietly cools the ramp back toward blue-grey
-     * fails here rather than being noticed months later as "it looks generic
-     * again".
+     * "Violet cast" is checkable at every step of both dark and neutral ramps:
+     * blue must exceed green, and red must sit between them. A future edit that
+     * quietly flattens the ramp back toward grey, or tips it into the blue-grey
+     * every other financial product uses, fails here rather than being noticed
+     * months later as "it looks generic again".
      */
-    for (const [step, hex] of Object.entries(palette.stone)) {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      expect(r, `stone.${step} (${hex}) should be warm`).toBeGreaterThan(b);
+    for (const family of ['obsidian', 'mist'] as const) {
+      for (const [step, hex] of Object.entries(palette[family])) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+
+        expect(b, `${family}.${step} (${hex}) should lean violet, not green`).toBeGreaterThan(g);
+        expect(r, `${family}.${step} (${hex}) should sit between blue and green`).toBeGreaterThan(g);
+        expect(r, `${family}.${step} (${hex}) should not out-run blue into red`).toBeLessThan(b);
+      }
     }
   });
 
-  it('has no blue family at all', () => {
-    // Reaching for a blue is how this palette reverts. The primary action is
-    // ink and the accent is copper; neither needs a hue to justify itself.
+  it('keeps the deepest ground darker than the ordinary dark surface', () => {
+    // 950 is the hero slab and the closing band; 900 is the dark card that sits
+    // on it. Collapsing the two would make the page one flat field.
+    const lum = (hex: string) =>
+      [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
+    expect(lum(palette.obsidian[950])).toBeLessThan(lum(palette.obsidian[900]));
+  });
+
+  it('has no second brand hue', () => {
+    /*
+     * Reaching for a blue, or keeping the old copper alongside the violet, is
+     * how this palette reverts. One accent is the whole discipline: a screen
+     * with one violet element has one thing worth looking at, and a screen with
+     * two brand hues has none.
+     */
     expect(palette).not.toHaveProperty('blue');
     expect(palette).not.toHaveProperty('gold');
+    expect(palette).not.toHaveProperty('copper');
   });
 });
 

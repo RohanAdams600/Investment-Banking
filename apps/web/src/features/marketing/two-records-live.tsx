@@ -153,11 +153,11 @@ export function TwoRecordsLive() {
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-pressed={open}
-          className="border-copper-600 text-copper-400 hover:bg-copper-600 focus-visible:ring-ring rounded-md border px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] outline-none transition-colors hover:text-stone-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          className="focus-visible:ring-ring hover:text-mist-50 focus-visible:ring-offset-obsidian-950 rounded-md border border-violet-600 px-4 py-2 font-mono text-xs uppercase tracking-[0.14em] text-violet-400 outline-none transition-colors hover:bg-violet-600 focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {open ? 'Revoke the agreement' : 'Sign the confidentiality agreement'}
         </button>
-        <p className="text-xs text-stone-400" aria-live="polite">
+        <p className="text-mist-400 text-xs" aria-live="polite">
           {open
             ? 'Signed. The seller can revoke it, and the record seals again.'
             : 'Try it — nothing here is real, and no account is needed.'}
@@ -170,13 +170,13 @@ export function TwoRecordsLive() {
 function Gate({ open, allowMotion }: { open: boolean; allowMotion: boolean }) {
   return (
     <div className="flex items-center justify-center py-2 sm:flex-col sm:py-0">
-      <div className="h-px w-10 bg-slate-600 sm:h-8 sm:w-px" aria-hidden />
+      <div className="bg-obsidian-600 h-px w-10 sm:h-8 sm:w-px" aria-hidden />
       <div
         className={[
           'my-0 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border sm:my-3',
           open
-            ? 'border-copper-500 bg-copper-500 text-slate-900'
-            : 'border-slate-600 bg-slate-800 text-stone-400',
+            ? 'text-obsidian-900 border-violet-500 bg-violet-500'
+            : 'border-obsidian-600 bg-obsidian-800 text-mist-400',
           allowMotion ? 'transition-colors duration-300' : '',
         ].join(' ')}
       >
@@ -193,7 +193,7 @@ function Gate({ open, allowMotion }: { open: boolean; allowMotion: boolean }) {
           />
         </svg>
       </div>
-      <div className="h-px w-10 bg-slate-600 sm:h-8 sm:w-px" aria-hidden />
+      <div className="bg-obsidian-600 h-px w-10 sm:h-8 sm:w-px" aria-hidden />
     </div>
   );
 }
@@ -217,50 +217,49 @@ function Record({
 }) {
   const border =
     tone === 'open'
-      ? 'border-copper-600'
+      ? 'border-violet-600'
       : tone === 'sealed'
-        ? 'border-slate-600'
-        : 'border-slate-700';
+        ? 'border-obsidian-600'
+        : 'border-obsidian-700';
 
   return (
     <div
       style={style}
       className={[
-        'rounded-md border bg-slate-800/70 p-5 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-[1px]',
+        'bg-obsidian-800/70 rounded-md border p-5 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-[1px]',
         border,
       ].join(' ')}
     >
-      <p className="text-copper-400 text-2xs font-mono uppercase tracking-[0.18em]">{eyebrow}</p>
+      <p className="text-2xs font-mono uppercase tracking-[0.18em] text-violet-400">{eyebrow}</p>
 
       <p
         className={[
-          'font-display mt-3 text-base text-stone-50',
-          redacted ? 'tracking-[0.1em] text-stone-500' : '',
+          'font-display text-mist-50 mt-3 text-base',
+          redacted ? 'text-mist-500 tracking-[0.1em]' : '',
         ].join(' ')}
       >
         {name}
       </p>
       <p
-        className={[
-          'mt-0.5 font-mono text-xs',
-          redacted ? 'text-stone-600' : 'text-stone-400',
-        ].join(' ')}
+        className={['mt-0.5 font-mono text-xs', redacted ? 'text-mist-600' : 'text-mist-400'].join(
+          ' ',
+        )}
       >
         {where}
       </p>
 
-      <div className="my-4 h-px bg-slate-600" aria-hidden />
+      <div className="bg-obsidian-600 my-4 h-px" aria-hidden />
 
       <dl className="space-y-3">
         {rows.map(([label, value]) => (
           <div key={label}>
-            <dt className="text-2xs font-mono uppercase tracking-[0.12em] text-stone-500">
+            <dt className="text-2xs text-mist-500 font-mono uppercase tracking-[0.12em]">
               {label}
             </dt>
             <dd
               className={[
                 'font-mono text-sm tabular-nums',
-                redacted ? 'select-none text-slate-600' : 'text-stone-50',
+                redacted ? 'text-obsidian-600 select-none' : 'text-mist-50',
               ].join(' ')}
             >
               {value}

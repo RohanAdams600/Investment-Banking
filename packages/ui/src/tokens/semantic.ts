@@ -19,77 +19,77 @@ export interface ColorRole {
 export const colorRoles = {
   // ---------------------------------------------------------------- surfaces
   canvas: {
-    light: palette.stone[50],
-    dark: palette.slate[900],
+    light: palette.mist[50],
+    dark: palette.obsidian[900],
     usage: 'Page background, furthest back.',
   },
   surface: {
     light: palette.white,
-    dark: palette.slate[800],
+    dark: palette.obsidian[800],
     usage: 'Default card / panel / table background.',
   },
   'surface-raised': {
     light: palette.white,
-    dark: palette.slate[700],
+    dark: palette.obsidian[700],
     usage: 'Popovers, dropdowns, modals — anything floating above a surface.',
   },
   'surface-sunken': {
-    light: palette.stone[100],
-    dark: palette.slate[900],
+    light: palette.mist[100],
+    dark: palette.obsidian[900],
     usage: 'Wells, code blocks, inset table headers.',
   },
   'surface-inverted': {
-    light: palette.slate[900],
-    dark: palette.stone[50],
+    light: palette.obsidian[900],
+    dark: palette.mist[50],
     usage: 'Deliberate contrast blocks — marketing bands, tooltips.',
   },
 
   // ------------------------------------------------------------------- text
   'text-primary': {
-    light: palette.slate[900],
-    dark: palette.stone[50],
+    light: palette.obsidian[900],
+    dark: palette.mist[50],
     usage: 'Body copy and headings.',
   },
   /*
    * Both are one step darker than the cool ramp they replaced, and that is not
    * a taste decision.
    *
-   * A warm neutral is lighter at every step than the blue-grey equivalent, so a
+   * A violet-cast neutral is lighter at every step than the blue-grey equivalent, so a
    * one-for-one swap carried `text-muted` from 4.3:1 down to 2.54:1 — a real
    * WCAG failure, on the labels and timestamps that are already the hardest
    * thing on the page to read. Caught by measuring rather than by looking, which
    * is why `contrast.test.ts` now measures on every build.
    */
   'text-secondary': {
-    light: palette.stone[800],
-    dark: palette.stone[300],
+    light: palette.mist[800],
+    dark: palette.mist[300],
     usage: 'Supporting copy, table cell secondary lines.',
   },
   'text-muted': {
-    light: palette.stone[700],
-    dark: palette.stone[400],
+    light: palette.mist[700],
+    dark: palette.mist[400],
     usage: 'Labels, captions, placeholder, timestamps.',
   },
   'text-inverted': {
     light: palette.white,
-    dark: palette.slate[900],
+    dark: palette.obsidian[900],
     usage: 'Text on `surface-inverted` or on a solid primary fill.',
   },
 
   // ---------------------------------------------------------------- borders
   'border-subtle': {
-    light: palette.stone[200],
-    dark: palette.slate[700],
+    light: palette.mist[200],
+    dark: palette.obsidian[700],
     usage: 'Hairlines between rows, dividers.',
   },
   'border-default': {
-    light: palette.stone[300],
-    dark: palette.slate[600],
+    light: palette.mist[300],
+    dark: palette.obsidian[600],
     usage: 'Input borders, card outlines.',
   },
   'border-strong': {
-    light: palette.stone[400],
-    dark: palette.stone[600],
+    light: palette.mist[400],
+    dark: palette.mist[600],
     usage: 'Hovered inputs, emphasized separation.',
   },
 
@@ -102,29 +102,29 @@ export const colorRoles = {
    * than any text role. Second — and this is why the light and dark values are
    * *different steps* rather than the same colour — a chart mark has to clear
    * 3:1 against its own surface in each theme, and no single step does:
-   * copper 500 is 4.25:1 on white and 2.78:1 on the dark card; copper 400 is
-   * 2.98:1 on white and 3.97:1 on the dark card. Flipping one value between
+   * violet 500 is 4.80:1 on white and below the bar on the dark card; violet 400
+   * is under 3:1 on white and 5.10:1 on the dark card. Flipping one value between
    * themes would ship an illegible chart in one of them.
    *
    * Measured with the same contrast maths as `contrast.test.ts`, which asserts
    * both of these.
    */
   'chart-mark': {
-    light: palette.copper[500],
-    dark: palette.copper[400],
+    light: palette.violet[500],
+    dark: palette.violet[400],
     usage: 'The data itself — bars, lines, dots. Never used for text.',
   },
   'chart-mark-soft': {
-    light: palette.copper[200],
-    dark: palette.copper[800],
+    light: palette.violet[200],
+    dark: palette.violet[800],
     usage: 'Context behind the current period: a sparkline’s earlier days, an unfilled track.',
   },
   /*
    * The second line on a chart, and why it is ink rather than a second hue.
    *
-   * This palette is deliberately warm and near-achromatic — there is no blue in
+   * This palette carries one hue and one cast of neutral — there is no second hue in
    * it at all — so two colours drawn from it collapse under the normal-vision
-   * separation check: copper against stone measures ΔE 11.7 in light and 14.5
+   * separation check: violet against mist measures far below the floor, as copper against stone did — ΔE 11.7 in light and 14.5
    * in dark, against a floor of 15. Full-colour readers cannot reliably tell
    * those two lines apart, and secondary encoding does not excuse that one.
    *
@@ -137,13 +137,13 @@ export const colorRoles = {
    * clear 3:1 against its own surface, and no single value does both.
    */
   'chart-context': {
-    light: palette.slate[900],
-    dark: palette.stone[100],
+    light: palette.obsidian[900],
+    dark: palette.mist[100],
     usage: 'The supporting series on a two-line chart. Deliberately neutral against the accent.',
   },
   'chart-grid': {
-    light: palette.stone[200],
-    dark: palette.slate[700],
+    light: palette.mist[200],
+    dark: palette.obsidian[700],
     usage: 'Gridlines and axis rules. Deliberately recessive — this is not data.',
   },
 
@@ -151,56 +151,56 @@ export const colorRoles = {
   /*
    * The primary action is ink, not a brand colour.
    *
-   * There is deliberately no blue in this palette. A near-black button on warm
-   * paper is the most confident control available and needs no hue to justify
+   * There is deliberately no blue in this palette. A near-black button on pale
+   * ground is the most confident control available and needs no hue to justify
    * itself; reaching for a blue here would have quietly reintroduced the look
-   * the repalette exists to leave behind. Copper stays the accent, which means
-   * it keeps its meaning — a screen with one copper element has one thing worth
+   * the repalette exists to leave behind. Violet stays the accent, which means
+   * it keeps its meaning — a screen with one violet element has one thing worth
    * looking at.
    */
   primary: {
-    light: palette.slate[800],
-    dark: palette.stone[100],
+    light: palette.obsidian[800],
+    dark: palette.mist[100],
     usage: 'Primary buttons, active nav, links.',
   },
   'primary-hover': {
-    light: palette.slate[900],
+    light: palette.obsidian[900],
     dark: palette.white,
     usage: 'Primary action hover state.',
   },
   'primary-active': {
-    light: palette.slate[700],
-    dark: palette.stone[200],
+    light: palette.obsidian[700],
+    dark: palette.mist[200],
     usage: 'Primary action pressed state.',
   },
   'primary-subtle': {
-    light: palette.stone[200],
-    dark: palette.slate[700],
+    light: palette.mist[200],
+    dark: palette.obsidian[700],
     usage: 'Tinted background for selected rows, active filter chips.',
   },
   'primary-fg': {
-    light: palette.stone[50],
-    dark: palette.slate[900],
+    light: palette.mist[50],
+    dark: palette.obsidian[900],
     usage: 'Foreground on a solid primary fill.',
   },
 
   // ------------------------------------------------------------------ accent
   accent: {
-    light: palette.copper[600],
-    dark: palette.copper[400],
+    light: palette.violet[600],
+    dark: palette.violet[400],
     usage:
-      'Weathered copper. Eyebrows, rules, the verified mark, one emphasis per screen. Never a surface.',
+      'Violet, the one accent. Eyebrows, rules, the verified mark, one emphasis per screen. Never a surface.',
   },
   'accent-subtle': {
-    light: palette.copper[50],
-    dark: palette.copper[900],
+    light: palette.violet[50],
+    dark: palette.violet[900],
     usage: 'Accent-tinted background behind a badge or callout.',
   },
   'accent-fg': {
-    light: palette.stone[50],
-    dark: palette.stone[50],
+    light: palette.mist[50],
+    dark: palette.mist[50],
     usage:
-      'Foreground on a solid accent fill. Copper is dark enough to take light text, unlike the gold it replaced.',
+      'Foreground on a solid accent fill. Violet 600 is dark enough to take light text; 400 is not, which is why the fill uses the darker step.',
   },
 
   // --------------------------------------------------------------- semantic
@@ -233,8 +233,8 @@ export const colorRoles = {
   /*
    * The focus ring is the one place a system colour beats a brand colour.
    *
-   * Copper would have been the obvious substitute for the blue that was here,
-   * and it is the wrong answer: the accent's job is that one copper element on
+   * Violet would have been the obvious substitute for the blue that was here,
+   * and it is the wrong answer: the accent's job is that one violet element on
    * a screen is the thing worth looking at, and a ring that borrows it makes
    * every focused input compete with that. The muted teal reads as machinery
    * rather than brand, which is what a focus ring should be.
@@ -246,7 +246,7 @@ export const colorRoles = {
       'Focus ring. Must stay visible against every surface role, and must not be mistaken for the accent.',
   },
   overlay: {
-    light: palette.slate[900],
+    light: palette.obsidian[900],
     dark: palette.black,
     usage: 'Modal scrim — always applied at reduced opacity.',
   },

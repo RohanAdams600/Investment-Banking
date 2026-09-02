@@ -4,83 +4,101 @@
  * These are the only place in the codebase where a literal hex color may appear.
  * Everything else references a semantic role (see `semantic.ts`), which in turn
  * resolves to a CSS variable. Swapping the palette therefore means editing this
- * file and re-running `pnpm --filter @ib/ui tokens:build`, with no component changes.
+ * file and re-running `pnpm --filter @ib/ui tokens:build`, with no component
+ * changes — which is how this repalette was done.
  *
- * ## Why this is not navy and gold
+ * ## Why obsidian and violet
  *
- * It was. Navy with a champagne accent is the palette every financial product
- * reaches for, which is exactly the problem: it is what a template produces, and
- * a marketplace that looks like a template is asking to be trusted with somebody's
- * life's work while looking like it was assembled in an afternoon.
+ * It was navy and gold, then limestone and copper. Navy is what every financial
+ * product reaches for, and a marketplace that looks like a template is asking to
+ * be trusted with somebody's life's work while looking like it was assembled in
+ * an afternoon. Limestone and copper solved that and had a different problem: it
+ * read as quiet and printed, which is right for a document and wrong for a place
+ * you are meant to arrive at and start searching.
  *
- * These colors come from the name instead. An ashlar is dressed, squared stone,
- * so the grounds are warm limestone rather than cool grey, the ink is a
- * near-black with a green cast rather than a blue one, and the single accent is
- * weathered copper — the metal that actually appears on old masonry. Nothing in
- * lower-middle-market M&A looks like this, because everyone in it copied each
- * other's navy.
+ * Obsidian is volcanic glass — black, but not a neutral black: it carries a
+ * violet sheen at the edges, which is exactly the relationship this palette
+ * needs between its ground and its accent. So the ink is a near-black with a
+ * violet cast rather than a green or blue one, the neutrals are cooled just
+ * enough to sit under it without turning grey-blue, and the single accent is the
+ * violet the ground already implies.
  *
- * Warm neutrals are also a practical choice, not only an aesthetic one. This
- * product is read for long stretches by people comparing numbers, and a paper
- * ground is easier to sit with than a blue-white one.
+ * The name still fits. An ashlar is dressed, squared stone; obsidian ashlar is
+ * polished black block, and the coursed-masonry motif in the hero reads better
+ * on black than it did on limestone.
+ *
+ * ## The rule that has not changed
+ *
+ * One accent. Violet is for eyebrows, rules, the verified mark and a single
+ * emphasis per screen — never a surface, never a second brand colour. A screen
+ * with one violet element has one thing worth looking at; a screen with nine has
+ * none. `contrast.test.ts` holds the measurable half of this.
  */
 
 export const palette = {
   /**
-   * Ink. Near-black with a green cast, which is what stops it reading as the
-   * blue-black every other financial product uses.
+   * Obsidian. The ink, and every dark ground in the product.
+   *
+   * Near-black with a violet cast: blue exceeds green at every step, and red
+   * sits between them, which is what gives volcanic glass its sheen rather than
+   * reading as a flat neutral or as the blue-black of a bank. 950 is the deepest
+   * ground — the hero slab and the closing band — and 900 is the ordinary dark
+   * surface, so the two can sit next to each other without either disappearing.
    */
-  slate: {
-    50: '#F2F4F2',
-    100: '#E2E7E4',
-    200: '#C4CCC8',
-    300: '#9FAAA5',
-    400: '#78847E',
-    500: '#57635D',
-    600: '#3F4A45',
-    700: '#2E3A38',
-    800: '#242D2B',
-    900: '#1F2421',
+  obsidian: {
+    50: '#F5F4F8',
+    100: '#E8E6EF',
+    200: '#CFCBDC',
+    300: '#ADA7C0',
+    400: '#857EA0',
+    500: '#625A7D',
+    600: '#4A4360',
+    700: '#363048',
+    800: '#251F35',
+    900: '#171227',
+    950: '#0D0916',
   },
 
   /**
-   * Warm limestone. The page ground, the rules, the quiet text.
+   * Mist. The page ground, the rules, the quiet text.
    *
-   * Deliberately not a cool grey: a warm neutral makes the whole product read as
-   * printed rather than rendered, and it is the single change that does most of
-   * the work here.
+   * Cool, but only just: a faint violet tint at every step so the light theme
+   * belongs to the same palette as the dark one, without tipping into the
+   * blue-grey that every other financial product uses. Blue exceeds red here
+   * too, which is the checkable version of that intent.
    */
-  stone: {
-    50: '#FAF8F4',
-    100: '#F7F4EF',
-    200: '#EFEAE1',
-    300: '#E0D9CD',
-    400: '#C9BFAE',
-    500: '#A99C87',
-    600: '#877B68',
-    700: '#6A5F50',
-    800: '#4C443A',
-    900: '#2E2A24',
+  mist: {
+    50: '#FBFAFD',
+    100: '#F5F3F9',
+    200: '#EAE7F1',
+    300: '#D8D4E3',
+    400: '#B6B0C6',
+    500: '#918AA5',
+    600: '#726B85',
+    700: '#575064',
+    800: '#413B4D',
+    900: '#292434',
   },
 
   /**
-   * Weathered copper. One accent, used sparingly — eyebrows, rules, the
-   * verified mark, a single emphasis per screen. Never a surface.
+   * Violet. One accent, used sparingly.
    *
-   * 600 on stone-100 measures about 6.2:1, so it is legible as text rather than
-   * decoration only.
+   * 600 is the step that carries text on a light ground — it measures past the
+   * 4.5:1 body threshold on both `canvas` and `surface`, so the accent can be a
+   * link and an eyebrow rather than decoration only. 400 is its counterpart on
+   * a dark ground. Both are held by `contrast.test.ts`.
    */
-  copper: {
-    50: '#FBF4EF',
-    100: '#F4E6DA',
-    200: '#E7CBB4',
-    300: '#D6AA88',
-    400: '#C08A63',
-    500: '#A66E48',
-    600: '#8C5A3C',
-    700: '#71482F',
-    800: '#543624',
-    900: '#382418',
+  violet: {
+    50: '#F8F4FE',
+    100: '#EFE7FC',
+    200: '#DECDF9',
+    300: '#C4A5F2',
+    400: '#A87DE8',
+    500: '#8B54DA',
+    600: '#7130BE',
+    700: '#5A2599',
+    800: '#441C75',
+    900: '#2D124F',
   },
 
   success: {

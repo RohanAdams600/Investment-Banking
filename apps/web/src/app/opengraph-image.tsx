@@ -28,10 +28,10 @@ export const contentType = 'image/png';
  * rectangle. Kept in sync with `packages/ui/src/tokens/primitives.ts` by hand;
  * a test asserts they match.
  */
-const INK = '#1F2421';
-const PAPER = '#F7F4EF';
-const COPPER = '#8C5A3C';
-const MUTED = '#9FAAA5';
+const INK = '#0D0916';
+const PAPER = '#F5F3F9';
+const ACCENT = '#A87DE8';
+const MUTED = '#ADA7C0';
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -52,7 +52,7 @@ export default function OpengraphImage() {
           <rect x="2" y="21" width="22" height="6" rx="1" fill={INK} />
           <rect x="5" y="13.5" width="16" height="6" rx="1" fill={INK} />
           <rect x="8" y="7" width="10" height="5" rx="1" fill={INK} />
-          <path d="M13 0 L18 5 H8 Z" fill={COPPER} />
+          <path d="M13 0 L18 5 H8 Z" fill={ACCENT} />
         </svg>
         <div
           style={{
@@ -68,7 +68,7 @@ export default function OpengraphImage() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ width: 96, height: 4, background: COPPER, marginBottom: 32 }} />
+        <div style={{ width: 96, height: 4, background: ACCENT, marginBottom: 32 }} />
         <div style={{ fontSize: 68, lineHeight: 1.1, color: INK, maxWidth: 900 }}>
           Buy and sell businesses, confidentially.
         </div>

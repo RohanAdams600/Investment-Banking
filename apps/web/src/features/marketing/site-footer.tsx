@@ -42,7 +42,7 @@ export function SiteFooter() {
           aria-label="Site"
         >
           <Link
-            href="/listings"
+            href="/businesses-for-sale"
             className="hover:text-text-primary underline-offset-4 hover:underline"
           >
             Businesses for sale

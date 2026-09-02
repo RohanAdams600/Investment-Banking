@@ -35,7 +35,7 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
     <header
       className={cn(
         'relative',
-        dark ? 'bg-slate-900 text-stone-50' : 'border-border-subtle bg-canvas border-b',
+        dark ? 'bg-obsidian-950 text-mist-50' : 'border-border-subtle bg-canvas border-b',
       )}
     >
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-4 px-6 py-5">
@@ -47,7 +47,7 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
           <span
             className={cn(
               'font-mono text-xs uppercase tracking-[0.2em]',
-              dark ? 'text-stone-300' : 'text-text-secondary',
+              dark ? 'text-mist-300' : 'text-text-secondary',
             )}
           >
             {brand.name}
@@ -58,34 +58,46 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
           aria-label="Main"
           className={cn(
             'flex flex-wrap items-center gap-x-6 gap-y-2 text-sm',
-            dark ? 'text-stone-300' : 'text-text-secondary',
+            dark ? 'text-mist-300' : 'text-text-secondary',
           )}
         >
           {/*
-            The middle three are hidden on a phone rather than folded into a
-            hamburger. Five links and a button wrap to two rows at 390px and eat
-            the top of the hero, and a menu that opens to reveal three items is
-            a worse trade than showing the two that matter: browsing, and
-            signing in. The footer carries the full set on every page, so
-            nothing becomes unreachable.
+            Four links, where the competition carries seven across two rows.
+
+            Their bar offers Businesses, Franchises, Brokers, Buy a Business,
+            Buy a Franchise, Sell a Business, Tools & Advice and Business
+            Brokers — several of which go to the same place, and the redundancy
+            is the reason it is hard to use rather than a bonus. Ours carries
+            only what the page itself does not already offer: the hero has the
+            buy and sell doors, so the bar adds the market, the third side of
+            it, the tool and the price.
+
+            The middle two are hidden on a phone rather than folded into a
+            hamburger. Four links and a button wrap to two rows at 390px and eat
+            the top of the hero, and a menu that opens to reveal two items is a
+            worse trade than showing the ones that matter. The footer carries
+            the full set on every page, so nothing becomes unreachable.
           */}
           <span className="hidden items-center gap-x-6 sm:flex">
-            <HeaderLink href="/listings" dark={dark}>
-              Businesses for sale
+            <HeaderLink href="/businesses-for-sale" dark={dark}>
+              Buy a business
             </HeaderLink>
-            <HeaderLink href="/pricing" dark={dark}>
-              Pricing
+            <HeaderLink href="/#advisors" dark={dark}>
+              For advisors
             </HeaderLink>
             <HeaderLink href="/tools/valuation" dark={dark}>
               Valuation
             </HeaderLink>
+            <HeaderLink href="/pricing" dark={dark}>
+              Pricing
+            </HeaderLink>
           </span>
 
           <Link
-            href="/listings"
+            href="/businesses-for-sale"
             className={cn(
               'underline-offset-4 transition-colors hover:underline sm:hidden',
-              dark ? 'hover:text-stone-50' : 'hover:text-text-primary',
+              dark ? 'hover:text-mist-50' : 'hover:text-text-primary',
             )}
           >
             Browse
@@ -105,7 +117,7 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
             className={cn(
               'rounded-sm px-3.5 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2',
               dark
-                ? 'focus-visible:ring-copper-400 bg-stone-50 text-slate-900 hover:bg-stone-200 focus-visible:ring-offset-slate-900'
+                ? 'bg-mist-50 text-obsidian-950 hover:bg-mist-200 focus-visible:ring-offset-obsidian-950 focus-visible:ring-violet-400'
                 : 'bg-primary text-primary-fg hover:bg-primary-hover focus-visible:ring-accent',
             )}
           >
@@ -131,7 +143,7 @@ function HeaderLink({
       href={href}
       className={cn(
         'underline-offset-4 transition-colors hover:underline',
-        dark ? 'hover:text-stone-50' : 'hover:text-text-primary',
+        dark ? 'hover:text-mist-50' : 'hover:text-text-primary',
       )}
     >
       {children}
@@ -153,7 +165,7 @@ function Mark() {
       <rect x="2" y="21" width="22" height="6" rx="1" fill="currentColor" opacity="0.85" />
       <rect x="5" y="13.5" width="16" height="6" rx="1" fill="currentColor" opacity="0.85" />
       <rect x="8" y="7" width="10" height="5" rx="1" fill="currentColor" opacity="0.85" />
-      <path d="M13 0 L18 5 H8 Z" className="fill-copper-400" />
+      <path d="M13 0 L18 5 H8 Z" className="fill-violet-400" />
     </svg>
   );
 }

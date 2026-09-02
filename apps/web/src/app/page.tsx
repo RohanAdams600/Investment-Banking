@@ -5,6 +5,7 @@ import { brand, isBrandFullyConfigured, pageTitle, unconfiguredBrandFields } fro
 import { Badge, Button, cn } from '@ib/ui';
 
 import { HeroBackdrop } from '@/features/marketing/hero-backdrop';
+import { HeroSearch } from '@/features/marketing/hero-search';
 import { SiteHeader } from '@/features/marketing/site-header';
 import { TwoRecordsLive } from '@/features/marketing/two-records-live';
 import {
@@ -13,6 +14,7 @@ import {
   ADVISOR_STEPS,
   BUYER_FEATURES,
   BUYER_STEPS,
+  FAQS,
   HERO,
   LIMITS,
   SELLER_FEATURES,
@@ -56,7 +58,7 @@ export default function HomePage() {
         read a paragraph and then pick from a row of buttons wastes the one
         moment they are certain of anything.
       */}
-      <section className="relative isolate overflow-hidden bg-slate-900 text-stone-50">
+      <section className="bg-obsidian-950 text-mist-50 relative isolate overflow-hidden">
         <HeroBackdrop />
 
         <div className="relative">
@@ -71,7 +73,7 @@ export default function HomePage() {
           )}
 
           <div className="max-w-3xl pb-2 pt-14 sm:pt-20">
-            <h1 className="font-display text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.025em] text-stone-50 sm:text-[4.25rem]">
+            <h1 className="font-display text-mist-50 text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.025em] sm:text-[4.25rem]">
               {HERO.headline}
             </h1>
 
@@ -81,9 +83,18 @@ export default function HomePage() {
               colour — one line doing the job a decorative divider would do,
               without becoming decoration.
             */}
-            <span className="bg-copper-400 mt-8 block h-px w-16" aria-hidden />
+            <span className="mt-8 block h-px w-16 bg-violet-400" aria-hidden />
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-300">{HERO.subhead}</p>
+            <p className="text-mist-300 mt-6 max-w-xl text-lg leading-relaxed">{HERO.subhead}</p>
+          </div>
+
+          {/*
+            Search before anything else a buyer might do. The competition puts
+            one at the top of every page and it is the thing they get right; we
+            had none anywhere a logged-out visitor could reach.
+          */}
+          <div className="pt-10">
+            <HeroSearch />
           </div>
         </div>
 
@@ -94,28 +105,28 @@ export default function HomePage() {
           which is what this is.
         */}
         <div className="relative mx-auto mt-10 max-w-6xl px-6 pb-16 sm:mt-14 sm:pb-20">
-          <div className="grid gap-px overflow-hidden rounded-sm bg-stone-50/10 sm:grid-cols-2">
+          <div className="bg-mist-50/10 grid gap-px overflow-hidden rounded-sm sm:grid-cols-2">
             {DOORS.map((door) => (
               <Link
                 key={door.href}
                 href={door.href}
-                className="focus-visible:ring-copper-400 group relative flex flex-col gap-4 bg-slate-900 p-8 outline-none transition-colors hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-inset sm:p-10"
+                className="bg-obsidian-950 hover:bg-obsidian-900 group relative flex flex-col gap-4 p-8 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400 sm:p-10"
               >
                 {/* Rises on hover. The only motion in the hero. */}
                 <span
-                  className="bg-copper-400 absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                  className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-violet-400 transition-transform duration-300 group-hover:scale-x-100"
                   aria-hidden
                 />
 
-                <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.2em]">
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-violet-400">
                   {door.eyebrow}
                 </p>
 
-                <h2 className="font-display text-2xl font-semibold leading-tight text-stone-50 sm:text-3xl">
+                <h2 className="font-display text-mist-50 text-2xl font-semibold leading-tight sm:text-3xl">
                   {door.title}
                 </h2>
 
-                <p className="max-w-sm text-sm leading-relaxed text-stone-300">{door.body}</p>
+                <p className="text-mist-300 max-w-sm text-sm leading-relaxed">{door.body}</p>
 
                 {/*
                   Real filter values and real guarantees, not decoration. They
@@ -126,14 +137,14 @@ export default function HomePage() {
                   {door.facets.map((facet) => (
                     <li
                       key={facet}
-                      className="rounded-full border border-stone-50/15 px-2.5 py-1 font-mono text-[11px] text-stone-400"
+                      className="border-mist-50/15 text-mist-400 rounded-full border px-2.5 py-1 font-mono text-[11px]"
                     >
                       {facet}
                     </li>
                   ))}
                 </ul>
 
-                <span className="text-copper-400 mt-auto flex items-center gap-2 pt-4 text-sm font-medium">
+                <span className="mt-auto flex items-center gap-2 pt-4 text-sm font-medium text-violet-400">
                   {door.cta}
                   <ArrowRight
                     className="h-4 w-4 transition-transform group-hover:translate-x-1"
@@ -144,11 +155,11 @@ export default function HomePage() {
             ))}
           </div>
 
-          <p className="mt-6 text-sm text-stone-400">
+          <p className="text-mist-400 mt-6 text-sm">
             Browsing takes a free account — sellers are entitled to know who is looking.{' '}
             <Link
               href="/tools/valuation"
-              className="text-stone-300 underline decoration-stone-600 underline-offset-4 transition-colors hover:text-stone-50"
+              className="text-mist-300 decoration-mist-600 hover:text-mist-50 underline underline-offset-4 transition-colors"
             >
               Not ready to list? Work out what your business is worth
             </Link>
@@ -166,26 +177,26 @@ export default function HomePage() {
         is deliberately the single inversion on the page — used twice it would
         stop meaning anything.
       */}
-      <section className="border-t border-stone-50/10 bg-slate-900 text-stone-50">
+      <section className="border-mist-50/10 bg-obsidian-950 text-mist-50 border-t">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[1fr_minmax(0,560px)] lg:items-center lg:gap-16 lg:py-20">
           <div className="space-y-4">
-            <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.2em]">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-violet-400">
               How confidentiality works
             </p>
-            <h2 className="max-w-lg text-2xl font-semibold text-stone-50 sm:text-3xl">
+            <h2 className="text-mist-50 max-w-lg text-2xl font-semibold sm:text-3xl">
               Two records, and buyers only ever reach one.
             </h2>
-            <p className="max-w-lg text-sm leading-relaxed text-stone-300">
+            <p className="text-mist-300 max-w-lg text-sm leading-relaxed">
               Everything that identifies your business — the name, the address, the exact figures,
               who your customers are — lives in a separate record from the listing. Reaching it
               requires a confidentiality agreement you issued, that has not expired and you have not
               revoked.
             </p>
-            <p className="max-w-lg text-sm leading-relaxed text-stone-300">
+            <p className="text-mist-300 max-w-lg text-sm leading-relaxed">
               That is a rule the database enforces on every read, not a permission flag in an
               interface, and it is tested on every build.
             </p>
-            <p className="flex items-center gap-2 pt-2 text-xs text-stone-400">
+            <p className="text-mist-400 flex items-center gap-2 pt-2 text-xs">
               <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               Illustrative figures — no real business is shown.
             </p>
@@ -197,6 +208,7 @@ export default function HomePage() {
 
       {/* Sellers */}
       <Side
+        id="selling"
         eyebrow="If you are selling"
         heading="Put it on the market without putting the word out."
         features={SELLER_FEATURES}
@@ -206,6 +218,7 @@ export default function HomePage() {
 
       {/* Buyers */}
       <Side
+        id="buying"
         eyebrow="If you are buying"
         heading="Stop reading listings that were never going to fit."
         features={BUYER_FEATURES}
@@ -216,12 +229,51 @@ export default function HomePage() {
 
       {/* Bankers, advisors and brokers */}
       <Side
+        id="advisors"
         eyebrow="If you advise on deals"
         heading="Run your clients’ sales here, start to close."
         features={ADVISOR_FEATURES}
         steps={ADVISOR_STEPS}
         cta={{ href: '/sign-up', label: 'Set up your practice' }}
       />
+
+      {/*
+        The questions people ask before signing up, answered on the page.
+
+        A two-column definition list rather than accordions: everything here is
+        short enough to read, and a row of collapsed headings makes a visitor
+        click six times to find out whether the answer they need exists. It also
+        means the answers are in the HTML a crawler sees.
+      */}
+      <section className="border-border-subtle border-t">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16">
+          <div className="lg:sticky lg:top-8 lg:self-start">
+            <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">
+              Before you sign up
+            </p>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-[2rem] sm:leading-[1.15]">
+              The questions everybody asks.
+            </h2>
+            <span className="bg-accent mt-6 block h-px w-12" aria-hidden />
+            <p className="text-text-secondary mt-6 text-sm leading-relaxed">
+              Including the ones with an unflattering answer. If something here is still unclear, it
+              is a fault in the page rather than in the question.
+            </p>
+          </div>
+
+          <dl className="border-border-subtle divide-border-subtle divide-y border-y">
+            {FAQS.map((item) => (
+              <div
+                key={item.q}
+                className="grid gap-2 py-6 md:grid-cols-[minmax(0,15rem)_1fr] md:gap-8"
+              >
+                <dt className="font-display text-base font-semibold">{item.q}</dt>
+                <dd className="text-text-secondary max-w-2xl text-sm leading-relaxed">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
 
       {/* What this is not */}
       <section className="border-border-subtle bg-surface-sunken/40 border-t">
@@ -255,13 +307,13 @@ export default function HomePage() {
         weaker version: a box asking to be clicked, indistinguishable from the
         boxes above it.
       */}
-      <section className="bg-slate-900 text-stone-50">
+      <section className="bg-obsidian-950 text-mist-50">
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-8 px-6 py-16">
           <div className="max-w-xl space-y-3">
-            <h2 className="font-display text-2xl font-semibold text-stone-50 sm:text-3xl">
+            <h2 className="font-display text-mist-50 text-2xl font-semibold sm:text-3xl">
               See what is on the market
             </h2>
-            <p className="text-sm leading-relaxed text-stone-300">
+            <p className="text-mist-300 text-sm leading-relaxed">
               Free to join. A seller hears from you when you request access, not before — and
               nothing you can see before then identifies anybody&rsquo;s business.
             </p>
@@ -271,7 +323,7 @@ export default function HomePage() {
             <Button
               asChild
               size="lg"
-              className="focus-visible:ring-copper-400 bg-stone-50 text-slate-900 hover:bg-stone-200"
+              className="bg-mist-50 text-obsidian-950 hover:bg-mist-200 focus-visible:ring-violet-400"
             >
               <Link href="/listings">
                 Browse businesses for sale
@@ -282,7 +334,7 @@ export default function HomePage() {
               asChild
               size="lg"
               variant="secondary"
-              className="border-stone-50/25 bg-transparent text-stone-50 hover:bg-stone-50/10 hover:text-stone-50"
+              className="border-mist-50/25 text-mist-50 hover:bg-mist-50/10 hover:text-mist-50 bg-transparent"
             >
               <Link href="/sign-up">List your business</Link>
             </Button>
@@ -313,6 +365,7 @@ export default function HomePage() {
  * removed; ruled cells read as a table of contents, which is what this is.
  */
 function Side({
+  id,
   eyebrow,
   heading,
   features,
@@ -320,6 +373,7 @@ function Side({
   cta,
   muted = false,
 }: {
+  id: string;
   eyebrow: string;
   heading: string;
   features: Array<{ title: string; body: string }>;
@@ -328,7 +382,12 @@ function Side({
   muted?: boolean;
 }) {
   return (
-    <section className={cn('border-border-subtle border-t', muted && 'bg-surface-sunken/40')}>
+    <section
+      id={id}
+      // `scroll-mt` so an anchor from the header does not land the heading
+      // flush against the top of the viewport with its eyebrow cut off.
+      className={cn('border-border-subtle scroll-mt-4 border-t', muted && 'bg-surface-sunken/40')}
+    >
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16">
         {/* The rail. Sticky on large screens only — on a phone it is a heading. */}
         <div className="lg:sticky lg:top-8 lg:self-start">

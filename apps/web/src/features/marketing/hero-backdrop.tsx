@@ -35,12 +35,12 @@ export function HeroBackdrop() {
         coursed at all.
       */}
       <div
-        className="absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full opacity-[0.16] blur-3xl"
+        className="absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full opacity-[0.22] blur-3xl"
         style={{
-          // copper-500. Primitives are Tailwind colours, not CSS variables, so
+          // violet-500. Primitives are Tailwind colours, not CSS variables, so
           // a gradient stop has to name the value — the same way the rest of
-          // this section names `slate-900` and `stone-50` directly.
-          background: 'radial-gradient(circle, #A66E48 0%, transparent 65%)',
+          // this section names `obsidian-950` and `mist-50` directly.
+          background: 'radial-gradient(circle, #8B54DA 0%, transparent 65%)',
         }}
       />
 
@@ -63,7 +63,7 @@ export function HeroBackdrop() {
             stagger is what makes it read as stonework instead of graph paper.
           */}
           <pattern id="ashlar-course" width="208" height="96" patternUnits="userSpaceOnUse">
-            <g stroke="#FAF8F4" strokeWidth="1" fill="none" opacity="0.42">
+            <g stroke="#FBFAFD" strokeWidth="1" fill="none" opacity="0.42">
               {/* Two bed joints, and the perpends staggered half a block between
                   them — the bond that makes coursed masonry read as masonry
                   rather than as tile. Blocks are roughly 2:1, which is the
@@ -75,9 +75,9 @@ export function HeroBackdrop() {
           </pattern>
 
           {/* Strongest at the top right, absent behind the copy. */}
-          <radialGradient id="ashlar-falloff" cx="0.88" cy="0.04" r="0.78">
+          <radialGradient id="ashlar-falloff" cx="0.95" cy="0.02" r="0.72">
             <stop offset="0%" stopColor="white" stopOpacity="1" />
-            <stop offset="45%" stopColor="white" stopOpacity="0.35" />
+            <stop offset="45%" stopColor="white" stopOpacity="0.3" />
             <stop offset="100%" stopColor="white" stopOpacity="0" />
           </radialGradient>
 

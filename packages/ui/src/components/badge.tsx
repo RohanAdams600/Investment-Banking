@@ -16,7 +16,7 @@ const badgeVariants = cva(
         danger: 'border-danger/25 bg-danger-subtle text-danger',
         info: 'border-info/25 bg-info-subtle text-info',
         /** Reserved for verification and premium status. Do not use decoratively. */
-        accent: 'border-accent/35 bg-accent-subtle text-copper-700',
+        accent: 'border-accent/35 bg-accent-subtle text-violet-700',
       },
     },
     defaultVariants: { variant: 'neutral' },

@@ -31,7 +31,7 @@ const buttonVariants = cva(
         ghost: 'text-text-secondary hover:bg-surface-sunken hover:text-text-primary',
         link: 'text-primary underline-offset-4 hover:underline',
         danger: 'bg-danger text-white hover:bg-danger/90 active:bg-danger/80',
-        accent: 'bg-accent text-accent-fg hover:bg-copper-600 active:bg-copper-700',
+        accent: 'bg-accent text-accent-fg hover:bg-violet-600 active:bg-violet-700',
       },
       size: {
         sm: 'h-8 px-3 text-xs [&_svg]:h-3.5 [&_svg]:w-3.5',
