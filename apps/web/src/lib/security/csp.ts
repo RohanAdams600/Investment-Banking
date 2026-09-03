@@ -7,17 +7,19 @@
  * origins were known, and now they are — there is exactly one, Supabase, and
  * the AI providers are called server-side where no browser policy applies.
  *
- * ## Rolled out report-only first, on purpose
+ * ## Enforced by default, with an explicit escape hatch
  *
  * A CSP that breaks the application in production is a worse outage than no CSP
- * is a vulnerability. `CSP_ENFORCE` decides which header this goes out as, and
- * it defaults to report-only. That is not the same failure the original note
- * warned about: a report-only policy is labelled, in the header name itself, as
- * not yet enforcing. A permissive enforcing one claims a protection it does not
- * provide.
+ * is a vulnerability, which is the argument that had this defaulting to
+ * report-only. It chose the wrong failure. `CSP_ENFORCE` decides which header
+ * this goes out as, and it now defaults to enforced.
  *
- * The rollout is: deploy report-only, walk the app, read the violations, then
- * set `CSP_ENFORCE=true`. `docs/deployment.md` carries it as a launch item.
+ * The rollout is: set `CSP_ENFORCE=false`, deploy, walk the app, read the
+ * violations, then remove the variable. Enforcement is the default because
+ * forgetting a variable is the likeliest thing that happens to a deployment and
+ * must not be what silently removes a control. `docs/deployment.md` carries it
+ * as a launch item, and `preflight --strict` refuses a production deploy with
+ * enforcement switched off.
  *
  * ## Nonces rather than 'unsafe-inline' for scripts
  *
@@ -147,14 +149,33 @@ export function buildCsp(options: CspOptions): string {
 
 /**
  * Which header to send it as.
- *
- * The default is report-only, and flipping it is a deployment decision rather
- * than a code change — see the rollout note above.
  */
 export function cspHeaderName(enforce: boolean): string {
   return enforce ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only';
 }
 
+/**
+ * Enforced unless somebody deliberately turns it off.
+ *
+ * ## Why the default was inverted
+ *
+ * It read `CSP_ENFORCE === 'true'`, so a deployment that forgot the variable
+ * shipped a policy that enforced nothing. The rollout argument for that is
+ * real — an over-tight CSP breaking production is a worse outage than no CSP is
+ * a vulnerability — but it chose the wrong failure. Forgetting a variable is the
+ * single most likely thing to happen to a deployment, and it should not be the
+ * thing that silently removes a control.
+ *
+ * So the rollout is now explicit rather than implicit: set `CSP_ENFORCE=false`
+ * for the window in which you are walking the app and reading violations, and
+ * remove it when you are done. An operator who forgets *that* gets a strict
+ * policy, which fails loudly and is fixed in minutes. An operator who forgot
+ * the old one got no protection and no signal, possibly for the life of the
+ * product.
+ *
+ * `preflight --strict` still refuses a production deploy with enforcement off,
+ * so the opt-out cannot quietly become permanent.
+ */
 export function isCspEnforced(): boolean {
-  return process.env.CSP_ENFORCE === 'true';
+  return process.env.CSP_ENFORCE !== 'false';
 }

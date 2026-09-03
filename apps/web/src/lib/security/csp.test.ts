@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { buildCsp, cspHeaderName, supabaseOrigins } from './csp';
+import { buildCsp, cspHeaderName, isCspEnforced, supabaseOrigins } from './csp';
 
 const NONCE = 'abc123';
 const SUPABASE = 'https://treltiukpuxhnzuplegu.supabase.co';
@@ -154,5 +154,42 @@ describe('cspHeaderName', () => {
 
   it('enforces when asked', () => {
     expect(cspHeaderName(true)).toBe('Content-Security-Policy');
+  });
+});
+
+describe('isCspEnforced', () => {
+  const original = process.env.CSP_ENFORCE;
+  afterEach(() => {
+    if (original === undefined) delete process.env.CSP_ENFORCE;
+    else process.env.CSP_ENFORCE = original;
+  });
+
+  it('enforces when the variable is absent', () => {
+    /*
+     * The whole point of the inversion, and the reason it is a test rather than
+     * a comment.
+     *
+     * This read `=== 'true'`, so a deployment that forgot the variable shipped
+     * a policy that enforced nothing — and said nothing about it. Forgetting a
+     * variable is the single likeliest thing to happen to a deployment, and it
+     * must not be what silently removes a control. Anybody tempted to restore
+     * the old default has to delete this test to do it.
+     */
+    delete process.env.CSP_ENFORCE;
+    expect(isCspEnforced()).toBe(true);
+  });
+
+  it('enforces for any value except the exact opt-out', () => {
+    // A typo must fail safe. `CSP_ENFORCE=flase` enforces.
+    for (const value of ['true', 'yes', '1', '', 'flase', 'FALSE', 'no']) {
+      process.env.CSP_ENFORCE = value;
+      expect(isCspEnforced(), `CSP_ENFORCE=${value}`).toBe(true);
+    }
+  });
+
+  it('reports the escape hatch only for a deliberate lowercase false', () => {
+    process.env.CSP_ENFORCE = 'false';
+    expect(isCspEnforced()).toBe(false);
+    expect(cspHeaderName(isCspEnforced())).toBe('Content-Security-Policy-Report-Only');
   });
 });

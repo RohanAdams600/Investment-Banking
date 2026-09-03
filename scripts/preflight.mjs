@@ -110,8 +110,10 @@ const checks = [
   {
     level: LAUNCH,
     name: 'Content Security Policy is enforced',
-    ok: () => process.env.CSP_ENFORCE === 'true',
-    fix: 'Deploy report-only first, walk every page, read the violations, then set CSP_ENFORCE=true.',
+    // Enforced is the default, so this only fails when somebody explicitly
+    // switched it off for a rollout window and left it that way.
+    ok: () => process.env.CSP_ENFORCE !== 'false',
+    fix: 'CSP_ENFORCE=false is set. That is the rollout escape hatch — walk every page, read the violations, then remove the variable.',
   },
   {
     level: LAUNCH,
