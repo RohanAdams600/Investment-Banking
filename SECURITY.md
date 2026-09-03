@@ -14,8 +14,7 @@ Whether they satisfy a given regulator is a question for your own counsel.
 
 | Item | State | Notes |
 | --- | --- | --- |
-| Migrations 0030–0038 | **Applied** | 28 verification checks pass against the live project. |
-| Migration 0039 | **NOT APPLIED** | Listing creation is refused until it runs. `supabase/apply-0039.sql` — paste it, and read the PASS/FAIL rows it prints. |
+| Migrations 0030–0042 | **Applied** | 10 post-apply checks pass against the live project, and `INSERT ... RETURNING` was proved working by a probe insert as a real seller, rolled back. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Not set | Server-side only. Never `NEXT_PUBLIC_`; preflight fails the build if that prefix ever appears on it. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Not set | Without a shared store every rate limit is an in-process counter that resets on each cold start — i.e. not limiting anything. `preflight --strict` fails without it. |
 | `RESEND_API_KEY` | Not set | Nothing emails anyone until it is set; a seller learns about an access request only when they next sign in. |
