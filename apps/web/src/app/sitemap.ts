@@ -66,6 +66,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     })),
+    /*
+     * The seller page ranks alongside the market rather than below it. "Sell my
+     * business" and "businesses for sale" are two different searches by two
+     * different people, and only one of them has a page that answers it
+     * directly.
+     */
+    {
+      url: `${brand.url}/sell`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.9,
+    },
     {
       url: `${brand.url}/pricing`,
       lastModified: now,

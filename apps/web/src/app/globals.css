@@ -18,11 +18,26 @@
       'liga' 1;
   }
 
-  /* Headings default to the display face; body copy stays on the UI sans. */
+  /*
+   * Headings default to the display face and INHERIT their colour.
+   *
+   * They used to declare `text-text-primary` here, which is the same value
+   * `body` already sets — so it changed nothing on a light ground and silently
+   * broke every heading on a dark one. A section that sets `text-mist-50` on
+   * itself had its paragraphs turn light and its headings stay near-black, on a
+   * near-black slab. That shipped twice: the closing band on the home page and
+   * the h1 on the seller page were both invisible, and both were found by
+   * looking at a screenshot rather than by any test.
+   *
+   * Inheriting is the fix rather than a workaround. `body` carries
+   * `text-text-primary`, so ordinary headings are unchanged; a heading inside a
+   * deliberately-coloured container now follows that container, which is what
+   * every author writing one already assumed.
+   */
   h1,
   h2,
   h3 {
-    @apply font-display text-text-primary;
+    @apply font-display;
     text-wrap: balance;
   }
 

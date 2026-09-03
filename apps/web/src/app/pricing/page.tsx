@@ -42,28 +42,82 @@ interface Tier {
   emphasis?: boolean;
 }
 
-const TIERS: Tier[] = [
+/**
+ * Two price lists, because there are two customers.
+ *
+ * ## Owners pay for attention, not for access
+ *
+ * The established marketplace in this category charges an owner a monthly fee
+ * per listing, tiered by placement, and takes nothing when the business sells.
+ * That is the model that works here, and the reason is structural rather than
+ * cultural: a marketplace that takes a percentage of the sale is competing for
+ * the same money as the brokers who bring it most of its inventory, and those
+ * brokers can list somewhere else.
+ *
+ * We differ in one deliberate place. A standard listing is free and stays free.
+ * Charging an owner to appear at all is a toll on supply, and supply is the
+ * thing a new marketplace has least of — an owner who pays to be listed
+ * somewhere with no buyers does it once. Paying for *placement* is a different
+ * transaction: it is worth something only when there is competition for
+ * attention, which is exactly when we deserve to be paid for it.
+ *
+ * ## What is deliberately absent
+ *
+ * No success fee. No percentage of the sale price. Not a philosophical
+ * position — a broker whose fee we were competing with would list elsewhere,
+ * and intermediaries bring listings in bulk.
+ */
+const SELLER_TIERS: Tier[] = [
   {
-    name: 'Free',
+    name: 'Listing',
     price: '$0',
-    cadence: 'always',
-    who: 'Owners testing the water, and buyers looking.',
+    cadence: 'always free',
+    who: 'An owner bringing one business to market.',
     features: [
-      'Browse every listing on the market',
+      'A live, anonymous listing for as long as you need it',
       'Valuation across several methods, with the assumptions shown',
-      'Record your acquisition criteria and get matched',
-      'One listing of your own',
-      'Deal rooms, messaging and confidentiality agreements',
+      'You issue the confidentiality agreement, and can revoke it',
+      'Deal rooms, messaging and a document vault with an access log',
+      'Buyer verification badges on everyone who asks for access',
     ],
-    cta: { label: 'Create an account', href: '/sign-up' },
+    cta: { label: 'List your business', href: '/sign-up' },
   },
+  {
+    name: 'Featured',
+    price: '$79',
+    cadence: 'per listing, per month',
+    who: 'An owner who wants to be found first.',
+    features: [
+      'Everything in Listing',
+      'Promoted placement at the top of browse and search results',
+      'Labelled as paid placement, because ranking by payment silently is deceptive',
+      'Cancel whenever — the listing stays, the placement stops',
+    ],
+    cta: { label: 'Start free', href: '/sign-up' },
+    emphasis: true,
+  },
+  {
+    name: 'Premier',
+    price: '$179',
+    cadence: 'per listing, per month',
+    who: 'A larger business where reach is worth paying for.',
+    features: [
+      'Everything in Featured',
+      'Top placement, above other promoted listings',
+      'Priority listing review, so it goes live the same day',
+      'Your listing included in the sector page for its industry',
+    ],
+    cta: { label: 'Start free', href: '/sign-up' },
+  },
+];
+
+const ADVISOR_TIERS: Tier[] = [
   {
     name: 'Broker',
     price: '$99',
     cadence: 'per month',
     who: 'An intermediary running deals for clients.',
     features: [
-      'Everything in Free',
       'Unlimited listings, managed on behalf of your clients',
       'Pipeline: contacts, tasks and reminders across every engagement',
       'Document vault with per-document grants and an access log',
@@ -107,40 +161,21 @@ export default function PricingPage() {
           </p>
         </header>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {TIERS.map((tier) => (
-            <Card key={tier.name} className={tier.emphasis ? 'border-accent' : undefined}>
-              <CardContent className="flex h-full flex-col gap-5 py-8">
-                <div className="space-y-1">
-                  <h2 className="font-display text-xl font-semibold">{tier.name}</h2>
-                  <p className="text-text-muted text-sm">{tier.who}</p>
-                </div>
+        <TierGroup
+          id="selling"
+          eyebrow="If you are selling a business"
+          heading="A listing is free. Being seen first is not."
+          note="Charging an owner to appear at all is a toll on the thing a new marketplace has least of. Paying for placement is worth something only when there is competition for attention — which is exactly when we have earned it."
+          tiers={SELLER_TIERS}
+        />
 
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-semibold tabular-nums">{tier.price}</span>
-                  <span className="text-text-muted text-sm">{tier.cadence}</span>
-                </div>
-
-                <p className="text-accent text-2xs font-mono uppercase tracking-[0.14em]">
-                  Free through launch
-                </p>
-
-                <ul className="flex-1 space-y-2.5">
-                  {tier.features.map((feature) => (
-                    <li key={feature} className="flex gap-2.5 text-sm leading-relaxed">
-                      <Check className="text-accent mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                      <span className="text-text-secondary">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button asChild variant={tier.emphasis ? 'primary' : 'secondary'}>
-                  <Link href={tier.cta.href}>{tier.cta.label}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <TierGroup
+          id="advising"
+          eyebrow="If you run deals for clients"
+          heading="The tooling a practice needs, per month."
+          note={`${brand.name} never takes a percentage of a sale, so nothing here competes with your fee. What you are paying for is the pipeline, the vault and the commission record — not permission to bring a client.`}
+          tiers={ADVISOR_TIERS}
+        />
 
         {/*
         Said here rather than in a footer, because the two questions a broker
@@ -186,5 +221,81 @@ export default function PricingPage() {
         </section>
       </main>
     </>
+  );
+}
+
+/**
+ * One priced audience.
+ *
+ * Split into groups rather than shown as five cards in a row because the two
+ * are not comparable: an owner choosing between Featured and Premier is making
+ * a different decision from a broker choosing between Broker and Firm, and a
+ * single row invites a comparison between the two that means nothing. The note
+ * under each heading carries the reasoning, which is the part that makes a
+ * price feel like a decision rather than a demand.
+ */
+function TierGroup({
+  id,
+  eyebrow,
+  heading,
+  note,
+  tiers,
+}: {
+  id: string;
+  eyebrow: string;
+  heading: string;
+  note: string;
+  tiers: Tier[];
+}) {
+  return (
+    <section id={id} className="mt-16 scroll-mt-4">
+      <div className="max-w-2xl space-y-3">
+        <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">{eyebrow}</p>
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{heading}</h2>
+        <p className="text-text-secondary text-sm leading-relaxed">{note}</p>
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        {tiers.map((tier) => (
+          <Card key={tier.name} className={tier.emphasis ? 'border-accent' : undefined}>
+            <CardContent className="flex h-full flex-col gap-5 py-8">
+              <div className="space-y-1">
+                <h3 className="font-display text-xl font-semibold">{tier.name}</h3>
+                <p className="text-text-muted text-sm">{tier.who}</p>
+              </div>
+
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-semibold tabular-nums">{tier.price}</span>
+                <span className="text-text-muted text-sm">{tier.cadence}</span>
+              </div>
+
+              {/*
+                Not shown on the free tier. "Free through launch" over a $0
+                price reads as a limited-time offer on something that is not
+                limited, which is the one place this page could mislead.
+              */}
+              {tier.price === '$0' ? null : (
+                <p className="text-accent text-2xs font-mono uppercase tracking-[0.14em]">
+                  Free through launch
+                </p>
+              )}
+
+              <ul className="flex-1 space-y-2.5">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex gap-2.5 text-sm leading-relaxed">
+                    <Check className="text-accent mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span className="text-text-secondary">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button asChild variant={tier.emphasis ? 'primary' : 'secondary'}>
+                <Link href={tier.cta.href}>{tier.cta.label}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
   );
 }

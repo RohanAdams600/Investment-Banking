@@ -198,6 +198,12 @@ describe('sitemap', () => {
         [
           '/',
           '/businesses-for-sale',
+          /*
+           * The seller page. Public and indexable on purpose: "sell my
+           * business" is the search an owner makes, and the market page does
+           * not answer it — it answers the buyer's.
+           */
+          '/sell',
           '/pricing',
           '/tools/valuation',
           '/legal/terms',

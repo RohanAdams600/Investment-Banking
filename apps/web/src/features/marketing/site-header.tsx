@@ -113,7 +113,7 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
             them.
           */}
           <Link
-            href="/sign-up"
+            href="/sell"
             className={cn(
               'rounded-sm px-3.5 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2',
               dark

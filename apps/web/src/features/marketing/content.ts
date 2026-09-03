@@ -111,7 +111,15 @@ export const DOORS: Door[] = [
     title: 'Sell without telling the market',
     body: 'List anonymously: industry, state and size ranges only. Your name, address and exact figures stay sealed until you personally issue a confidentiality agreement to a buyer you have chosen.',
     cta: 'List your business',
-    href: '/sign-up',
+    /*
+     * The seller page, not sign-up.
+     *
+     * An owner clicking this has decided nothing yet — they want to know what
+     * listing here means before they make an account, and a form is the worst
+     * possible answer to that. The buying door can go straight to the market
+     * because the market is itself the explanation; selling needs a page.
+     */
+    href: '/sell',
     facets: ['Anonymous listing', 'You issue the NDA', 'Revocable access', 'Buyers verified'],
   },
 ];

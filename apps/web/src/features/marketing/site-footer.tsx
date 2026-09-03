@@ -47,10 +47,7 @@ export function SiteFooter() {
           >
             Businesses for sale
           </Link>
-          <Link
-            href="/sign-up"
-            className="hover:text-text-primary underline-offset-4 hover:underline"
-          >
+          <Link href="/sell" className="hover:text-text-primary underline-offset-4 hover:underline">
             List your business
           </Link>
           <Link
