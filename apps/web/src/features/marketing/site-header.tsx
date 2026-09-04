@@ -72,21 +72,28 @@ export function SiteHeader({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
             buy and sell doors, so the bar adds the market, the third side of
             it, the tool and the price.
 
-            The middle two are hidden on a phone rather than folded into a
+            Valuation was here and is not any more. Adding the directory took
+            the bar to five links plus a button, which is where it stops being
+            scannable and starts being the competitor's two-row nav with our
+            wording. The valuation tool is the free thing at the front door
+            rather than the thing being sold — it keeps its place in the hero
+            and in the footer.
+
+            The middle links are hidden on a phone rather than folded into a
             hamburger. Four links and a button wrap to two rows at 390px and eat
-            the top of the hero, and a menu that opens to reveal two items is a
-            worse trade than showing the ones that matter. The footer carries
+            the top of the hero, and a menu that opens to reveal three items is
+            a worse trade than showing the ones that matter. The footer carries
             the full set on every page, so nothing becomes unreachable.
           */}
           <span className="hidden items-center gap-x-6 sm:flex">
             <HeaderLink href="/businesses-for-sale" dark={dark}>
               Buy a business
             </HeaderLink>
-            <HeaderLink href="/#advisors" dark={dark}>
+            <HeaderLink href="/for-advisors" dark={dark}>
               For advisors
             </HeaderLink>
-            <HeaderLink href="/tools/valuation" dark={dark}>
-              Valuation
+            <HeaderLink href="/brokers" dark={dark}>
+              Find a broker
             </HeaderLink>
             <HeaderLink href="/pricing" dark={dark}>
               Pricing

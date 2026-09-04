@@ -3,6 +3,7 @@ import { brand } from '@ib/core';
 
 import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
 import { publicListingIndex } from '@/features/market/queries';
+import { brokerIndex } from '@/features/brokers/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 /**
@@ -39,7 +40,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * a sitemap missing its listings is a bad day, an empty one is a signal to
    * Google that the site went away.
    */
-  const listings = isSupabaseConfigured() ? await publicListingIndex().catch(() => []) : [];
+  const [listings, brokers] = isSupabaseConfigured()
+    ? await Promise.all([publicListingIndex().catch(() => []), brokerIndex().catch(() => [])])
+    : [[], []];
 
   return [
     { url: brand.url, lastModified: now, changeFrequency: 'weekly', priority: 1 },
@@ -72,6 +75,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      * different people, and only one of them has a page that answers it
      * directly.
      */
+    /*
+     * The advisor page and the directory.
+     *
+     * Both rank for searches the market pages cannot answer — "business
+     * brokers in Ohio" is a different query from "businesses for sale", made
+     * by a different person, and the directory is the only page that answers
+     * it. It is also the acquisition surface for the supply side, so it is
+     * priced alongside the market rather than beneath it.
+     */
+    {
+      url: `${brand.url}/for-advisors`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.9,
+    },
+    {
+      url: `${brand.url}/brokers`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    },
+    ...brokers.map((slug) => ({
+      url: `${brand.url}/brokers/${slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     {
       url: `${brand.url}/sell`,
       lastModified: now,

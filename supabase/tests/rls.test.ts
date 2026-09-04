@@ -133,8 +133,28 @@ describe.skipIf(!hasDatabase)('row level security', () => {
       // invisible locally and live on the real project.
       const expected: Record<string, string[]> = {
         audit_log: ['SELECT'],
+        /*
+         * A view, like `market_listings`, and in this inventory for the same
+         * reason: it grants SELECT, so it is part of what `authenticated` can
+         * reach. `anon` holds the same SELECT and is checked separately below.
+         *
+         * The view is the access control for the directory — it exposes
+         * published profiles only, and `firm_profiles` itself is unreachable to
+         * anyone but the firm's own administrators.
+         */
+        broker_directory: ['SELECT'],
         consent_records: ['INSERT', 'SELECT'],
         firm_members: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+        /*
+         * DELETE is granted, unlike most of this schema.
+         *
+         * The rest withholds it because the record of a business coming to
+         * market is not disposable. A directory profile is the opposite: it is
+         * a firm's own public page, carrying their name, and a firm that wants
+         * to stop appearing is entitled to remove it rather than have it
+         * retained unpublished for the platform's convenience.
+         */
+        firm_profiles: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         firms: ['SELECT', 'UPDATE'],
         jurisdictions: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
         legal_templates: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],

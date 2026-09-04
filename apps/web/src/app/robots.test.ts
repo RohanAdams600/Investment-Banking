@@ -204,11 +204,21 @@ describe('sitemap', () => {
            * not answer it — it answers the buyer's.
            */
           '/sell',
+          /*
+           * The advisor page and the directory. Public and indexable on
+           * purpose: "business brokers in Ohio" is a search the market pages
+           * cannot answer, and the directory is the acquisition surface for the
+           * supply side — the half of the market that brings listings in bulk.
+           */
+          '/for-advisors',
+          '/brokers',
           '/pricing',
           '/tools/valuation',
           '/legal/terms',
           '/legal/privacy',
-        ].includes(path) || path.startsWith('/businesses-for-sale/');
+        ].includes(path) ||
+        path.startsWith('/businesses-for-sale/') ||
+        path.startsWith('/brokers/');
 
       expect(allowed, `${path} is in the sitemap and should not be`).toBe(true);
     }

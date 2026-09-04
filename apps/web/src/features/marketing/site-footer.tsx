@@ -51,6 +51,18 @@ export function SiteFooter() {
             List your business
           </Link>
           <Link
+            href="/for-advisors"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            For advisors
+          </Link>
+          <Link
+            href="/brokers"
+            className="hover:text-text-primary underline-offset-4 hover:underline"
+          >
+            Find a broker
+          </Link>
+          <Link
             href="/pricing"
             className="hover:text-text-primary underline-offset-4 hover:underline"
           >
