@@ -182,6 +182,19 @@ export function SiteHeader({ actor, unread }: SiteHeaderProps) {
               >
                 AI agents &amp; API keys
               </Link>
+              {/*
+                The directory profile. Shown to everyone in this menu rather
+                than gated on a role: the page itself explains what to do if
+                you do not administer a firm, which is a better answer than a
+                menu item that silently is not there for people who would want
+                it.
+              */}
+              <Link
+                href="/settings/directory"
+                className="hover:bg-surface-base block rounded px-3 py-2 text-sm"
+              >
+                Directory profile
+              </Link>
               <Link
                 href="/settings/security"
                 className="hover:bg-surface-base block rounded px-3 py-2 text-sm"
