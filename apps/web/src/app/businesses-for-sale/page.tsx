@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { INDUSTRY_PROFILES, brand, formatBand, pageTitle, type IndustryKey } from '@ib/core';
+import { INDUSTRY_PROFILES, formatBand, pageTitle, type IndustryKey } from '@ib/core';
 
 import { GUIDED_INDUSTRY_KEYS } from '@/features/market/industry-guides';
+import { MarketState } from '@/features/marketing/market-state';
 import { PublicFilters } from '@/features/market/public-filters';
 import { publicListings } from '@/features/market/queries';
 import { InterestForm } from '@/features/interest/interest-form';
@@ -154,7 +155,14 @@ export default async function PublicMarketPage({
           */
           /* No Card wrapper: `InterestForm` renders its own, and nesting them
              draws two borders around one thing. */
-          <div className="mt-8 space-y-3">
+          <div className="mt-8 space-y-6">
+            {/*
+              Only when nothing is filtered. A search that returned nothing is
+              a narrowing problem, and telling somebody the market is new when
+              they can see it has listings is confusing.
+            */}
+            {isFiltered ? null : <MarketState subject="a business like the one you want" />}
+
             {/*
                 The address capture, here rather than behind a sign-up.
 
@@ -176,13 +184,21 @@ export default async function PublicMarketPage({
               side="buying"
               jurisdictions={jurisdictions}
               source={isFiltered ? 'public-market-no-matches' : 'public-market-empty'}
+              /*
+                The unfiltered case is now the secondary offer, because the
+                panel above already made the primary one. Two blocks announcing
+                that the market is empty is the fault this was meant to fix, so
+                this one asks for something the panel cannot: a description in
+                the visitor's own words, which reaches an operator rather than a
+                filter.
+              */
               heading={
-                isFiltered ? 'Nothing matches those filters.' : 'The first listings are not up yet.'
+                isFiltered ? 'Nothing matches those filters.' : 'Or tell us in your own words.'
               }
               blurb={
                 isFiltered
                   ? 'Try widening them — or leave your details and you will hear the day something like this comes to market.'
-                  : `${brand.name} is opening shortly. Leave your details and you will hear the day something fits — not before, and not otherwise.`
+                  : 'Size, structure, anything you will not compromise on. It reaches a person rather than a filter, and you hear the day something fits — not before, and not otherwise.'
               }
             />
 

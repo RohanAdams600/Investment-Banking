@@ -27,12 +27,15 @@ import { emptyInterestState, registerInterest } from './actions';
  */
 export function InterestForm({
   side,
+  eyebrow,
   jurisdictions,
   source,
   heading,
   blurb,
 }: {
   side: 'selling' | 'buying' | 'advising';
+  /** Omitted where a heading above has already set the context. */
+  eyebrow?: string;
   jurisdictions: { code: string; name: string }[];
   source: string;
   heading: string;
@@ -58,9 +61,17 @@ export function InterestForm({
     <Card>
       <CardContent className="space-y-5 py-8">
         <div className="space-y-2">
-          <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">
-            Opening shortly
-          </p>
+          {/*
+            The eyebrow is passed in rather than fixed.
+            
+            It read "Opening shortly" on every use, which is a promise with no
+            date and is the register of a parked domain rather than a product.
+            It is also wrong wherever this form is the secondary offer under a
+            panel that has already said the market is new.
+          */}
+          {eyebrow ? (
+            <p className="text-accent font-mono text-xs uppercase tracking-[0.2em]">{eyebrow}</p>
+          ) : null}
           <h2 className="font-display text-2xl font-semibold">{heading}</h2>
           <p className="text-text-secondary max-w-xl text-sm leading-relaxed">{blurb}</p>
         </div>

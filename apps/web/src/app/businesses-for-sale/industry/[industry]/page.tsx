@@ -2,13 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
-import {
-  INDUSTRY_PROFILES,
-  brand,
-  formatBand,
-  pageTitle,
-  type IndustryKey,
-} from '@ib/core';
+import { INDUSTRY_PROFILES, brand, formatBand, pageTitle, type IndustryKey } from '@ib/core';
 import { Button, Card, CardContent } from '@ib/ui';
 
 import {
@@ -18,6 +12,7 @@ import {
 } from '@/features/market/industry-guides';
 import { publicListings } from '@/features/market/queries';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
+import { MarketState } from '@/features/marketing/market-state';
 
 export const revalidate = 3600;
 
@@ -68,11 +63,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function IndustryPage({
-  params,
-}: {
-  params: Promise<{ industry: string }>;
-}) {
+export default async function IndustryPage({ params }: { params: Promise<{ industry: string }> }) {
   const key = resolve((await params).industry);
   if (!key) notFound();
 
@@ -108,21 +99,21 @@ export default async function IndustryPage({
         </h2>
 
         {listings.length === 0 ? (
-          <Card className="mt-5">
-            <CardContent className="space-y-3 py-8">
-              <p className="text-text-secondary max-w-xl text-sm leading-relaxed">
-                No {profile.label.toLowerCase()} businesses are listed at the moment. {brand.name}{' '}
-                is opening shortly — tell us what you are looking for and you will hear the day
-                something in this sector is published.
-              </p>
-              <Button asChild variant="secondary">
-                <Link href="/listings">
-                  Register your interest
-                  <ArrowRight aria-hidden />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+          /*
+            The shared panel rather than a sector-specific apology.
+
+            The old copy said the platform was "opening shortly" and pointed at
+            an authenticated route, so the one thing it offered a stranger who
+            arrived from a search was a sign-up form. The guide above is the
+            reason this page exists and is worth reading on a day with no
+            listings — which at launch is every day.
+          */
+          <div className="mt-5">
+            <MarketState
+              heading={`No ${profile.label.toLowerCase()} businesses are listed yet.`}
+              subject="one in this sector"
+            />
+          </div>
         ) : (
           <ul className="divide-border-subtle mt-5 divide-y">
             {listings.map((listing) => (
@@ -153,10 +144,7 @@ export default async function IndustryPage({
 
       {/* What a buyer of this kind of business examines. */}
       <section className="mt-16" aria-labelledby="what-buyers-examine">
-        <h2
-          id="what-buyers-examine"
-          className="font-display text-2xl font-semibold tracking-tight"
-        >
+        <h2 id="what-buyers-examine" className="font-display text-2xl font-semibold tracking-tight">
           What buyers examine
         </h2>
         <dl className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -234,11 +222,11 @@ export default async function IndustryPage({
               {basis}. {profile.rationale}
             </p>
             <p className="text-text-muted text-sm leading-relaxed">
-              This is an illustrative range for a whole sector, provided for information only. It
-              is not a valuation, not advice, and not a recommendation to buy, sell or price any
-              business at any figure. Any individual company can fall well outside it for reasons
-              no general model can see. Use it to frame a conversation with an advisor, not to
-              replace one.
+              This is an illustrative range for a whole sector, provided for information only. It is
+              not a valuation, not advice, and not a recommendation to buy, sell or price any
+              business at any figure. Any individual company can fall well outside it for reasons no
+              general model can see. Use it to frame a conversation with an advisor, not to replace
+              one.
             </p>
             <Button asChild variant="secondary">
               <Link href="/tools/valuation">
@@ -257,9 +245,9 @@ export default async function IndustryPage({
         </h2>
         <p className="text-text-secondary mt-4 max-w-2xl leading-relaxed">{guide.sellerNote}</p>
         <p className="text-text-secondary mt-4 max-w-2xl text-sm leading-relaxed">
-          Listing on {brand.name} is anonymous. Your industry, state and size ranges are public;
-          the company name, the address and the exact figures sit in a separate record that opens
-          only to a buyer you have personally issued a confidentiality agreement to.
+          Listing on {brand.name} is anonymous. Your industry, state and size ranges are public; the
+          company name, the address and the exact figures sit in a separate record that opens only
+          to a buyer you have personally issued a confidentiality agreement to.
         </p>
         <Button asChild className="mt-6">
           <Link href="/sign-up">

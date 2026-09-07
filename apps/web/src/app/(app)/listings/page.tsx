@@ -13,6 +13,7 @@ import type { BrowseFilters } from '@/features/listings/types';
 import { getActor } from '@/lib/auth/actor';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { SaveSearchForm } from '@/features/search/save-search-form';
+import { MarketState } from '@/features/marketing/market-state';
 
 export const metadata: Metadata = {
   title: 'Businesses for sale',
@@ -121,13 +122,26 @@ export default async function ListingsPage({
         possibly be useful to somebody who arrived this early.
       */}
       {!marketOpen ? (
-        <InterestForm
-          side="buying"
-          jurisdictions={jurisdictions}
-          source="browse-prelaunch"
-          heading="The first listings are not up yet."
-          blurb="Tell us what you are looking for and you will hear from us the day something fits — not before, and not otherwise. Recording it now also means the matching has your criteria the moment sellers arrive."
-        />
+        <div className="space-y-6">
+          {/*
+            A signed-in visitor gets the better mechanism.
+
+            The anonymous interest form takes an address and a sector because
+            that is all a stranger can offer. Somebody with an account can save
+            a real search — filters, a name, a frequency, and a page showing
+            what it currently matches — so offering them the lesser version is
+            offering them a worse product than the one they signed up for.
+          */}
+          <MarketState heading="Nothing is listed yet." subject="something that fits" />
+
+          <InterestForm
+            side="buying"
+            jurisdictions={jurisdictions}
+            source="browse-prelaunch"
+            heading="Or tell us in your own words."
+            blurb="Size, structure, anything you will not compromise on. It reaches an operator rather than a filter, and it means the matching has your criteria the moment sellers arrive."
+          />
+        </div>
       ) : (
         <>
           <Filters jurisdictions={jurisdictions} current={filters} />
